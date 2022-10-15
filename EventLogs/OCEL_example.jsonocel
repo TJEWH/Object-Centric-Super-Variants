@@ -51,15 +51,23 @@
       "ocel:vmap": {}},
 
     "4": {
+      "ocel:activity": "H",
+      "ocel:timestamp": "2019-05-20T09:07:54",
+      "ocel:omap": [
+	  "i2"
+      ],
+      "ocel:vmap": {}},
+
+   "5": {
       "ocel:activity": "E",
-      "ocel:timestamp": "2019-05-20T09:07:49",
+      "ocel:timestamp": "2019-05-20T09:07:55",
       "ocel:omap": [
         "i1",
 	  "i2"
       ],
       "ocel:vmap": {}},
 
-    "5": {
+    "6": {
       "ocel:activity": "F",
       "ocel:timestamp": "2019-05-20T09:07:59",
       "ocel:omap": [
@@ -68,7 +76,7 @@
       ],
       "ocel:vmap": {}},
 
-    "6": {
+    "7": {
       "ocel:activity": "G",
       "ocel:timestamp": "2019-05-20T09:08:00",
       "ocel:omap": [
@@ -76,7 +84,7 @@
       ],
       "ocel:vmap": {}},
 
-    "7": {
+    "8": {
       "ocel:activity": "A",
       "ocel:timestamp": "2019-05-20T09:08:47",
       "ocel:omap": [
@@ -84,7 +92,7 @@
       ],
       "ocel:vmap": {}},
 
-    "8": {
+    "9": {
       "ocel:activity": "B",
       "ocel:timestamp": "2019-05-20T09:08:48",
       "ocel:omap": [
@@ -92,7 +100,7 @@
       ],
       "ocel:vmap": {}},
 
-    "9": {
+    "10": {
       "ocel:activity": "C",
       "ocel:timestamp": "2019-05-20T09:08:50",
       "ocel:omap": [
@@ -101,7 +109,23 @@
       ],
       "ocel:vmap": {}},
 
-    "10": {
+   "11": {
+      "ocel:activity": "I",
+      "ocel:timestamp": "2019-05-20T09:08:53",
+      "ocel:omap": [
+	  "i3"
+      ],
+      "ocel:vmap": {}},
+
+   "12": {
+      "ocel:activity": "F",
+      "ocel:timestamp": "2019-05-20T09:08:59",
+      "ocel:omap": [
+	  "i3"
+      ],
+      "ocel:vmap": {}},
+
+    "13": {
       "ocel:activity": "D",
       "ocel:timestamp": "2019-05-20T09:08:55",
       "ocel:omap": [
