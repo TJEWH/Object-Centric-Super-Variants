@@ -47,23 +47,76 @@ class SummarizedLane:
         result_string = result_string[:-1]
         return result_string + "]"
     
-    def __eq__(self, other):
-        if isinstance(other, self.__class__):
-            if self.object_type != other.object_types:
-                return False
-            elif len(self.elements) == len(other.elements):
-                return False
-            else:
-                result = True
-                for i in range(len(self.elements)):
-                    result = result and self.elements[i] == other.elements[i]
-                result = result and self.horizontal_indices == other.horizontal_indices
-                return result
-        return False
     
     def update_indices(self, start_index, offset):
         for i in range(start_index, len(self.horizontal_indices)):
             self.horizontal_indices[i] += offset
+
+    def same_summarization(self, summarization):
+        if(summarization.object_type != self.object_type or len(self.horizontal_indices) != len(summarization.horizontal_indices)):
+            return False
+        else:
+            result = True
+            for i in range(len(self.elements)):
+                result = result and self.elements[i] == summarization.elements[i]
+            return result
+    
+    def subsumed_summarization(self, summarization):
+        if(summarization.object_type != self.object_type or len(self.horizontal_indices) != len(summarization.horizontal_indices)):
+            return False
+        result = False
+        self_contains_choice = any(isinstance(x, GenericChoiceConstruct) for x in self.elements) or any(isinstance(x, GenericOptionalChoiceConstruct) for x in self.elements)
+        other_contains_choice = any(isinstance(x, GenericChoiceConstruct) for x in summarization.elements) or any(isinstance(x, GenericOptionalChoiceConstruct) for x in summarization.elements)
+        if(self_contains_choice and not other_contains_choice):
+            realizations = self.get_realizations()
+            for realization in realizations:
+                result = result or realization.same_summarization(summarization)
+        elif(not self_contains_choice and other_contains_choice):
+            realizations = summarization.get_realizations()
+            for realization in realizations:
+                result = result or realization.same_summarization(self)
+        #else:
+            #realizations1 = self.get_realizations()
+            #realizations2 = summarization.get_realizations()
+
+            #result1 = []
+            #for i in range(len(realizations1)):
+            #    sequence_list = [element.activity for element in realizations1[i].elements]
+            #    result1.append(sequence_list)
+
+            #result2 = []
+            #for i in range(len(realizations2)):
+            #    sequence_list = [element.activity for element in realizations2[i].elements]
+            #    result2.append(sequence_list)
+
+            #result = set(result1) == set(result2)
+                
+
+        return result
+
+    def get_realizations(self):
+        realizations = []
+        realizations.append([])
+        for element in self.elements:
+            if(type(element) == CommonConstruct):
+                realizations = [realization + [element] for realization in realizations]
+            if(type(element) == GenericChoiceConstruct or type(element) == GenericOptionalChoiceConstruct):
+                intermediate_result = []
+                for choice in element.choices:
+                    sublist = [CommonConstruct(choice[i], None) for i in range(len(choice))]
+                    intermediate_result.extend([realization + sublist for realization in realizations])
+                realizations = intermediate_result
+        result = []
+        for i in range(len(realizations)):
+            result.append(SummarizedLane(i, "realization " + str(i), self.object_type, realizations[i], range(len(realizations[i])), None))
+        return result
+
+
+
+
+                    
+
+
             
 class SummarizedConstruct:
     '''The data structure the elements of a summarized variant'''
@@ -120,6 +173,46 @@ class ChoiceConstruct(SummarizedConstruct):
         if isinstance(other, self.__class__):
             return self.choices == other.choices
         return False
+
+class GenericChoiceConstruct:
+    choices = []
+    frequencies = []
+    length = 0
+    position = 0 
+
+    def __init__(self, choices, frequencies, length, position):
+        self.choices = choices
+        self.frequencies = frequencies
+        self.length = length
+        self.position = position
+    
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.choices == other.choices
+        return False
+
+    def __str__(self):
+        return f"Choices {self.choices}"
+
+class GenericOptionalChoiceConstruct:
+    choices = []
+    frequencies = []
+    length = 0
+    position = 0 
+
+    def __init__(self, choices, frequencies, length, position):
+        self.choices = choices
+        self.frequencies = frequencies
+        self.length = length
+        self.position = position
+    
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.choices == other.choices
+        return False
+
+    def __str__(self):
+        return f"Choices {self.choices}"
 
 
 def convert_to_summarized_format(lane):

@@ -21,7 +21,6 @@ def get_all_summarizations(variant, print_result = True):
             
             # Initialize result variables
             result_lanes = []
-            updated_interaction_points = []
             remaining_lanes = [lane.lane_id for lane in variant.lanes]
             interaction_points_mapping = []
             
