@@ -1,8 +1,16 @@
 import Input_Extraction_Definition as IED
-import Summarization_Utils as SU
 import Super_Variant_Definition as SVD
 
 def get_candidates(lanes, interactions):
+    '''
+    Yields all maximal merging candidate sets for a set of lanes, thus, all sets of lanes that share all interaction points
+    :param lanes: The lanes of the variant
+    :type lanes: List of VariantLane
+    :param interactions: The interactions of the variant
+    :type interactions: List of InteractionPoints
+    :return: A list of sets of lanes that can be merged
+    :rtype: List
+    '''
     result = []
     
     for lane1 in lanes:
@@ -26,6 +34,21 @@ def get_candidates(lanes, interactions):
     return result
 
 def branch_on_candidates(variant, remaining_candidates, init_summarization, level, print_result):
+    '''
+    Visits one node in the candidate tree, summarizes the current merging candidate and recurses on subtrees
+    :param variant: The variant to be summarized
+    :type variant: ExtractedVariant
+    :param remaining_candidates: The merging candidates that have not yet been merged
+    :type remaining_candidates: List
+    :param init_summarization: Stores the current state of the within-variant summarization, namely the summarized lanes thus far and the corresponding mappings of interaction points
+    :type init_summarization: Dictionary
+    :param level: The current depth in the tree
+    :type level: Integer
+    :param print_result: Whether or not the print commands should be executed
+    :type print_result: Boolean
+    :return: The summarization of the current candidate joined with the results from the child nodes
+    :rtype: List
+    '''
     import copy
     current_summarization = copy.deepcopy(init_summarization)
     print("------------------------------------------")
@@ -37,28 +60,28 @@ def branch_on_candidates(variant, remaining_candidates, init_summarization, leve
         current_summarization["Lanes"].append(summarized_lane)
         current_summarization["Mappings"].append((summarized_lane.lane_id, new_mappings))
 
+    # Check for redundancies
+        for i in range(len(current_summarization["Lanes"])-1):
+            for j in range(i+1, len(current_summarization["Lanes"])):
+                summary1 = current_summarization["Lanes"][i]
+                summary2 = current_summarization["Lanes"][j]
+                if(summary1.same_summarization(summary2) or summary1.subsumed_summarization(summary2)):
+                    if(print_result):
+                        print("----")
+                        print("Redundancy found, pruning subtree!")
+                        print("\n")
+                    return None
+
     # Recursive call
     if (len(remaining_candidates) == 0):
         print("----")
         print("Leaf node reached!")
         print("\n")
         return [current_summarization]
+
     else:
-
-        # Check Redundancy
-        for i in range(len(current_summarization["Lanes"])-1):
-            for j in range(i+1, len(current_summarization["Lanes"])):
-                summary1 = current_summarization["Lanes"][i]
-                summary2 = current_summarization["Lanes"][j]
-                if(summary1.same_summarization(summary2) or summary1.subsumed_summarization(summary2)):
-                    print("----")
-                    print("Redundancy found, pruning subtree!")
-                    print("\n")
-                    return None
-
-
         result = []
-        for candidate in SU.get_partitions(remaining_candidates[0]):
+        for candidate in get_partitions(remaining_candidates[0]):
             current_summarization["Candidate"] = candidate
             subtree_result = branch_on_candidates(variant, remaining_candidates[1:], (current_summarization), level+1, print_result)
             if(subtree_result != None):
@@ -66,28 +89,43 @@ def branch_on_candidates(variant, remaining_candidates, init_summarization, leve
         print("\n")
         return result
 
+
 def within_variant_summarization(variant, print_result = True):
+    '''
+    Yields all unique valid summarizations of a given variant
+    :param variant: The variant that is to be generalized
+    :type variant: ExtractedVariant
+    :param print_result: Whether or not the print commands should be executed
+    :type print_result: Boolean
+    :return: A list of all unique valid summarizations of the variant
+    :rtype: SummarizedLane
+    '''
+
+    # Initialize candidate parameters 
     all_candidates = get_candidates(variant.lanes, variant.interaction_points)
-    first_choice =  SU.get_partitions(all_candidates[0])
+    first_choice =  get_partitions(all_candidates[0])
     all_summarizations = []
     init_summary = {}
     init_summary["Lanes"] = []
     init_summary["Mappings"] = []
+
+    # Traverse tree of candidates
     for partition in first_choice:
         init_summary["Candidate"] = partition
         subtree_result = branch_on_candidates(variant, all_candidates[1:], init_summary, 1, print_result)
         if(subtree_result != None):
             all_summarizations.extend(subtree_result)
 
-    
+    # Re-align summarizations
     result = []
     for summarization in all_summarizations:
-        print("-------------------")
-        for lane in summarization["Lanes"]:
-            print(lane)
-        #result_lanes, result_interaction_points = re_align_lanes(summarization["Lanes"], merge_interaction_mappings(summarization["Mappings"]),False)
-        #result.append(SVD.SummarizedVariant(result_lanes, variant.object_types, result_interaction_points))
-    
+        result_lanes, result_interaction_points = re_align_lanes(summarization["Lanes"], merge_interaction_mappings(summarization["Mappings"]), print_result)
+        result.append(SVD.SummarizedVariant(result_lanes, variant.object_types, result_interaction_points))
+
+        if(print_result):
+            print(result[-1])
+            print("-------------------")
+
     return result
 
 
@@ -103,11 +141,10 @@ def between_lane_summarization(lanes, interactions, print_result):
     :return: The summarization of the given lanes
     :rtype: SummarizedLane
     '''
-    common_activities = SU.max_order_preserving_common_activities(lanes)
+    common_activities = max_order_preserving_common_activities(lanes)
 
     # Initializing the values for the summarized lanes object
     elements = []
-    horizontal_indices = []
     object_type = lanes[0].object_type
     lane_name = lanes[0].object_type + " i"
     lane_id = tuple([lane.lane_id for lane in lanes])
@@ -131,9 +168,8 @@ def between_lane_summarization(lanes, interactions, print_result):
             interval_subprocesses.append((lanes[j].activities[start_index:end_index],lanes[j].horizontal_indices[start_index:end_index]))
         
         # Add summarized subprocess to elements
-        interval_elements, interval_length = apply_patterns(interval_subprocesses, print_result)
+        interval_elements, interval_length = apply_patterns(interval_subprocesses, current_horizontal_index, print_result)
         elements.extend(interval_elements)
-        horizontal_indices.extend(list(range(current_horizontal_index, current_horizontal_index + interval_length)))
         current_horizontal_index += interval_length
                      
         # Add the common activity to the elements of the summarized lane
@@ -150,9 +186,9 @@ def between_lane_summarization(lanes, interactions, print_result):
         if (is_interacting_activity):
             for index in (set(list(common_activities.values())[i])):
                 new_interaction_points_mapping[(index, str(interaction_point.interaction_lanes))] = current_horizontal_index
-        
-        elements.append(SVD.CommonConstruct(list(common_activities.keys())[i],len(lanes)))
-        horizontal_indices.append(current_horizontal_index)
+            elements.append(SVD.InteractionConstruct(list(common_activities.keys())[i], len(lanes), current_horizontal_index))
+        else:
+            elements.append(SVD.CommonConstruct(list(common_activities.keys())[i], len(lanes), current_horizontal_index))
         current_horizontal_index += 1
             
         # Update indices for the next iteration
@@ -172,15 +208,14 @@ def between_lane_summarization(lanes, interactions, print_result):
         interval_subprocesses.append((lanes[j].activities[start_index:],lanes[j].horizontal_indices[start_index:]))
     
     # Add summarized subprocess to elements
-    interval_elements, interval_length = apply_patterns(interval_subprocesses, print_result)
+    interval_elements, interval_length = apply_patterns(interval_subprocesses, current_horizontal_index, print_result)
     elements.extend(interval_elements)
-    horizontal_indices.extend(list(range(current_horizontal_index, current_horizontal_index + interval_length)))
     current_horizontal_index += interval_length
         
-    return SVD.SummarizedLane(lane_id, lane_name, object_type, elements, horizontal_indices, len(lanes)), new_interaction_points_mapping
+    return SVD.SummarizedLane(lane_id, lane_name, object_type, elements, len(lanes)), new_interaction_points_mapping
 
 
-def apply_patterns(activities, print_result):
+def apply_patterns(activities, start_index, print_result):
     '''
     Determines an applicable pattern (Optional Pattern or Exclusive Choice Pattern) for a set of activity sequences 
     and their current indices
@@ -205,105 +240,41 @@ def apply_patterns(activities, print_result):
     elements = []
     length = 0
     
-    if(SU.check_optional_pattern(activities)):
+    # Determine choices and their frequencies
+    choice_activities = [activity_list for activity_list in activities]
+    longest_option = max([choice[0] for choice in choice_activities], key=len)
+    length = len(longest_option)
+    unique_choice_sequences = [list(sequence) for sequence in set(tuple(sequence) for sequence in [option[0] for option in choice_activities]) if list(sequence) != []]
+    frequencies = []
+    for choice in unique_choice_sequences:
+        frequency = 0
+        for sequence in choice_activities:
+            if (choice == sequence):
+                frequency += 1
+        frequencies.append(frequency)
         
-        optional_activities = [activity_list for activity_list in activities if activity_list[0]]
-        frequency = sum([1 for activity_list in activities if activity_list[0]])
-        for i in range(len(optional_activities[0][0])):
-            
-            if(print_result):
-            # Output printing
-                print("\n")
-                print("Adding the optional activity: ")
-                print(optional_activities[0][0][i])
-            
-            # Storing the new positions of the interaction points
-            indices = tuple()
-            for j in range(len(optional_activities)):
-                indices += (optional_activities[j][1][i],)
-            
-            # Adding Construct
-            elements.append(SVD.OptionalConstruct([optional_activities[0][0][i]],[frequency]))
-            length += 1
-            
-        return elements, length
-    
+    # Adding Construct
+    if([] in choice_activities):
+        if(print_result):
+
+        # Output printing
+            print("\n")
+            print("Adding a optional choice element between the following sequences.")
+            print(unique_choice_sequences)
+
+        elements.append(SVD.OptionalConstruct(unique_choice_sequences, frequencies, start_index, start_index+length-1))
+
     else:
-        # Determine choices and their frequencies
-        choice_activities = [activity_list for activity_list in activities]
-        longest_option = max([choice[0] for choice in choice_activities], key=len)
-        length = len(longest_option)
-        unique_choice_sequences = [list(sequence) for sequence in set(tuple(sequence) for sequence in [option[0] for option in choice_activities]) if list(sequence) != []]
-        frequencies = []
-        for choice in unique_choice_sequences:
-            frequency = 0
-            for sequence in choice_activities:
-                if (choice == sequence):
-                    frequency += 1
-            frequencies.append(frequency)
-        
-        # Adding Construct
-        if([] in choice_activities):
-            if(print_result):
-            # Output printing
-                print("\n")
-                print("Adding a optional choice element between the following sequences. Must be extracted afterwards.")
-                print(unique_choice_sequences)
-            elements.append(SVD.GenericOptionalChoiceConstruct(unique_choice_sequences, frequencies, length, 0))
-        else:
-            if(print_result):
-            # Output printing
-                print("\n")
-                print("Adding a choice element between the following sequences. Must be extracted afterwards.")
-                print(unique_choice_sequences)
-            elements.append(SVD.GenericChoiceConstruct(unique_choice_sequences, frequencies, length, 0))
 
-        # Add the corresponding choices
-        #for i in range(len(longest_option)):
-            
-            # Determine the activity at index i for each choice
-            #choice = []
-            #for j in range(len(unique_choice_sequences)):
-                #if (i < len(unique_choice_sequences[j])):
-                    #choice.append(unique_choice_sequences[j][i])
-                #else:
-                    #choice.append("")
-            #choice = list(set(choice))                
-                
-            # Determine frequency
-            #frequencies = []
-            #for c in choice:
-                #if(c != ""):
-                    #frequency = 0
-                    #for j in range(len(choice_activities)):   
-                        #if(len(choice_activities[j][0])>i):
-                            #if(choice_activities[j][0][i] == c):
-                                #frequency += 1
-                    #frequencies.append(frequency)
-                        
-            #if("" in choice):
-                #if(print_result):
-                    # Output printing
-                    #print("\n")
-                    #print("Adding the optional choice activities: ")
-                    #print([c for c in choice if c != ""])
-            
-            # Adding Construct
-                #elements.append(SVD.OptionalConstruct([c for c in choice if c != ""], frequencies))
-                #length += 1
+        if(print_result):
+            # Output printing
+            print("\n")
+            print("Adding a choice element between the following sequences.")
+            print(unique_choice_sequences)
 
-            #else:     
-                #if(print_result):
-                    # Output printing
-                    #print("\n")
-                    #print("Adding the choice between the following activity: ")
-                    #print(choice)
+        elements.append(SVD.ChoiceConstruct(unique_choice_sequences, frequencies, start_index, start_index+length-1))
             
-                # Adding Construct
-                #elements.append(SVD.ChoiceConstruct(choice,frequencies))
-                #length += 1
-            
-        return elements, length
+    return elements, length
 
 
 def merge_interaction_mappings(mappings):
@@ -372,9 +343,10 @@ def re_align_lanes(lanes, mappings, print_result):
                 # Shift indices by the offset
                 current_position = updated_mappings[earliest_interaction_point[0]][lane.lane_id]
                 offset = target_position - current_position
+                element = lane.get_element(current_position)
+                lane.shift_lane(element, offset)
                 if(print_result):
-                    print("We have shifted lane " + lane.lane_name + " by " + str(offset) + " starting from activity " + str(lane.elements[lane.horizontal_indices.index(current_position)]) + ".")
-                lane.update_indices(lane.horizontal_indices.index(current_position),offset)
+                    print("We have shifted lane " + lane.lane_name + " by " + str(offset) + " starting from activity " + str(element) + ".")
                 
                 
                 # Update all values in the dictionary accordingly
@@ -386,3 +358,71 @@ def re_align_lanes(lanes, mappings, print_result):
         updated_interaction_points.append(IED.InteractionPoint(name, lanes, types, position))
         
     return aligned_lanes, updated_interaction_points
+
+
+def max_order_preserving_common_activities(lanes):
+    '''
+    Extracts the longest sequence od activities found in all lanes, preserving their order
+    :param lanes: Multiple sequences of activities
+    :type lanes: list of VariantLane
+    :return: the longest order preserving common activity sequence and their indices in the variant
+    :rtype: dict
+    '''
+    # Initialization, copy elements
+    activity_sets = []
+    l = [lane.activities for lane in lanes]
+    base_lane = l[0]
+    base_indices = lanes[0].horizontal_indices
+    
+    # Retrieves all common sublists that ensure the precise order
+    for i in range(len(base_lane)):
+        
+        # Keeping track of the original indices and the remaining sublists
+        comparison = [] 
+        indices = []
+        for lane in range(1,len(l)):
+            comparison.append(lanes[lane].activities)
+            indices.append(lanes[lane].horizontal_indices)
+            
+        set = dict()
+        
+        # For each activity in base lane as starting point find the list of activities
+        # that appear in all other lanes
+        for j in range(i,len(base_lane)):
+            if (all(base_lane[j] in lane for lane in comparison[0:])):
+
+                #Create result tuple
+                indices_of_lane = ()
+                indices_of_lane = indices_of_lane + (base_indices[j],)
+                
+                # Add the corresponding index for each other variant and adjust the lists
+                for k in range(len(comparison)):
+                    indices_of_lane = indices_of_lane + (indices[k][comparison[k].index(base_lane[j])],)
+                    indices[k] = indices[k][comparison[k].index(base_lane[j])+1:]
+                    comparison[k] = comparison[k][comparison[k].index(base_lane[j])+1:]
+                
+                set[base_lane[j]] = indices_of_lane
+        activity_sets.append(set)
+        
+    # Return the maximal list of activities for optimality
+    return max(activity_sets, key=len)
+
+
+def partition(collection):
+    if len(collection) == 1:
+        yield [collection]
+        return
+
+    first = collection[0]
+    for smaller in partition(collection[1:]):
+        # insert `first` in each of the subpartition's subsets
+        for n, subset in enumerate(smaller):
+            yield smaller[:n] + [[first] + subset]  + smaller[n+1:]
+        # put `first` in its own subset 
+        yield [ [ first ] ] + smaller
+
+def get_partitions(candidate):
+    partitions = []
+    for n, p in enumerate(partition(list(candidate)), 1):
+        partitions.append(p)
+    return(partitions)

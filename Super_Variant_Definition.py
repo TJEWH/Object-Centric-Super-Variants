@@ -29,31 +29,24 @@ class SummarizedLane:
     object_type = ""
     lane_name = ""
     elements = []
-    horizontal_indices = []
-    frequency = 0 
+    cardinality = 0 
     
-    def __init__(self, lane_id, name, object_type, elements, indices, frequency):
+    def __init__(self, lane_id, name, object_type, elements, cardinality):
         self.lane_id = lane_id
         self.object_type = object_type
         self.lane_name = name
         self.elements = elements
-        self.horizontal_indices = indices
-        self.frequency = frequency
+        self.cardinality = cardinality
     
     def __str__(self):
         result_string = f"ID: {self.lane_id}, Name: {self.lane_name}: ["
         for i in range(len(self.elements)):
-            result_string += "(Pos: " + str(self.horizontal_indices[i]) + ", " + str(self.elements[i]) + "),"       
+            result_string += str(self.elements[i]) + ","       
         result_string = result_string[:-1]
         return result_string + "]"
-    
-    
-    def update_indices(self, start_index, offset):
-        for i in range(start_index, len(self.horizontal_indices)):
-            self.horizontal_indices[i] += offset
 
     def same_summarization(self, summarization):
-        if(summarization.object_type != self.object_type or len(self.horizontal_indices) != len(summarization.horizontal_indices)):
+        if(summarization.object_type != self.object_type or len(self.elements) != len(summarization.elements)):
             return False
         else:
             result = True
@@ -62,11 +55,11 @@ class SummarizedLane:
             return result
     
     def subsumed_summarization(self, summarization):
-        if(summarization.object_type != self.object_type or len(self.horizontal_indices) != len(summarization.horizontal_indices)):
+        if(summarization.object_type != self.object_type or len(self.elements) != len(summarization.elements)):
             return False
         result = False
-        self_contains_choice = any(isinstance(x, GenericChoiceConstruct) for x in self.elements) or any(isinstance(x, GenericOptionalChoiceConstruct) for x in self.elements)
-        other_contains_choice = any(isinstance(x, GenericChoiceConstruct) for x in summarization.elements) or any(isinstance(x, GenericOptionalChoiceConstruct) for x in summarization.elements)
+        self_contains_choice = any(isinstance(x, ChoiceConstruct) for x in self.elements) or any(isinstance(x, OptionalConstruct) for x in self.elements)
+        other_contains_choice = any(isinstance(x, ChoiceConstruct) for x in summarization.elements) or any(isinstance(x, OptionalConstruct) for x in summarization.elements)
         if(self_contains_choice and not other_contains_choice):
             realizations = self.get_realizations()
             for realization in realizations:
@@ -91,65 +84,102 @@ class SummarizedLane:
 
             #result = set(result1) == set(result2)
                 
-
         return result
 
     def get_realizations(self):
         realizations = []
         realizations.append([])
         for element in self.elements:
-            if(type(element) == CommonConstruct):
+            if(type(element) == CommonConstruct or type(element) == InteractionConstruct):
                 realizations = [realization + [element] for realization in realizations]
-            if(type(element) == GenericChoiceConstruct or type(element) == GenericOptionalChoiceConstruct):
+            if(type(element) == ChoiceConstruct or type(element) == OptionalConstruct):
                 intermediate_result = []
                 for choice in element.choices:
-                    sublist = [CommonConstruct(choice[i], None) for i in range(len(choice))]
+                    sublist = [CommonConstruct(choice[i], None, 0) for i in range(len(choice))]
                     intermediate_result.extend([realization + sublist for realization in realizations])
                 realizations = intermediate_result
         result = []
         for i in range(len(realizations)):
-            result.append(SummarizedLane(i, "realization " + str(i), self.object_type, realizations[i], range(len(realizations[i])), None))
+            index = 0
+            for element in realizations[i]:
+                element.position = index
+                index += 1
+            result.append(SummarizedLane(i, "realization " + str(i), self.object_type, realizations[i], None))
         return result
 
 
+    def get_element(self, position):
+        for element in self.elements:
+            if((type(element) == CommonConstruct or type(element) == InteractionConstruct) and element.position == position):
+                return element
+            if((type(element) == ChoiceConstruct or type(element) == OptionalConstruct) and position >= element.position_start and position <= element.position_end):
+                return element
+        return None
 
+    
+    def shift_lane(self, start_element, offset):
+        index = self.elements.index(start_element)
+        for i in range(index, len(self.elements)):
+            if(type(self.elements[i]) == CommonConstruct or type(self.elements[i]) == InteractionConstruct):
+                self.elements[i].position += offset
+            if(type(self.elements[i]) == ChoiceConstruct or type(self.elements[i]) == OptionalConstruct):
+                self.elements[i].position_start += offset
+                self.elements[i].position_end += offset
+        
+        
 
                     
 
 
             
-class SummarizedConstruct:
+class VariantElement:
     '''The data structure the elements of a summarized variant'''
 
-class CommonConstruct(SummarizedConstruct):
+class CommonConstruct(VariantElement):
     '''The data structure of common activities in a summarized variant'''
     activity = ""
     frequency = 0
+    position = 0
     
-    def __init__(self, activity, frequency):
+    def __init__(self, activity, frequency, position):
         self.activity = activity
         self.frequency = frequency
+        self.position = position
         
     def __str__(self):
-        return f"{self.activity}"
+        return f"(Pos {self.position}: {self.activity})"
     
     def __eq__(self, other):
         if isinstance(other, self.__class__):
             return self.activity == other.activity
         return False
 
-    
-class OptionalConstruct(SummarizedConstruct):
-    '''The data structure of an optional activity in a summarized variant'''
-    options = []
-    frequencies = []
-    
-    def __init__(self, options, frequencies):
-        self.options = options
-        self.frequencies = frequencies
+class InteractionConstruct(CommonConstruct):
     
     def __str__(self):
-        return f"Optional {self.options}"
+        return f"(Pos {self.position}: Interaction {self.activity})"
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.activity == other.activity
+        return False
+
+    
+class OptionalConstruct(VariantElement):
+    '''The data structure of an optional activity in a summarized variant'''
+    choices = []
+    frequencies = []
+    position_start = 0
+    position_end = 0
+    
+    def __init__(self, options, frequencies, start, end):
+        self.options = options
+        self.frequencies = frequencies
+        self.position_start = start
+        self.position_end = end
+    
+    def __str__(self):
+        return f"(Pos: {self.position_start} - {self.position_end}: Optional {self.options})"
     
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -157,85 +187,47 @@ class OptionalConstruct(SummarizedConstruct):
         return False
 
     
-class ChoiceConstruct(SummarizedConstruct):
+class ChoiceConstruct(VariantElement):
     '''The data structure of a choice of activities in a summarized variant'''
     choices = []
     frequencies = []
+    position_start = 0
+    position_end = 0
     
-    def __init__(self, choices, frequencies):
+    def __init__(self, choices, frequencies, start, end):
         self.choices = choices
         self.frequencies = frequencies
+        self.position_start = start
+        self.position_end = end
         
     def __str__(self):
-        return f"Choices {self.choices}"
+        return f"(Pos: {self.position_start} - {self.position_end}: Optional {self.choices})"
     
     def __eq__(self, other):
         if isinstance(other, self.__class__):
             return self.choices == other.choices
         return False
-
-class GenericChoiceConstruct:
-    choices = []
-    frequencies = []
-    length = 0
-    position = 0 
-
-    def __init__(self, choices, frequencies, length, position):
-        self.choices = choices
-        self.frequencies = frequencies
-        self.length = length
-        self.position = position
-    
-    def __eq__(self, other):
-        if isinstance(other, self.__class__):
-            return self.choices == other.choices
-        return False
-
-    def __str__(self):
-        return f"Choices {self.choices}"
-
-class GenericOptionalChoiceConstruct:
-    choices = []
-    frequencies = []
-    length = 0
-    position = 0 
-
-    def __init__(self, choices, frequencies, length, position):
-        self.choices = choices
-        self.frequencies = frequencies
-        self.length = length
-        self.position = position
-    
-    def __eq__(self, other):
-        if isinstance(other, self.__class__):
-            return self.choices == other.choices
-        return False
-
-    def __str__(self):
-        return f"Choices {self.choices}"
 
 
 def convert_to_summarized_format(lane):
     '''
-    Converts a single line that needs no summarization to the desired format
+    Converts a single lane that needs no summarization to the desired format
     :param lane: The single flattened lane of one involved object
     :type lane: Lane
     :return: single lane converted into a summarized format
-    :rtype:SummarizedLane
+    :rtype: SummarizedLane
     '''
     elements = []
-    indices = []
     for i in range(len(lane.activities)):
-        elements.append(CommonConstruct(lane.activities[i],1))
-        indices.append(lane.horizontal_indices[i])
+        elements.append(CommonConstruct(lane.activities[i], 1, i))
     
-    result = SummarizedLane(tuple()+(lane.lane_id,), lane.object_type ,lane.object_type, elements, indices)
+    result = SummarizedLane(tuple()+(lane.lane_id,), lane.object_type ,lane.object_type, elements)
     return result
 
 
 def is_interaction_point(interactions, activity_name, positions):
     '''
-    Determines whether one of the merged original activities of a summarized activity is an interaction point
+    Determines whether the merged set of activities was an interaction point
     :param interactions: The interaction points of the variant
     :type interaction: List of type InteractionPoint
     :param activity_name: The name of the activity that is checked
@@ -271,12 +263,13 @@ def summarized_variant_layouting(summarized_variant):
     activities = []
     for lane in summarized_variant.lanes:
         for i in range(len(lane.elements)):
-            interactions = [lane.lane_id]
-            for interactionPoint in summarized_variant.interaction_points:
-                if(lane.lane_id in interactionPoint.interaction_lanes and lane.horizontal_indices[i] == interactionPoint.index_in_lanes):
-                    interactions.extend(interactionPoint.interaction_lanes)
+            if(type(lane.elements[i]) == CommonConstruct):
+                interactions = [lane.lane_id]
+                for interactionPoint in summarized_variant.interaction_points:
+                    if(lane.lane_id in interactionPoint.interaction_lanes and lane.elements[i].position == interactionPoint.index_in_lanes):
+                        interactions.extend(interactionPoint.interaction_lanes)
 
-            activities.append([lane.elements[i],[[lane.horizontal_indices[i],lane.horizontal_indices[i]],list(set(interactions))]])
+            activities.append([lane.elements[i],[[lane.elements[i].position, lane.elements[i].position],list(set(interactions))]])
     
     # Remove duplicate activities that are interaction points
     unique_activities = []
