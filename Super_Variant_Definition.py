@@ -19,8 +19,85 @@ class SummarizedVariant:
             result_string += str(self.interaction_points[i]) + "\n"
         return result_string
     
-    def __eq__(self, other):
-        return
+    def equals(self, other):
+        return ((self.encode_lexicographically()) == (other.encode_lexicographically()))
+
+    def encode_lexicographically(self):
+
+        mapping = {}
+        
+        total_order_objects = [str(object) for object in list(self.object_types)]
+        total_order_objects.sort()
+
+        encoded_result = []
+        for object in total_order_objects:
+
+            object_lanes = [lane for lane in self.lanes if lane.object_type == object]
+            encoded_lanes = []
+            id = 0
+            for lane in object_lanes:
+                encoding = ""
+                for element in lane.elements:
+                    if(type(element) == CommonConstruct):
+                        encoding += f"CO[{element.position}:{element.position}, {element.activity}] "
+
+                    elif(type(element) == InteractionConstruct):
+                        encoding += f"IP[{element.position}:{element.position}, {element.activity}] "
+                        
+                    else:
+                        choices = []
+                        for choice in element.choices:
+                            sequence = ""
+                            for i in range(len(choice)):
+                                sequence += str(choice[i])
+                            choices.append(sequence)
+                        choices_encoding = ""
+                        for choice in choices:
+                            choices_encoding += choice
+                            choices_encoding += ", "
+                        choices_encoding = choices_encoding[:-2]
+
+                        if(type(element) == ChoiceConstruct):
+                            encoding += f"CH[{element.position_start}:{element.position_end}, [{choices_encoding}]] "
+                        
+                        elif(type(element) == OptionalConstruct):
+                            encoding += f"OP[{element.position_start}:{element.position_end}, [{choices_encoding}]] "
+        
+
+                encoded_lanes.append(str(id) + encoding)
+                mapping[str(id) + encoding] = (lane.lane_id,0)
+                id += 1
+
+            encoded_lanes.sort(key = lambda x: x[1:])
+
+            for i in range(len(encoded_lanes)):
+                lane_id = mapping[encoded_lanes[i]][0]
+                mapping[encoded_lanes[i]]= (lane_id,object + " " + str(i))
+                encoded_lanes[i] = object + " " + str(i) + ": " + encoded_lanes[i][1:]
+
+            encoded_result.extend(encoded_lanes)
+
+        mapping = dict((x, y) for x, y in list(mapping.values()))
+
+        interactions_result = []
+        for interaction in self.interaction_points:
+            interacting_lanes = [mapping[lane_id] for lane_id in interaction.interaction_lanes]
+            interacting_lanes.sort()
+            lanes_encoding = "".join(str(x)+", " for x in interacting_lanes)
+            lanes_encoding = lanes_encoding[:-2]
+            encoding = f"IP[{interaction.index_in_lanes},[{lanes_encoding}]] "
+            interactions_result.append(encoding)
+        
+        interactions_result.sort() 
+
+        result = ""
+        for encoded_lane in encoded_result:
+            result += encoded_lane
+        result += "- "
+        for encoded_ip in interactions_result:
+            result += encoded_ip
+        return result
+ 
     
     
 class SummarizedLane:
@@ -45,6 +122,7 @@ class SummarizedLane:
         result_string = result_string[:-1]
         return result_string + "]"
 
+
     def same_summarization(self, summarization):
         if(summarization.object_type != self.object_type or len(self.elements) != len(summarization.elements)):
             return False
@@ -68,21 +146,16 @@ class SummarizedLane:
             realizations = summarization.get_realizations()
             for realization in realizations:
                 result = result or realization.same_summarization(self)
-        #else:
-            #realizations1 = self.get_realizations()
-            #realizations2 = summarization.get_realizations()
-
-            #result1 = []
-            #for i in range(len(realizations1)):
-            #    sequence_list = [element.activity for element in realizations1[i].elements]
-            #    result1.append(sequence_list)
-
-            #result2 = []
-            #for i in range(len(realizations2)):
-            #    sequence_list = [element.activity for element in realizations2[i].elements]
-            #    result2.append(sequence_list)
-
-            #result = set(result1) == set(result2)
+        else:
+            realizations1 = self.get_realizations()
+            realizations2 = summarization.get_realizations()
+            subsumed_in_2 = True
+            subsumed_in_1 = True
+            for realization in realizations1:
+                subsumed_in_2 = subsumed_in_2 and any([realization.same_summarization(other) for other in realizations2])
+            for realization in realizations2:
+                subsumed_in_1 = subsumed_in_1 and any([realization.same_summarization(other) for other in realizations1])
+            result = (subsumed_in_2 or subsumed_in_1)
                 
         return result
 
@@ -124,12 +197,7 @@ class SummarizedLane:
                 self.elements[i].position += offset
             if(type(self.elements[i]) == ChoiceConstruct or type(self.elements[i]) == OptionalConstruct):
                 self.elements[i].position_start += offset
-                self.elements[i].position_end += offset
-        
-        
-
-                    
-
+                self.elements[i].position_end += offset      
 
             
 class VariantElement:
@@ -172,18 +240,18 @@ class OptionalConstruct(VariantElement):
     position_start = 0
     position_end = 0
     
-    def __init__(self, options, frequencies, start, end):
-        self.options = options
+    def __init__(self, choices, frequencies, start, end):
+        self.choices = choices
         self.frequencies = frequencies
         self.position_start = start
         self.position_end = end
     
     def __str__(self):
-        return f"(Pos: {self.position_start} - {self.position_end}: Optional {self.options})"
+        return f"(Pos: {self.position_start} - {self.position_end}: Optional {self.choices})"
     
     def __eq__(self, other):
         if isinstance(other, self.__class__):
-            return self.options == other.options
+            return self.choices == other.choices
         return False
 
     
@@ -201,7 +269,7 @@ class ChoiceConstruct(VariantElement):
         self.position_end = end
         
     def __str__(self):
-        return f"(Pos: {self.position_start} - {self.position_end}: Optional {self.choices})"
+        return f"(Pos: {self.position_start} - {self.position_end}: Choice {self.choices})"
     
     def __eq__(self, other):
         if isinstance(other, self.__class__):

@@ -51,11 +51,13 @@ def branch_on_candidates(variant, remaining_candidates, init_summarization, leve
     '''
     import copy
     current_summarization = copy.deepcopy(init_summarization)
-    print("------------------------------------------")
-    print("Current Level: " + str(level))
+    if(print_result):
+        print("------------------------------------------")
+        print("Current Level: " + str(level))
     for partition in current_summarization["Candidate"]:
-        print("----")
-        print("Summarizing Lanes: " + str([lane.lane_id for lane in partition]))
+        if(print_result):
+            print("----")
+            print("Summarizing Lanes: " + str([lane.lane_id for lane in partition]))
         summarized_lane, new_mappings = between_lane_summarization(partition, variant.interaction_points, print_result)
         current_summarization["Lanes"].append(summarized_lane)
         current_summarization["Mappings"].append((summarized_lane.lane_id, new_mappings))
@@ -74,9 +76,10 @@ def branch_on_candidates(variant, remaining_candidates, init_summarization, leve
 
     # Recursive call
     if (len(remaining_candidates) == 0):
-        print("----")
-        print("Leaf node reached!")
-        print("\n")
+        if(print_result):
+            print("----")
+            print("Leaf node reached!")
+            print("\n")
         return [current_summarization]
 
     else:
@@ -86,7 +89,8 @@ def branch_on_candidates(variant, remaining_candidates, init_summarization, leve
             subtree_result = branch_on_candidates(variant, remaining_candidates[1:], (current_summarization), level+1, print_result)
             if(subtree_result != None):
                 result.extend(subtree_result)
-        print("\n")
+        if(print_result):
+            print("\n")
         return result
 
 
@@ -119,11 +123,11 @@ def within_variant_summarization(variant, print_result = True):
     # Re-align summarizations
     result = []
     for summarization in all_summarizations:
-        result_lanes, result_interaction_points = re_align_lanes(summarization["Lanes"], merge_interaction_mappings(summarization["Mappings"]), print_result)
-        result.append(SVD.SummarizedVariant(result_lanes, variant.object_types, result_interaction_points))
+        #result_lanes, result_interaction_points = re_align_lanes(summarization["Lanes"], merge_interaction_mappings(summarization["Mappings"]), print_result)
+        #result.append(SVD.SummarizedVariant(result_lanes, variant.object_types, result_interaction_points))
 
         if(print_result):
-            print(result[-1])
+            #print(result[-1])
             print("-------------------")
 
     return result
@@ -241,10 +245,10 @@ def apply_patterns(activities, start_index, print_result):
     length = 0
     
     # Determine choices and their frequencies
-    choice_activities = [activity_list for activity_list in activities]
-    longest_option = max([choice[0] for choice in choice_activities], key=len)
+    choice_activities = [activity_list[0] for activity_list in activities]
+    longest_option = max(choice_activities, key=len)
     length = len(longest_option)
-    unique_choice_sequences = [list(sequence) for sequence in set(tuple(sequence) for sequence in [option[0] for option in choice_activities]) if list(sequence) != []]
+    unique_choice_sequences = [list(sequence) for sequence in set(tuple(sequence) for sequence in choice_activities) if list(sequence) != []]
     frequencies = []
     for choice in unique_choice_sequences:
         frequency = 0
@@ -325,8 +329,8 @@ def re_align_lanes(lanes, mappings, print_result):
         earliest_interaction_point = min(updated_mappings.items(), key=lambda x: list(x[1].values()))
         if(print_result):
             print("We have an interaction at the following points in the interacting lanes: " + str(earliest_interaction_point[1]))
-        name = earliest_interaction_point[0][1]
         lanes = [lane.lane_id for lane in aligned_lanes if lane.lane_id in list(earliest_interaction_point[1].keys())]
+        name = aligned_lanes[0].get_element(earliest_interaction_point[1][aligned_lanes[0].lane_id]).activity
         types = list(earliest_interaction_point[1].keys())
         
         if(len(set(list(earliest_interaction_point[1].values()))) == 1):
