@@ -51,6 +51,8 @@ def branch_on_candidates(variant, remaining_candidates, init_summarization, leve
     '''
     import copy
     current_summarization = copy.deepcopy(init_summarization)
+    new_lanes = []
+    new_mappings = []
     if(print_result):
         print("------------------------------------------")
         print("Current Level: " + str(level))
@@ -58,21 +60,24 @@ def branch_on_candidates(variant, remaining_candidates, init_summarization, leve
         if(print_result):
             print("----")
             print("Summarizing Lanes: " + str([lane.lane_id for lane in partition]))
-        summarized_lane, new_mappings = between_lane_summarization(partition, variant.interaction_points, print_result)
-        current_summarization["Lanes"].append(summarized_lane)
-        current_summarization["Mappings"].append((summarized_lane.lane_id, new_mappings))
+        summarized_lane, new_intermediate_mappings = between_lane_summarization(partition, variant.interaction_points, print_result)
+        new_lanes.append(summarized_lane)
+        new_mappings.append((summarized_lane.lane_id, new_intermediate_mappings))
 
     # Check for redundancies
-        for i in range(len(current_summarization["Lanes"])-1):
-            for j in range(i+1, len(current_summarization["Lanes"])):
-                summary1 = current_summarization["Lanes"][i]
-                summary2 = current_summarization["Lanes"][j]
+        for i in range(len(new_lanes)):
+            for j in range(i+1, len(new_lanes)):
+                summary1 = new_lanes[i]
+                summary2 = new_lanes[j]
                 if(summary1.same_summarization(summary2) or summary1.subsumed_summarization(summary2)):
                     if(print_result):
                         print("----")
                         print("Redundancy found, pruning subtree!")
                         print("\n")
                     return None
+
+    current_summarization["Lanes"].extend(new_lanes)
+    current_summarization["Mappings"].extend(new_mappings)
 
     # Recursive call
     if (len(remaining_candidates) == 0):
@@ -123,11 +128,14 @@ def within_variant_summarization(variant, print_result = True):
     # Re-align summarizations
     result = []
     for summarization in all_summarizations:
-        #result_lanes, result_interaction_points = re_align_lanes(summarization["Lanes"], merge_interaction_mappings(summarization["Mappings"]), print_result)
-        #result.append(SVD.SummarizedVariant(result_lanes, variant.object_types, result_interaction_points))
+        result_lanes, result_interaction_points = re_align_lanes(summarization["Lanes"], merge_interaction_mappings(summarization["Mappings"]), print_result)
+        result.append(SVD.SummarizedVariant(result_lanes, variant.object_types, result_interaction_points))
 
         if(print_result):
-            #print(result[-1])
+            print(result[-1])
+            #for lane in summarization["Lanes"]:
+                #print(lane)
+            #print(merge_interaction_mappings(summarization["Mappings"]))
             print("-------------------")
 
     return result
@@ -179,10 +187,10 @@ def between_lane_summarization(lanes, interactions, print_result):
         # Add the common activity to the elements of the summarized lane
         if(print_result):
             print("\n")
-            print("Adding the common activity: " + str(list(common_activities.keys())[i]))
+            print("Adding the common activity: " + str(list(common_activities.keys())[i][1]))
 
         # Checks if the common activity is an interaction point
-        is_interacting_activity, interaction_point = IED.is_interaction_point(interactions, list(common_activities.keys())[i], list(common_activities.values())[i])        
+        is_interacting_activity, interaction_point = IED.is_interaction_point(interactions, list(common_activities.keys())[i][1], list(common_activities.values())[i])        
         
         if(print_result):
             print("This is an interaction point: " + str(is_interacting_activity))
@@ -190,9 +198,9 @@ def between_lane_summarization(lanes, interactions, print_result):
         if (is_interacting_activity):
             for index in (set(list(common_activities.values())[i])):
                 new_interaction_points_mapping[(index, str(interaction_point.interaction_lanes))] = current_horizontal_index
-            elements.append(SVD.InteractionConstruct(list(common_activities.keys())[i], len(lanes), current_horizontal_index))
+            elements.append(SVD.InteractionConstruct(list(common_activities.keys())[i][1], len(lanes), current_horizontal_index))
         else:
-            elements.append(SVD.CommonConstruct(list(common_activities.keys())[i], len(lanes), current_horizontal_index))
+            elements.append(SVD.CommonConstruct(list(common_activities.keys())[i][1], len(lanes), current_horizontal_index))
         current_horizontal_index += 1
             
         # Update indices for the next iteration
@@ -329,8 +337,8 @@ def re_align_lanes(lanes, mappings, print_result):
         earliest_interaction_point = min(updated_mappings.items(), key=lambda x: list(x[1].values()))
         if(print_result):
             print("We have an interaction at the following points in the interacting lanes: " + str(earliest_interaction_point[1]))
-        lanes = [lane.lane_id for lane in aligned_lanes if lane.lane_id in list(earliest_interaction_point[1].keys())]
-        name = aligned_lanes[0].get_element(earliest_interaction_point[1][aligned_lanes[0].lane_id]).activity
+        lanes = [lane for lane in aligned_lanes if lane.lane_id in list(earliest_interaction_point[1].keys())]
+        name = lanes[0].get_element(earliest_interaction_point[1][lanes[0].lane_id]).activity
         types = list(earliest_interaction_point[1].keys())
         
         if(len(set(list(earliest_interaction_point[1].values()))) == 1):
@@ -359,7 +367,7 @@ def re_align_lanes(lanes, mappings, print_result):
                         updated_mappings[key][lane.lane_id] += offset
                 
         del updated_mappings[earliest_interaction_point[0]]
-        updated_interaction_points.append(IED.InteractionPoint(name, lanes, types, position))
+        updated_interaction_points.append(IED.InteractionPoint(name, [lane.lane_id for lane in lanes], types, position))
         
     return aligned_lanes, updated_interaction_points
 
@@ -393,7 +401,8 @@ def max_order_preserving_common_activities(lanes):
         # For each activity in base lane as starting point find the list of activities
         # that appear in all other lanes
         for j in range(i,len(base_lane)):
-            if (all(base_lane[j] in lane for lane in comparison[0:])):
+            
+            if (all(base_lane[j] in lane for lane in comparison)):
 
                 #Create result tuple
                 indices_of_lane = ()
@@ -405,7 +414,12 @@ def max_order_preserving_common_activities(lanes):
                     indices[k] = indices[k][comparison[k].index(base_lane[j])+1:]
                     comparison[k] = comparison[k][comparison[k].index(base_lane[j])+1:]
                 
-                set[base_lane[j]] = indices_of_lane
+                duplicate_key_set = [key for key in list(set.keys()) if key[1] == base_lane[j]]
+                if (len(duplicate_key_set) > 0):
+                    maximum = max([key[0] for key in duplicate_key_set])
+                    set[maximum+1, base_lane[j]] = (indices_of_lane)
+                else:
+                    set[0, base_lane[j]] = (indices_of_lane)
         activity_sets.append(set)
         
     # Return the maximal list of activities for optimality
