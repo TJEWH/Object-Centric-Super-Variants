@@ -1,15 +1,17 @@
 import Input_Extraction_Definition as IED
 import Within_Variant_Summarization as WVS
-from ocpa.visualization.log.variants import factory as variants_visualization_factory
 
 def get_unique_summarizations(process):
+    from ocpa.visualization.log.variants import factory as variants_visualization_factory
+    from tqdm.auto import tqdm
+
     variant_layouting = variants_visualization_factory.apply(process)
     all_unique_summarizations_dict = dict()
     all_unique_summarizations_set = []
     all_summarizations = []
 
-    for i in range(len(process.variants)):
-        print("Summarizing variant " + str(i) + " of the process...")
+    for i in tqdm(range(len(process.variants))):
+        print(' \n' + "Summarizing variant " + str(i) + " of the process...")
         extracted_variant = IED.extract_lanes(variant_layouting[process.variants[i]])
         extracted_summarizations = WVS.within_variant_summarization(extracted_variant, False)
 
