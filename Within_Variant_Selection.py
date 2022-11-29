@@ -12,15 +12,18 @@ def get_unique_summarizations(process):
 
     for i in tqdm(range(len(process.variants))):
         print(' \n' + "Summarizing variant " + str(i) + " of the process...")
-        extracted_variant = IED.extract_lanes(variant_layouting[process.variants[i]])
+        extracted_variant = IED.extract_lanes(variant_layouting[process.variants[i]], 0) # Extract the variants frequency
         extracted_summarizations = WVS.within_variant_summarization(extracted_variant, False)
 
         for summarization in extracted_summarizations:
             all_summarizations.append(summarization)
             encoding = summarization.encode_lexicographically()
+            print(summarization)
 
             if(encoding in all_unique_summarizations_dict.keys()):
                 all_unique_summarizations_dict[encoding][0].append(i)
+                # Join element frequencies in the summarization
+                # Update in both dictionary and set or store all summarizations in list
             else:
                 all_unique_summarizations_dict[encoding] = ([i], summarization)
                 all_unique_summarizations_set.append((encoding, summarization))

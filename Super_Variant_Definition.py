@@ -3,11 +3,13 @@ class SummarizedVariant:
     object_types = {}
     lanes = []
     interaction_points = []
+    frequency = 0 
     
-    def __init__(self, lanes, object_types, interaction_points):
+    def __init__(self, lanes, object_types, interaction_points, frequency):
         self.lanes = lanes
         self.object_types = object_types
         self.interaction_points = interaction_points
+        self.frequency = frequency 
     
     def __str__(self):
         result_string = "Lanes: \n"
@@ -17,7 +19,12 @@ class SummarizedVariant:
         result_string += "\nInteraction Points: \n"
         for i in range(len(self.interaction_points)):
             result_string += str(self.interaction_points[i]) + "\n"
-        return result_string
+        return result_string + "Frequency: " + str(self.frequency)
+
+    def rename_lane(self, lane_id, new_name):
+        for lane in self.lanes:
+            if(lane.lane_id == lane_id):
+                lane.lane_name = new_name
     
     def equals(self, other):
         return ((self.encode_lexicographically()) == (other.encode_lexicographically()))
@@ -36,7 +43,7 @@ class SummarizedVariant:
             encoded_lanes = []
             id = 0
             for lane in object_lanes:
-                encoding = ""
+                encoding = f"CAR {lane.cardinality}: "
                 for element in lane.elements:
                     if(type(element) == CommonConstruct):
                         encoding += f"CO[{element.position}:{element.position}, {element.activity}] "
@@ -72,7 +79,8 @@ class SummarizedVariant:
 
             for i in range(len(encoded_lanes)):
                 lane_id = mapping[encoded_lanes[i]][0]
-                mapping[encoded_lanes[i]]= (lane_id,object + " " + str(i))
+                mapping[encoded_lanes[i]]= (lane_id, object + " " + str(i))
+                self.rename_lane(lane_id, object + " " + str(i))
                 encoded_lanes[i] = object + " " + str(i) + ": " + encoded_lanes[i][1:]
 
             encoded_result.extend(encoded_lanes)
@@ -96,6 +104,8 @@ class SummarizedVariant:
         result += "- "
         for encoded_ip in interactions_result:
             result += encoded_ip
+        
+        self.lanes.sort(key = lambda x: x.lane_name)
         return result
  
     
@@ -106,7 +116,7 @@ class SummarizedLane:
     object_type = ""
     lane_name = ""
     elements = []
-    cardinality = 0 
+    cardinality = "0" 
     
     def __init__(self, lane_id, name, object_type, elements, cardinality):
         self.lane_id = lane_id
@@ -116,7 +126,7 @@ class SummarizedLane:
         self.cardinality = cardinality
     
     def __str__(self):
-        result_string = f"ID: {self.lane_id}, Name: {self.lane_name}: ["
+        result_string = f"ID: {self.lane_id}, Name: {self.lane_name}, Cardinality: {self.cardinality}:  ["
         for i in range(len(self.elements)):
             result_string += str(self.elements[i]) + ","       
         result_string = result_string[:-1]
@@ -232,9 +242,7 @@ class InteractionConstruct(CommonConstruct):
             return self.activity == other.activity
         return False
 
-    
-class OptionalConstruct(VariantElement):
-    '''The data structure of an optional activity in a summarized variant'''
+class GeneralChoiceStructure(VariantElement):
     choices = []
     frequencies = []
     position_start = 0
@@ -245,36 +253,25 @@ class OptionalConstruct(VariantElement):
         self.frequencies = frequencies
         self.position_start = start
         self.position_end = end
-    
-    def __str__(self):
-        return f"(Pos: {self.position_start} - {self.position_end}: Optional {self.choices})"
     
     def __eq__(self, other):
         if isinstance(other, self.__class__):
             return self.choices == other.choices
         return False
 
+class OptionalConstruct(GeneralChoiceStructure):
+    '''The data structure of an optional activity in a summarized variant'''
     
-class ChoiceConstruct(VariantElement):
+    def __str__(self):
+        return f"(Pos: {self.position_start} - {self.position_end}: Optional {self.choices})"
+
+
+    
+class ChoiceConstruct(GeneralChoiceStructure):
     '''The data structure of a choice of activities in a summarized variant'''
-    choices = []
-    frequencies = []
-    position_start = 0
-    position_end = 0
     
-    def __init__(self, choices, frequencies, start, end):
-        self.choices = choices
-        self.frequencies = frequencies
-        self.position_start = start
-        self.position_end = end
-        
     def __str__(self):
         return f"(Pos: {self.position_start} - {self.position_end}: Choice {self.choices})"
-    
-    def __eq__(self, other):
-        if isinstance(other, self.__class__):
-            return self.choices == other.choices
-        return False
 
 
 def convert_to_summarized_format(lane):
@@ -325,19 +322,24 @@ def summarized_variant_layouting(summarized_variant):
     for type in summarized_variant.object_types:
         object_lanes = [lane for lane in summarized_variant.lanes if lane.object_type == type]
         for lane in object_lanes:
-            items[lane.lane_id] = (type, lane.lane_name, lane.frequency)
+            items[lane.lane_id] = (type, lane.lane_name, lane.cardinality)
     
     # Create list of activities and their indices
     activities = []
     for lane in summarized_variant.lanes:
-        for i in range(len(lane.elements)):
-            if(type(lane.elements[i]) == CommonConstruct):
-                interactions = [lane.lane_id]
+        for elem in lane.elements:
+
+            interactions = [lane.lane_id]
+
+            if(isinstance(elem,InteractionConstruct)):
                 for interactionPoint in summarized_variant.interaction_points:
-                    if(lane.lane_id in interactionPoint.interaction_lanes and lane.elements[i].position == interactionPoint.index_in_lanes):
+                    if(lane.lane_id in interactionPoint.interaction_lanes and elem.position == interactionPoint.index_in_lanes):
                         interactions.extend(interactionPoint.interaction_lanes)
 
-            activities.append([lane.elements[i],[[lane.elements[i].position, lane.elements[i].position],list(set(interactions))]])
+            if(isinstance(elem,CommonConstruct) or isinstance(elem,InteractionConstruct)):
+                activities.append([elem,[[elem.position, elem.position],list(set(interactions))]])
+            else:
+                activities.append([elem,[[elem.position_start, elem.position_end],list(set(interactions))]])
     
     # Remove duplicate activities that are interaction points
     unique_activities = []

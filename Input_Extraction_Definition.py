@@ -46,11 +46,13 @@ class ExtractedVariant:
     object_types  = {}
     lanes = []
     interaction_points = {}
+    frequency = 0
     
-    def __init__(self, lanes, object_types, interaction_points):
+    def __init__(self, lanes, object_types, interaction_points, frequency):
         self.lanes = lanes
         self.object_types = object_types
         self.interaction_points = interaction_points
+        self.frequency = frequency
         
     def __str__(self):
         result_string = "Lanes: \n"
@@ -60,7 +62,7 @@ class ExtractedVariant:
         result_string += "\nInteraction Points: \n"
         for i in range(len(self.interaction_points)):
             result_string += str(self.interaction_points[i]) + "\n"
-        return result_string
+        return result_string + "Frequency: " + str(self.frequency)
     
     def get_lanes_of_type(self, object_type):
         return [lane for lane in self.lanes if lane.object_type == object_type]
@@ -69,7 +71,7 @@ class ExtractedVariant:
         return [lane for lane in self.lanes if lane.lane_id == lane_id][0]
 
 
-def extract_lanes(variant):
+def extract_lanes(variant, frequency):
     '''
     Converts a layouted variant into another format used by the summarization methods
     :param variant: The single flattened lane of one involved object
@@ -106,7 +108,7 @@ def extract_lanes(variant):
             extracted_interactions.append(InteractionPoint((events[i][0]), events[i][1][1], set(types), events[i][1][0][0]))
     
     extracted_types = set([object[0] for object in objects.values()])
-    extracted_variant = ExtractedVariant(extracted_lanes, extracted_types, extracted_interactions)
+    extracted_variant = ExtractedVariant(extracted_lanes, extracted_types, extracted_interactions, frequency)
     return extracted_variant
 
 

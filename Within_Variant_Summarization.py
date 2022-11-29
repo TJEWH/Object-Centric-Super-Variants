@@ -129,13 +129,10 @@ def within_variant_summarization(variant, print_result = True):
     result = []
     for summarization in all_summarizations:
         result_lanes, result_interaction_points = re_align_lanes(summarization["Lanes"], merge_interaction_mappings(summarization["Mappings"]), print_result)
-        result.append(SVD.SummarizedVariant(result_lanes, variant.object_types, result_interaction_points))
+        result.append(SVD.SummarizedVariant(result_lanes, variant.object_types, result_interaction_points, variant.frequency))
 
         if(print_result):
             print(result[-1])
-            #for lane in summarization["Lanes"]:
-                #print(lane)
-            #print(merge_interaction_mappings(summarization["Mappings"]))
             print("-------------------")
 
     return result
@@ -224,7 +221,11 @@ def between_lane_summarization(lanes, interactions, print_result):
     elements.extend(interval_elements)
     current_horizontal_index += interval_length
         
-    return SVD.SummarizedLane(lane_id, lane_name, object_type, elements, len(lanes)), new_interaction_points_mapping
+    cardinality = "1"
+    if len(lanes)>1:
+        cardinality = "n"
+        
+    return SVD.SummarizedLane(lane_id, lane_name, object_type, elements, cardinality), new_interaction_points_mapping
 
 
 def apply_patterns(activities, start_index, print_result):
