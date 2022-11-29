@@ -1,0 +1,70 @@
+import Super_Variant_Definition as SVD
+
+DEFAULT_CHEVRON_LENGTH = 7.
+DEFAULT_CHEVRON_HEIGHT = 4.
+
+def chevron_at_position(vertical_index, horizontal_index, length, height):
+    
+    from matplotlib.path import Path
+    verts = [
+       (horizontal_index, vertical_index),  # Left bottom coner
+       (horizontal_index + DEFAULT_CHEVRON_LENGTH * length, vertical_index),  # Right bottom corner
+       (horizontal_index + DEFAULT_CHEVRON_LENGTH * length + 1.2, vertical_index + height/2), # Outer tip of chevron
+       (horizontal_index + DEFAULT_CHEVRON_LENGTH * length, vertical_index + height),  # Right top coner
+       (horizontal_index, vertical_index + height),  # Left bottom coner
+       (horizontal_index + 1.2, vertical_index + height/2), # Inner top of chevron
+       (horizontal_index, vertical_index),  # Left bottom coner
+    ]
+
+    codes = [
+        Path.MOVETO,
+        Path.LINETO,
+        Path.LINETO,
+        Path.LINETO,
+        Path.LINETO,
+        Path.LINETO,
+        Path.CLOSEPOLY,
+    ]
+
+    return Path(verts, codes)
+
+
+def activity_chevron(ax, activity, lane_property, color):
+    
+    from matplotlib.path import Path
+    import matplotlib.patches as patches
+    line_style = '-'
+    label = activity[0]
+    ax.text(activity[1][0][0]*DEFAULT_CHEVRON_LENGTH+2.5, lane_property[1]+(1/2)*lane_property[0] - 0.4, label)
+    ax.add_patch(patches.PathPatch(chevron_at_position(lane_property[1], activity[1][0][0]*DEFAULT_CHEVRON_LENGTH, 1, lane_property[0]), facecolor = color, lw=2, ls = line_style))
+    return ax 
+
+
+def scale_lightness(rgb, scale_l):
+    import colorsys
+    h, l, s = colorsys.rgb_to_hls(*rgb)
+    return colorsys.hls_to_rgb(h, min(1, l * scale_l), s = s)
+
+def visualize_within_variant_summarization(summarization):
+    import matplotlib.pyplot as plt
+    from matplotlib.path import Path
+    import matplotlib.patches as patches
+    from matplotlib import colors
+     
+    # Defining the colors for each lane
+    colors = ['orange','limegreen', 'cornflowerblue', 'gold', 'crimson']
+    number_of_object_types = len(list(summarization.object_types))
+    colors = colors[:number_of_object_types]
+    color_assignment_types = dict(zip(list(summarization.object_types), colors))
+    color_assignment_lanes = dict()
+    for type in summarization.object_types:
+        type_lanes = len([lane.lane_id for lane in summarization.lanes if lane.type == type])
+        number_of_type_lanes = len(type_lanes)
+        offset = number_of_type_lanes/4
+        color = colors.to_rgba(color_assignment_types[type])
+        scale = 0
+        for lane in type_lanes:
+            color_assignment_lanes[lane] = scale_lightness(color, scale)
+            scale += offset
+    
+    print(color_assignment_lanes)

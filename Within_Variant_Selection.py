@@ -18,7 +18,6 @@ def get_unique_summarizations(process):
         for summarization in extracted_summarizations:
             all_summarizations.append(summarization)
             encoding = summarization.encode_lexicographically()
-            print(summarization)
 
             if(encoding in all_unique_summarizations_dict.keys()):
                 all_unique_summarizations_dict[encoding][0].append(i)
