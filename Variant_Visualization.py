@@ -39,7 +39,7 @@ def activity_chevron(ax, activity, horizontal_index, vertical_index, color):
     from matplotlib.path import Path
     import matplotlib.patches as patches
 
-    ax.text(horizontal_index * DEFAULT_CHEVRON_LENGTH + 2.0, vertical_index * DEFAULT_CHEVRON_HEIGHT + 0.4 * DEFAULT_CHEVRON_HEIGHT, activity, zorder = 10)
+    ax.text(horizontal_index * DEFAULT_CHEVRON_LENGTH + 2.0, vertical_index * DEFAULT_CHEVRON_HEIGHT + 0.3 * DEFAULT_CHEVRON_HEIGHT, activity, zorder = 10)
     ax.add_patch(patches.PathPatch(chevron_at_position(horizontal_index * DEFAULT_CHEVRON_LENGTH, vertical_index * DEFAULT_CHEVRON_HEIGHT, 1, DEFAULT_CHEVRON_HEIGHT), facecolor = color, lw = 1.3, ls = '-', zorder = 5))
     return ax  
 
@@ -52,7 +52,7 @@ def interaction_activity_chevron(ax, activity, horizontal_index, vertical_index,
     length_sub_chevron = (1/number_sub_chevrons)
 
   
-    ax.text(horizontal_index * DEFAULT_CHEVRON_LENGTH + 2.0, vertical_index * DEFAULT_CHEVRON_HEIGHT + 0.4 * DEFAULT_CHEVRON_HEIGHT, activity, zorder = 10)
+    ax.text(horizontal_index * DEFAULT_CHEVRON_LENGTH + 2.0, vertical_index * DEFAULT_CHEVRON_HEIGHT + 0.3 * DEFAULT_CHEVRON_HEIGHT, activity, zorder = 10)
 
     for i in range(len(interaction_point.interaction_lanes)):
         ax.add_patch(patches.PathPatch(chevron_at_position(horizontal_index * DEFAULT_CHEVRON_LENGTH + i*length_sub_chevron*DEFAULT_CHEVRON_LENGTH, vertical_index * DEFAULT_CHEVRON_HEIGHT, length_sub_chevron, DEFAULT_CHEVRON_HEIGHT), facecolor = colors[interaction_point.interaction_lanes[i]], lw = 0, ls = '-', zorder = 5))
@@ -96,7 +96,7 @@ def visualize_variant(variant):
     current_vertical_position = 0
     for i in range(len(variant.lanes)):
         color = color_assignment_lanes[variant.lanes[i].lane_id]
-        ax.text(-7.5, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.4 * DEFAULT_CHEVRON_HEIGHT, variant.lanes[i].lane_name, zorder = 10)
+        ax.text(-7.5, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.3 * DEFAULT_CHEVRON_HEIGHT, variant.lanes[i].lane_name, zorder = 10)
         ax.add_patch(patches.Rectangle((-8.0, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length+2) * DEFAULT_CHEVRON_LENGTH, DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0))
         for j in range(len(variant.lanes[i].horizontal_indices)):
             is_interacting_activity, interaction_point = IED.is_interaction_point(variant.interaction_points, variant.lanes[i].lane_id, variant.lanes[i].horizontal_indices[j]) 
@@ -107,7 +107,7 @@ def visualize_variant(variant):
         current_vertical_position += 1
 
     ax.set_aspect('equal')
-    ax.set_xlim(-10, (maximal_lane_length+1)*DEFAULT_CHEVRON_LENGTH+2)
+    ax.set_xlim(-10, (maximal_lane_length + 1)*DEFAULT_CHEVRON_LENGTH+2)
     ax.set_ylim(-2, current_vertical_position*DEFAULT_CHEVRON_HEIGHT+2)
     plt.axis('off')
     plt.show()

@@ -23,9 +23,9 @@ import Variant_Visualization as VV
 
 filename = "EventLogs/OCEL_example.jsonocel"
 ocel_running_example = ocel_import_factory.apply(filename)
-#selection = WVSE.within_variant_selection(ocel_running_example)
+selection = WVSE.within_variant_selection(ocel_running_example)
 variant_layouting = variants_visualization_factory.apply(ocel_running_example)
-extracted_variant = IED.extract_lanes(variant_layouting[ocel_running_example.variants[1]], False)
+extracted_variant = IED.extract_lanes(variant_layouting[ocel_running_example.variants[1]], 0)
 summarizations = WVSU.within_variant_summarization(extracted_variant)
 for summarization in summarizations:
     WVVI.visualize_within_variant_summarization(summarization)

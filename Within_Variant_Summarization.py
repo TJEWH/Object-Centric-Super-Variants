@@ -130,6 +130,7 @@ def within_variant_summarization(variant, print_result = True):
     for summarization in all_summarizations:
         result_lanes, result_interaction_points = re_align_lanes(summarization["Lanes"], merge_interaction_mappings(summarization["Mappings"]), print_result)
         result.append(SVD.SummarizedVariant(result_lanes, variant.object_types, result_interaction_points, variant.frequency))
+        result[-1].encode_lexicographically()
 
         if(print_result):
             print(result[-1])
