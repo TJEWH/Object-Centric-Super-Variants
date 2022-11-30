@@ -187,7 +187,7 @@ def between_lane_summarization(lanes, interactions, print_result):
             print("Adding the common activity: " + str(list(common_activities.keys())[i][1]))
 
         # Checks if the common activity is an interaction point
-        is_interacting_activity, interaction_point = IED.is_interaction_point(interactions, list(common_activities.keys())[i][1], list(common_activities.values())[i])        
+        is_interacting_activity, interaction_point = IED.is_interaction_point(interactions, [lane.lane_id for lane in lanes][0], list(common_activities.values())[i][0])        
         
         if(print_result):
             print("This is an interaction point: " + str(is_interacting_activity))

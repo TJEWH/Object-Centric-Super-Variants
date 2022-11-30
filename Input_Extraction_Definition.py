@@ -112,7 +112,7 @@ def extract_lanes(variant, frequency):
     return extracted_variant
 
 
-def is_interaction_point(interactions, activity_name, positions):
+def is_interaction_point(interactions, lane, position):
     '''
     Determines whether one of the merged original activities of a summarized activity is an interaction point
     :param interactions: The interaction points of the variant
@@ -125,6 +125,6 @@ def is_interaction_point(interactions, activity_name, positions):
     :rtype: Boolean
     '''
     for interaction in interactions:
-        if interaction.activity_name == activity_name and interaction.index_in_lanes in positions:
+        if lane in interaction.interaction_lanes and interaction.index_in_lanes == position:
             return True, interaction
     return False, None

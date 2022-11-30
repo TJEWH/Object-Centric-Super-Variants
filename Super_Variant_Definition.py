@@ -290,9 +290,9 @@ def convert_to_summarized_format(lane):
     return result
 
 
-def is_interaction_point(interactions, activity_name, positions):
+def is_interaction_point(interactions, lane, position):
     '''
-    Determines whether the merged set of activities was an interaction point
+    Determines whether one of the merged original activities of a summarized activity is an interaction point
     :param interactions: The interaction points of the variant
     :type interaction: List of type InteractionPoint
     :param activity_name: The name of the activity that is checked
@@ -303,9 +303,9 @@ def is_interaction_point(interactions, activity_name, positions):
     :rtype: Boolean
     '''
     for interaction in interactions:
-        if interaction.activity_name == activity_name and interaction.index_in_lanes in positions:
-            return True  
-    return False
+        if lane in interaction.interaction_lanes and interaction.index_in_lanes == position:
+            return True, interaction
+    return False, None
 
 
 def summarized_variant_layouting(summarized_variant):
