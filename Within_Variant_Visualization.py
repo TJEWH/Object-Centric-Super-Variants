@@ -77,11 +77,11 @@ def summarized_activity_chevron(ax, element, lane_property, color, current_verti
                     label = label + " (" + str(element.frequencies[0]) + ")"
                     ax.text(element.position_start * DEFAULT_CHEVRON_LENGTH + 2.0 + i * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * DEFAULT_CHEVRON_HEIGHT * lane_property["Height"] - 0.3, label, zorder = 10)
                     ax.add_patch(patches.PathPatch(chevron_at_position((element.position_start + i) * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT, 1, lane_property["Height"]  * DEFAULT_CHEVRON_HEIGHT), facecolor = color, lw = 1.3, ls = line_style, zorder = 5))
-                    return ax
+                return ax
         else:
             line_style = '-'
 
-        ax.add_patch(patches.PathPatch(chevron_at_position(element.position_start * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT, (element.position_end - element.position_start) + 1, lane_property["Height"]  * DEFAULT_CHEVRON_HEIGHT), facecolor = "None", lw = 1.3, ls = line_style, zorder = 5))
+        ax.add_patch(patches.PathPatch(chevron_at_position(element.position_start * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT, (element.position_end - element.position_start) + 1, lane_property["Height"]  * DEFAULT_CHEVRON_HEIGHT), facecolor = "None", lw = 1.3, ls = "-", zorder = 5))
 
         for i in range(len(element.choices)):
             sub_default_chevron_lenght = DEFAULT_CHEVRON_LENGTH * 5/6
@@ -89,7 +89,7 @@ def summarized_activity_chevron(ax, element, lane_property, color, current_verti
             margin = DEFAULT_CHEVRON_HEIGHT * 1/12
             vertical_position = current_vertical_position + i * DEFAULT_CHEVRON_HEIGHT
             length_of_choice = len(element.choices[i])
-            horizontal_start_position = (element.position_start * DEFAULT_CHEVRON_LENGTH) + 1.5 + ((element.position_end - element.position_start) + 1 * sub_default_chevron_lenght - length_of_choice*sub_default_chevron_lenght)/2
+            horizontal_start_position = (element.position_start * DEFAULT_CHEVRON_LENGTH) + 1.5 + (((element.position_end - element.position_start) + 1) * sub_default_chevron_lenght - length_of_choice * sub_default_chevron_lenght) / 2
             for j in range(len(element.choices[i])):
                 label = str(element.choices[i][j])
                 label = label + " (" + str(element.frequencies[i]) + ")"

@@ -22,7 +22,7 @@ def get_unique_summarizations(process):
             if(encoding in all_unique_summarizations_dict.keys()):
                 all_unique_summarizations_dict[encoding][0].append(i)
                 all_unique_summarizations_dict[encoding][1].append(summarization)
-                for item in all_summarizations:
+                for item in all_unique_summarizations_set:
                     if (item[0] == encoding):
                         item[1].append(summarization)
             else:
