@@ -18,12 +18,12 @@ import Variant_Visualization as VV
 
 filename = "EventLogs/OCEL_example.jsonocel"
 ocel_running_example = ocel_import_factory.apply(filename)
-selection = WVSE.within_variant_selection(ocel_running_example)
-#variant_layouting = variants_visualization_factory.apply(ocel_running_example)
+#selection = WVSE.within_variant_selection(ocel_running_example)
+variant_layouting = variants_visualization_factory.apply(ocel_running_example)
 #for variant in ocel_running_example.variants:
-#extracted_variant = IED.extract_lanes(variant_layouting[ocel_running_example.variants[3]], ocel_running_example.variant_frequencies[0])
-#VV.visualize_variant(extracted_variant)
-#summarizations = WVSU.within_variant_summarization(extracted_variant)
-#for summarization in list(summarizations):
-    #WVVI.visualize_within_variant_summarization(summarization)
+extracted_variant = IED.extract_lanes(variant_layouting[ocel_running_example.variants[2]], ocel_running_example.variant_frequencies[5])
+VV.visualize_variant(extracted_variant)
+summarizations = WVSU.within_variant_summarization(extracted_variant)
+for summarization in list(summarizations):
+    WVVI.visualize_within_variant_summarization(summarization)
 
