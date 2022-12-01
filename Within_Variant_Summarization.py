@@ -149,7 +149,7 @@ def between_lane_summarization(lanes, interactions, print_result):
     :param print_result: Whether or not the print commands should be executed
     :type print_result: Boolean
     :return: The summarization of the given lanes
-    :rtype: SummarizedLane
+    :rtype: SuperLane
     '''
     common_activities = max_order_preserving_common_activities(lanes)
 
@@ -226,7 +226,7 @@ def between_lane_summarization(lanes, interactions, print_result):
     if len(lanes)>1:
         cardinality = "n"
         
-    return SVD.SummarizedLane(lane_id, lane_name, object_type, elements, cardinality), new_interaction_points_mapping
+    return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality), new_interaction_points_mapping
 
 
 def apply_patterns(activities, start_index, print_result):

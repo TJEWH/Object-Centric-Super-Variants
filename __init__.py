@@ -8,9 +8,11 @@ import Within_Variant_Summarization as WVSU
 import Within_Variant_Selection as WVSE
 import Variant_Visualization as VV
 
-#filename = "EventLogs/order_process.jsonocel"
-#ocel_order_process = ocel_import_factory.apply(filename)
-#selection = WVSE.within_variant_selection(ocel_order_process)
+filename = "EventLogs/order_process.jsonocel"
+ocel_order_process = ocel_import_factory.apply(filename)
+selection = WVSE.within_variant_selection(ocel_order_process)
+#for summarization in (selection.values()):
+    #print(summarization[1].frequency)
 
 #variant_layouting = variants_visualization_factory.apply(ocel_order_process)
 #extracted_variant = IED.extract_lanes(variant_layouting[ocel_order_process.variants[10]], 0)
@@ -21,11 +23,12 @@ import Variant_Visualization as VV
     #WVVI.visualize_within_variant_summarization(summarization[1])
 
 
-filename = "EventLogs/OCEL_example.jsonocel"
-ocel_running_example = ocel_import_factory.apply(filename)
-selection = WVSE.within_variant_selection(ocel_running_example)
-variant_layouting = variants_visualization_factory.apply(ocel_running_example)
-extracted_variant = IED.extract_lanes(variant_layouting[ocel_running_example.variants[1]], 0)
-summarizations = WVSU.within_variant_summarization(extracted_variant)
-for summarization in summarizations:
-    WVVI.visualize_within_variant_summarization(summarization)
+#filename = "EventLogs/OCEL_example.jsonocel"
+#ocel_running_example = ocel_import_factory.apply(filename)
+#selection = WVSE.within_variant_selection(ocel_running_example)
+#variant_layouting = variants_visualization_factory.apply(ocel_running_example)
+#extracted_variant = IED.extract_lanes(variant_layouting[ocel_running_example.variants[1]], 0)
+#summarizations = WVSU.within_variant_summarization(extracted_variant)
+#for summarization in summarizations:
+    #WVVI.visualize_within_variant_summarization(summarization)
+

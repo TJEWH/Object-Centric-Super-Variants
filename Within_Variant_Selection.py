@@ -12,7 +12,7 @@ def get_unique_summarizations(process):
 
     for i in tqdm(range(len(process.variants))):
         print(' \n' + "Summarizing variant " + str(i) + " of the process...")
-        extracted_variant = IED.extract_lanes(variant_layouting[process.variants[i]], 0) # Extract the variants frequency
+        extracted_variant = IED.extract_lanes(variant_layouting[process.variants[i]], process.variant_frequencies[i]) # Extract the variants frequency
         extracted_summarizations = WVS.within_variant_summarization(extracted_variant, False)
 
         for summarization in extracted_summarizations:
@@ -21,11 +21,13 @@ def get_unique_summarizations(process):
 
             if(encoding in all_unique_summarizations_dict.keys()):
                 all_unique_summarizations_dict[encoding][0].append(i)
-                # Join element frequencies in the summarization
-                # Update in both dictionary and set or store all summarizations in list
+                all_unique_summarizations_dict[encoding][1].append(summarization)
+                for item in all_summarizations:
+                    if (item[0] == encoding):
+                        item[1].append(summarization)
             else:
-                all_unique_summarizations_dict[encoding] = ([i], summarization)
-                all_unique_summarizations_set.append((encoding, summarization))
+                all_unique_summarizations_dict[encoding] = ([i], [summarization])
+                all_unique_summarizations_set.append((encoding, [summarization]))
 
     return all_unique_summarizations_set, all_unique_summarizations_dict
 
@@ -48,22 +50,22 @@ def solve_hitting_set_problem(T, S):
     model = gurobipy.Model("hittingSet")
     x = {}
     for elem in T:
-        x[elem]=model.addVar(name="x_%s" % str(elem[0]), vtype = gurobipy.GRB.BINARY)
+        x[elem[1][0]]=model.addVar(name="x_%s" % str(elem[0]), vtype = gurobipy.GRB.BINARY)
 
     model.update()
 
     for key in S.keys():
-        model.addConstr(sum(x[elem] for elem in S[key]) >= 1)
+        model.addConstr(sum(x[elem[1][0]] for elem in S[key]) >= 1)
     
-    model.setObjective(sum(x[elem] for elem in T))
+    model.setObjective(sum(x[elem[1][0]] for elem in T))
     model.modelSense = gurobipy.GRB.MINIMIZE
     model.optimize()
     print('\n Objective value: %g\n' % model.ObjVal)
     print('\n Variable values: \n')
     solution = []
     for elem in T:
-        print(str(elem[0]) + ": " + str(x[elem].X))
-        if(x[elem].X == 1.0):
+        print(str(elem[0]) + ": " + str(x[elem[1][0]].X))
+        if(x[elem[1][0]].X == 1.0):
             solution.append(elem)
     print("-----------------------------")
     return model, solution

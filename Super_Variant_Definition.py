@@ -108,9 +108,29 @@ class SummarizedVariant:
         self.lanes.sort(key = lambda x: x.lane_name)
         return result
  
+class SuperVariant(SummarizedVariant):
+     
+    id = 0
+
+    def __init__(self, id, lanes, object_types, interaction_points, frequency):
+        self.lanes = lanes
+        self.object_types = object_types
+        self.interaction_points = interaction_points
+        self.frequency = frequency
+        self.id = id
+
+    def __str__(self):
+        result_string = "Super Variant " + str(id) + "\n Lanes: \n"
+        for i in range(len(self.lanes)):
+            result_string += str(self.lanes[i]) + "\n"
+        result_string += "\nInvolved Objects: \n" + str(self.object_types) +"\n"
+        result_string += "\nInteraction Points: \n"
+        for i in range(len(self.interaction_points)):
+            result_string += str(self.interaction_points[i]) + "\n"
+        return result_string + "Frequency: " + str(self.frequency)
     
     
-class SummarizedLane:
+class SuperLane:
     '''The data structure of a summarized object-centric variant'''
     lane_id = ()
     object_type = ""
@@ -187,7 +207,7 @@ class SummarizedLane:
             for element in realizations[i]:
                 element.position = index
                 index += 1
-            result.append(SummarizedLane(i, "realization " + str(i), self.object_type, realizations[i], None))
+            result.append(SuperLane(i, "realization " + str(i), self.object_type, realizations[i], None))
         return result
 
 
@@ -209,11 +229,19 @@ class SummarizedLane:
                 self.elements[i].position_start += offset
                 self.elements[i].position_end += offset      
 
-            
-class VariantElement:
+class OptionalSuperLane(SuperLane):
+
+    def __str__(self):
+        result_string = f"Optional ID: {self.lane_id}, Name: {self.lane_name}, Cardinality: {self.cardinality}:  ["
+        for i in range(len(self.elements)):
+            result_string += str(self.elements[i]) + ","       
+        result_string = result_string[:-1]
+        return result_string + "]"
+
+class SummarizationElement:
     '''The data structure the elements of a summarized variant'''
 
-class CommonConstruct(VariantElement):
+class CommonConstruct(SummarizationElement):
     '''The data structure of common activities in a summarized variant'''
     activity = ""
     frequency = 0
@@ -242,7 +270,7 @@ class InteractionConstruct(CommonConstruct):
             return self.activity == other.activity
         return False
 
-class GeneralChoiceStructure(VariantElement):
+class GeneralChoiceStructure(SummarizationElement):
     choices = []
     frequencies = []
     position_start = 0
@@ -286,7 +314,7 @@ def convert_to_summarized_format(lane):
     for i in range(len(lane.activities)):
         elements.append(CommonConstruct(lane.activities[i], 1, i))
     
-    result = SummarizedLane(tuple()+(lane.lane_id,), lane.object_type ,lane.object_type, elements)
+    result = SuperLane(tuple()+(lane.lane_id,), lane.object_type ,lane.object_type, elements)
     return result
 
 
