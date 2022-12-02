@@ -8,7 +8,7 @@ import Input_Extraction_Definition as IED
 DEFAULT_CHEVRON_LENGTH = 15.
 DEFAULT_CHEVRON_HEIGHT = 4.
 
-def chevron_at_position( horizontal_index, vertical_index, length, height):
+def __chevron_at_position( horizontal_index, vertical_index, length, height):
     
     from matplotlib.path import Path
     verts = [
@@ -34,16 +34,16 @@ def chevron_at_position( horizontal_index, vertical_index, length, height):
     return Path(verts, codes)
 
 
-def activity_chevron(ax, activity, horizontal_index, vertical_index, color):
+def __activity_chevron(ax, activity, horizontal_index, vertical_index, color):
 
     from matplotlib.path import Path
     import matplotlib.patches as patches
 
     ax.text(horizontal_index * DEFAULT_CHEVRON_LENGTH + 2.0, vertical_index * DEFAULT_CHEVRON_HEIGHT + 0.3 * DEFAULT_CHEVRON_HEIGHT, activity, zorder = 10)
-    ax.add_patch(patches.PathPatch(chevron_at_position(horizontal_index * DEFAULT_CHEVRON_LENGTH, vertical_index * DEFAULT_CHEVRON_HEIGHT, 1, DEFAULT_CHEVRON_HEIGHT), facecolor = color, lw = 1.3, ls = '-', zorder = 5))
+    ax.add_patch(patches.PathPatch(__chevron_at_position(horizontal_index * DEFAULT_CHEVRON_LENGTH, vertical_index * DEFAULT_CHEVRON_HEIGHT, 1, DEFAULT_CHEVRON_HEIGHT), facecolor = color, lw = 1.3, ls = '-', zorder = 5))
     return ax  
 
-def interaction_activity_chevron(ax, activity, horizontal_index, vertical_index, colors, interaction_point):
+def __interaction_activity_chevron(ax, activity, horizontal_index, vertical_index, colors, interaction_point):
 
     from matplotlib.path import Path
     import matplotlib.patches as patches
@@ -55,8 +55,8 @@ def interaction_activity_chevron(ax, activity, horizontal_index, vertical_index,
     ax.text(horizontal_index * DEFAULT_CHEVRON_LENGTH + 2.0, vertical_index * DEFAULT_CHEVRON_HEIGHT + 0.3 * DEFAULT_CHEVRON_HEIGHT, activity, zorder = 10)
 
     for i in range(len(interaction_point.interaction_lanes)):
-        ax.add_patch(patches.PathPatch(chevron_at_position(horizontal_index * DEFAULT_CHEVRON_LENGTH + i*length_sub_chevron*DEFAULT_CHEVRON_LENGTH, vertical_index * DEFAULT_CHEVRON_HEIGHT, length_sub_chevron, DEFAULT_CHEVRON_HEIGHT), facecolor = colors[interaction_point.interaction_lanes[i]], lw = 0, ls = '-', zorder = 5))
-    ax.add_patch(patches.PathPatch(chevron_at_position(horizontal_index * DEFAULT_CHEVRON_LENGTH, vertical_index * DEFAULT_CHEVRON_HEIGHT, 1, DEFAULT_CHEVRON_HEIGHT), facecolor="None", lw = 1.3, ls = '-', zorder = 7))
+        ax.add_patch(patches.PathPatch(__chevron_at_position(horizontal_index * DEFAULT_CHEVRON_LENGTH + i*length_sub_chevron*DEFAULT_CHEVRON_LENGTH, vertical_index * DEFAULT_CHEVRON_HEIGHT, length_sub_chevron, DEFAULT_CHEVRON_HEIGHT), facecolor = colors[interaction_point.interaction_lanes[i]], lw = 0, ls = '-', zorder = 5))
+    ax.add_patch(patches.PathPatch(__chevron_at_position(horizontal_index * DEFAULT_CHEVRON_LENGTH, vertical_index * DEFAULT_CHEVRON_HEIGHT, 1, DEFAULT_CHEVRON_HEIGHT), facecolor="None", lw = 1.3, ls = '-', zorder = 7))
     return ax
 
 
@@ -101,9 +101,9 @@ def visualize_variant(variant):
         for j in range(len(variant.lanes[i].horizontal_indices)):
             is_interacting_activity, interaction_point = IED.is_interaction_point(variant.interaction_points, variant.lanes[i].lane_id, variant.lanes[i].horizontal_indices[j]) 
             if (is_interacting_activity):
-                ax = interaction_activity_chevron(ax, variant.lanes[i].activities[j], variant.lanes[i].horizontal_indices[j], current_vertical_position, color_assignment_lanes, interaction_point)
+                ax = __interaction_activity_chevron(ax, variant.lanes[i].activities[j], variant.lanes[i].horizontal_indices[j], current_vertical_position, color_assignment_lanes, interaction_point)
             else:
-                ax = activity_chevron(ax, variant.lanes[i].activities[j], variant.lanes[i].horizontal_indices[j], current_vertical_position, color)
+                ax = __activity_chevron(ax, variant.lanes[i].activities[j], variant.lanes[i].horizontal_indices[j], current_vertical_position, color)
         current_vertical_position += 1
 
     ax.set_aspect('equal')

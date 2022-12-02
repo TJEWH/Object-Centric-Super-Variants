@@ -8,7 +8,7 @@ from matplotlib import colors
 DEFAULT_CHEVRON_LENGTH = 15.
 DEFAULT_CHEVRON_HEIGHT = 4.
 
-def chevron_at_position(horizontal_index, vertical_index, length, height):
+def __chevron_at_position(horizontal_index, vertical_index, length, height):
     
     from matplotlib.path import Path
     verts = [
@@ -34,7 +34,7 @@ def chevron_at_position(horizontal_index, vertical_index, length, height):
     return Path(verts, codes)
 
 
-def interaction_activity_chevron(ax, lane, element, lane_properties, interaction_points, current_vertical_position):
+def __interaction_activity_chevron(ax, lane, element, lane_properties, interaction_points, current_vertical_position):
 
     from matplotlib.path import Path
     import matplotlib.patches as patches
@@ -52,11 +52,11 @@ def interaction_activity_chevron(ax, lane, element, lane_properties, interaction
     ax.text(element.position * DEFAULT_CHEVRON_LENGTH + 2.0, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * DEFAULT_CHEVRON_HEIGHT * lane_properties[lane]["Height"] - 0.3, label, zorder = 10)
 
     for i in range(len(interacting_lanes)):
-        ax.add_patch(patches.PathPatch(chevron_at_position(element.position * DEFAULT_CHEVRON_LENGTH + i * length_sub_chevron * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT, length_sub_chevron, lane_properties[lane]["Height"]  * DEFAULT_CHEVRON_HEIGHT), facecolor = lane_properties[interacting_lanes[i]]["Color"], lw = 0, ls = '-', zorder = 5))
-    ax.add_patch(patches.PathPatch(chevron_at_position(element.position * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT, 1, lane_properties[lane]["Height"]  * DEFAULT_CHEVRON_HEIGHT), facecolor="None", lw = 1.3, ls = '-', zorder = 7))
+        ax.add_patch(patches.PathPatch(__chevron_at_position(element.position * DEFAULT_CHEVRON_LENGTH + i * length_sub_chevron * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT, length_sub_chevron, lane_properties[lane]["Height"]  * DEFAULT_CHEVRON_HEIGHT), facecolor = lane_properties[interacting_lanes[i]]["Color"], lw = 0, ls = '-', zorder = 5))
+    ax.add_patch(patches.PathPatch(__chevron_at_position(element.position * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT, 1, lane_properties[lane]["Height"]  * DEFAULT_CHEVRON_HEIGHT), facecolor="None", lw = 1.3, ls = '-', zorder = 7))
     return ax
 
-def summarized_activity_chevron(ax, element, lane_property, color, current_vertical_position):
+def __summarized_activity_chevron(ax, element, lane_property, color, current_vertical_position):
     
     from matplotlib.path import Path
     import matplotlib.patches as patches
@@ -65,7 +65,7 @@ def summarized_activity_chevron(ax, element, lane_property, color, current_verti
         label = element.activity
         label = label + " (" + str(element.frequency) + ")"
         ax.text(element.position * DEFAULT_CHEVRON_LENGTH + 2.0, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * DEFAULT_CHEVRON_HEIGHT * lane_property["Height"] - 0.3, label, zorder = 10)
-        ax.add_patch(patches.PathPatch(chevron_at_position(element.position * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT, 1, lane_property["Height"]  * DEFAULT_CHEVRON_HEIGHT), facecolor = color, lw = 1.3, ls = '-', zorder = 5))
+        ax.add_patch(patches.PathPatch(__chevron_at_position(element.position * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT, 1, lane_property["Height"]  * DEFAULT_CHEVRON_HEIGHT), facecolor = color, lw = 1.3, ls = '-', zorder = 5))
         return ax
         
     elif (isinstance(element, SVD.GeneralChoiceStructure)): 
@@ -76,12 +76,12 @@ def summarized_activity_chevron(ax, element, lane_property, color, current_verti
                     label = str(element.choices[0][i])
                     label = label + " (" + str(element.frequencies[0]) + ")"
                     ax.text(element.position_start * DEFAULT_CHEVRON_LENGTH + 2.0 + i * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * DEFAULT_CHEVRON_HEIGHT * lane_property["Height"] - 0.3, label, zorder = 10)
-                    ax.add_patch(patches.PathPatch(chevron_at_position((element.position_start + i) * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT, 1, lane_property["Height"]  * DEFAULT_CHEVRON_HEIGHT), facecolor = color, lw = 1.3, ls = line_style, zorder = 5))
+                    ax.add_patch(patches.PathPatch(__chevron_at_position((element.position_start + i) * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT, 1, lane_property["Height"]  * DEFAULT_CHEVRON_HEIGHT), facecolor = color, lw = 1.3, ls = line_style, zorder = 5))
                 return ax
         else:
             line_style = '-'
 
-        ax.add_patch(patches.PathPatch(chevron_at_position(element.position_start * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT, (element.position_end - element.position_start) + 1, lane_property["Height"]  * DEFAULT_CHEVRON_HEIGHT), facecolor = "None", lw = 1.3, ls = "-", zorder = 5))
+        ax.add_patch(patches.PathPatch(__chevron_at_position(element.position_start * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT, (element.position_end - element.position_start) + 1, lane_property["Height"]  * DEFAULT_CHEVRON_HEIGHT), facecolor = "None", lw = 1.3, ls = "-", zorder = 5))
 
         sub_default_chevron_lenght = ((((element.position_end - element.position_start) + 1) * DEFAULT_CHEVRON_LENGTH) - 2.5) / ((element.position_end - element.position_start) + 1)
         margin_length = 0.3
@@ -98,7 +98,7 @@ def summarized_activity_chevron(ax, element, lane_property, color, current_verti
                 label = str(element.choices[i][j])
                 label = label + " (" + str(element.frequencies[i]) + ")"
                 ax.text(horizontal_start_position + j * sub_default_chevron_lenght + 2.0, vertical_position + margin_height + 0.5 * sub_default_chevron_heigth - 0.3, label, zorder = 10)
-                ax.add_patch(patches.PathPatch(chevron_at_position(horizontal_start_position + j * sub_default_chevron_lenght, vertical_position + margin_height, sub_default_chevron_lenght/DEFAULT_CHEVRON_LENGTH, sub_default_chevron_heigth), facecolor = color, lw = 1.3, ls = line_style, zorder = 7))
+                ax.add_patch(patches.PathPatch(__chevron_at_position(horizontal_start_position + j * sub_default_chevron_lenght, vertical_position + margin_height, sub_default_chevron_lenght/DEFAULT_CHEVRON_LENGTH, sub_default_chevron_heigth), facecolor = color, lw = 1.3, ls = line_style, zorder = 7))
 
         return ax  
 
@@ -155,9 +155,9 @@ def visualize_within_variant_summarization(summarization):
         ax.add_patch(patches.Rectangle((-8.0, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length+2) * DEFAULT_CHEVRON_LENGTH, lane_properties[summarization.lanes[i].lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0))
         for elem in summarization.lanes[i].elements:
             if (isinstance(elem,SVD.InteractionConstruct)):
-                ax = interaction_activity_chevron(ax, summarization.lanes[i].lane_id, elem, lane_properties, summarization.interaction_points, current_vertical_position)
+                ax = __interaction_activity_chevron(ax, summarization.lanes[i].lane_id, elem, lane_properties, summarization.interaction_points, current_vertical_position)
             else:
-                ax = summarized_activity_chevron(ax, elem, lane_properties[summarization.lanes[i].lane_id], color, current_vertical_position)
+                ax = __summarized_activity_chevron(ax, elem, lane_properties[summarization.lanes[i].lane_id], color, current_vertical_position)
         current_vertical_position += lane_properties[summarization.lanes[i].lane_id]["Height"]
 
     ax.set_aspect('equal')

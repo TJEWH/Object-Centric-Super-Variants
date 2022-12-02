@@ -32,7 +32,7 @@ def get_unique_summarizations(process):
     return all_unique_summarizations_set, all_unique_summarizations_dict
 
 
-def determine_subsets(universe, unique_summarizations):
+def __determine_subsets(universe, unique_summarizations):
     universe_T = list(zip(range(len(universe)), universe))
     subsets_S = dict()
     for key in list(unique_summarizations.keys()):
@@ -45,7 +45,7 @@ def determine_subsets(universe, unique_summarizations):
     return universe_T, subsets_S
 
 
-def solve_hitting_set_problem(T, S):
+def __solve_hitting_set_problem(T, S):
     import gurobipy
     model = gurobipy.Model("hittingSet")
     x = {}
@@ -73,8 +73,8 @@ def solve_hitting_set_problem(T, S):
 def within_variant_selection(process):
 
     universe, summarization_dictionary = get_unique_summarizations(process)
-    T, S = determine_subsets(universe, summarization_dictionary)
-    model, solution = solve_hitting_set_problem(T, S)
+    T, S = __determine_subsets(universe, summarization_dictionary)
+    model, solution = __solve_hitting_set_problem(T, S)
 
     result = {}
     for key in summarization_dictionary.keys():

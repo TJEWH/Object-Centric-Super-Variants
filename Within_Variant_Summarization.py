@@ -1,7 +1,7 @@
 import Input_Extraction_Definition as IED
 import Super_Variant_Definition as SVD
 
-def get_candidates(lanes, interactions):
+def __get_candidates(lanes, interactions):
     '''
     Yields all maximal merging candidate sets for a set of lanes, thus, all sets of lanes that share all interaction points
     :param lanes: The lanes of the variant
@@ -33,7 +33,7 @@ def get_candidates(lanes, interactions):
         
     return result
 
-def branch_on_candidates(variant, remaining_candidates, init_summarization, level, print_result):
+def __branch_on_candidates(variant, remaining_candidates, init_summarization, level, print_result):
     '''
     Visits one node in the candidate tree, summarizes the current merging candidate and recurses on subtrees
     :param variant: The variant to be summarized
@@ -60,7 +60,7 @@ def branch_on_candidates(variant, remaining_candidates, init_summarization, leve
         if(print_result):
             print("----")
             print("Summarizing Lanes: " + str([lane.lane_id for lane in partition]))
-        summarized_lane, new_intermediate_mappings = between_lane_summarization(partition, variant.interaction_points, print_result)
+        summarized_lane, new_intermediate_mappings = __between_lane_summarization(partition, variant.interaction_points, print_result)
         new_lanes.append(summarized_lane)
         new_mappings.append((summarized_lane.lane_id, new_intermediate_mappings))
 
@@ -91,7 +91,7 @@ def branch_on_candidates(variant, remaining_candidates, init_summarization, leve
         result = []
         for candidate in get_partitions(remaining_candidates[0]):
             current_summarization["Candidate"] = candidate
-            subtree_result = branch_on_candidates(variant, remaining_candidates[1:], (current_summarization), level+1, print_result)
+            subtree_result = __branch_on_candidates(variant, remaining_candidates[1:], (current_summarization), level+1, print_result)
             if(subtree_result != None):
                 result.extend(subtree_result)
         if(print_result):
@@ -111,7 +111,7 @@ def within_variant_summarization(variant, print_result = True):
     '''
 
     # Initialize candidate parameters 
-    all_candidates = get_candidates(variant.lanes, variant.interaction_points)
+    all_candidates = __get_candidates(variant.lanes, variant.interaction_points)
     first_choice =  get_partitions(all_candidates[0])
     all_summarizations = []
     init_summary = {}
@@ -121,14 +121,14 @@ def within_variant_summarization(variant, print_result = True):
     # Traverse tree of candidates
     for partition in first_choice:
         init_summary["Candidate"] = partition
-        subtree_result = branch_on_candidates(variant, all_candidates[1:], init_summary, 1, print_result)
+        subtree_result = __branch_on_candidates(variant, all_candidates[1:], init_summary, 1, print_result)
         if(subtree_result != None):
             all_summarizations.extend(subtree_result)
 
     # Re-align summarizations
     result = []
     for summarization in all_summarizations:
-        result_lanes, result_interaction_points = re_align_lanes(summarization["Lanes"], merge_interaction_mappings(summarization["Mappings"]), print_result)
+        result_lanes, result_interaction_points = __re_align_lanes(summarization["Lanes"], __merge_interaction_mappings(summarization["Mappings"]), print_result)
         result.append(SVD.SummarizedVariant(result_lanes, variant.object_types, result_interaction_points, variant.frequency))
         result[-1].encode_lexicographically()
 
@@ -139,7 +139,7 @@ def within_variant_summarization(variant, print_result = True):
     return result
 
 
-def between_lane_summarization(lanes, interactions, print_result):
+def __between_lane_summarization(lanes, interactions, print_result):
     '''
     Yields a generic summarizations of lanes of the same object type
     :param lanes: The lanes of the same object type that need summarization
@@ -151,7 +151,7 @@ def between_lane_summarization(lanes, interactions, print_result):
     :return: The summarization of the given lanes
     :rtype: SuperLane
     '''
-    common_activities = max_order_preserving_common_activities(lanes)
+    common_activities = __max_order_preserving_common_activities(lanes)
 
     # Initializing the values for the summarized lanes object
     elements = []
@@ -178,7 +178,7 @@ def between_lane_summarization(lanes, interactions, print_result):
             interval_subprocesses.append((lanes[j].activities[start_index:end_index],lanes[j].horizontal_indices[start_index:end_index]))
         
         # Add summarized subprocess to elements
-        interval_elements, interval_length = apply_patterns(interval_subprocesses, current_horizontal_index, print_result)
+        interval_elements, interval_length = __apply_patterns(interval_subprocesses, current_horizontal_index, print_result)
         elements.extend(interval_elements)
         current_horizontal_index += interval_length
                      
@@ -218,7 +218,7 @@ def between_lane_summarization(lanes, interactions, print_result):
         interval_subprocesses.append((lanes[j].activities[start_index:],lanes[j].horizontal_indices[start_index:]))
     
     # Add summarized subprocess to elements
-    interval_elements, interval_length = apply_patterns(interval_subprocesses, current_horizontal_index, print_result)
+    interval_elements, interval_length = __apply_patterns(interval_subprocesses, current_horizontal_index, print_result)
     elements.extend(interval_elements)
     current_horizontal_index += interval_length
         
@@ -229,7 +229,7 @@ def between_lane_summarization(lanes, interactions, print_result):
     return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality), new_interaction_points_mapping
 
 
-def apply_patterns(activities, start_index, print_result):
+def __apply_patterns(activities, start_index, print_result):
     '''
     Determines an applicable pattern (Optional Pattern or Exclusive Choice Pattern) for a set of activity sequences 
     and their current indices
@@ -291,7 +291,7 @@ def apply_patterns(activities, start_index, print_result):
     return elements, length
 
 
-def merge_interaction_mappings(mappings):
+def __merge_interaction_mappings(mappings):
     '''
     Pre-processes the mappings from the summarization for easy handling
     :param mappings: The mappings of original interaction points to new indices in the summarized lanes
@@ -315,7 +315,7 @@ def merge_interaction_mappings(mappings):
     return merged_mappings        
             
 
-def re_align_lanes(lanes, mappings, print_result):
+def __re_align_lanes(lanes, mappings, print_result):
     '''
     Given the summarized lanes and the mappings from original interaction points to new indices, this method aligns the lane, such
     that interaction points between multiple lanes have the same horizontal index
@@ -374,7 +374,7 @@ def re_align_lanes(lanes, mappings, print_result):
     return aligned_lanes, updated_interaction_points
 
 
-def max_order_preserving_common_activities(lanes):
+def __max_order_preserving_common_activities(lanes):
     '''
     Extracts the longest sequence od activities found in all lanes, preserving their order
     :param lanes: Multiple sequences of activities
@@ -428,21 +428,19 @@ def max_order_preserving_common_activities(lanes):
     return max(activity_sets, key=len)
 
 
-def partition(collection):
+def __partition(collection):
     if len(collection) == 1:
         yield [collection]
         return
 
     first = collection[0]
-    for smaller in partition(collection[1:]):
-        # insert `first` in each of the subpartition's subsets
+    for smaller in __partition(collection[1:]):
         for n, subset in enumerate(smaller):
             yield smaller[:n] + [[first] + subset]  + smaller[n+1:]
-        # put `first` in its own subset 
         yield [ [ first ] ] + smaller
 
 def get_partitions(candidate):
     partitions = []
-    for n, p in enumerate(partition(list(candidate)), 1):
+    for n, p in enumerate(__partition(list(candidate)), 1):
         partitions.append(p)
     return(partitions)
