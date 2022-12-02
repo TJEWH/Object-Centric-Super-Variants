@@ -83,18 +83,22 @@ def summarized_activity_chevron(ax, element, lane_property, color, current_verti
 
         ax.add_patch(patches.PathPatch(chevron_at_position(element.position_start * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT, (element.position_end - element.position_start) + 1, lane_property["Height"]  * DEFAULT_CHEVRON_HEIGHT), facecolor = "None", lw = 1.3, ls = "-", zorder = 5))
 
+        sub_default_chevron_lenght = ((((element.position_end - element.position_start) + 1) * DEFAULT_CHEVRON_LENGTH) - 2.5) / ((element.position_end - element.position_start) + 1)
+        margin_length = 0.3
+        sub_default_chevron_lenght -= margin_length / ((element.position_end - element.position_start) + 1)
+        sub_default_chevron_heigth = DEFAULT_CHEVRON_HEIGHT * 5/6
+        margin_height = DEFAULT_CHEVRON_HEIGHT * 1/12
+
         for i in range(len(element.choices)):
-            sub_default_chevron_lenght = DEFAULT_CHEVRON_LENGTH * 5/6
-            sub_default_chevron_heigth = DEFAULT_CHEVRON_HEIGHT * 5/6
-            margin = DEFAULT_CHEVRON_HEIGHT * 1/12
-            vertical_position = current_vertical_position + i * DEFAULT_CHEVRON_HEIGHT
+            vertical_position = (current_vertical_position * DEFAULT_CHEVRON_HEIGHT) + i * DEFAULT_CHEVRON_HEIGHT
             length_of_choice = len(element.choices[i])
-            horizontal_start_position = (element.position_start * DEFAULT_CHEVRON_LENGTH) + 1.5 + (((element.position_end - element.position_start) + 1) * sub_default_chevron_lenght - length_of_choice * sub_default_chevron_lenght) / 2
+       
+            horizontal_start_position = (element.position_start * DEFAULT_CHEVRON_LENGTH) + 1.25 + margin_length + (((element.position_end - element.position_start) + 1) * (sub_default_chevron_lenght) - (length_of_choice * sub_default_chevron_lenght + margin_length)) / 2
             for j in range(len(element.choices[i])):
                 label = str(element.choices[i][j])
                 label = label + " (" + str(element.frequencies[i]) + ")"
-                ax.text(horizontal_start_position + j * sub_default_chevron_lenght + 2.0, vertical_position + margin + 0.5 * sub_default_chevron_heigth - 0.3, label, zorder = 10)
-                ax.add_patch(patches.PathPatch(chevron_at_position(horizontal_start_position + j * sub_default_chevron_lenght, vertical_position + margin, 5/6, sub_default_chevron_heigth), facecolor = color, lw = 1.3, ls = line_style, zorder = 7))
+                ax.text(horizontal_start_position + j * sub_default_chevron_lenght + 2.0, vertical_position + margin_height + 0.5 * sub_default_chevron_heigth - 0.3, label, zorder = 10)
+                ax.add_patch(patches.PathPatch(chevron_at_position(horizontal_start_position + j * sub_default_chevron_lenght, vertical_position + margin_height, sub_default_chevron_lenght/DEFAULT_CHEVRON_LENGTH, sub_default_chevron_heigth), facecolor = color, lw = 1.3, ls = line_style, zorder = 7))
 
         return ax  
 
