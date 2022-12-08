@@ -10,6 +10,7 @@ class SummarizedVariant:
         self.object_types = object_types
         self.interaction_points = interaction_points
         self.frequency = frequency 
+
     
     def __str__(self):
         result_string = "Lanes: \n"
@@ -21,30 +22,45 @@ class SummarizedVariant:
             result_string += str(self.interaction_points[i]) + "\n"
         return result_string + "Frequency: " + str(self.frequency)
 
+
     def rename_lane(self, lane_id, new_name):
         for lane in self.lanes:
             if(lane.lane_id == lane_id):
                 lane.lane_name = new_name
+
     
     def equals(self, other):
         return ((self.encode_lexicographically()) == (other.encode_lexicographically()))
 
+
     def encode_lexicographically(self):
 
+        # Stores the mapping from original lane_id to the new lane_id based on the enumeration of the encoded lanes
         mapping = {}
         
+        # The lanes are sorted by their type and encoded in this alphabetical order
         total_order_objects = [str(object) for object in list(self.object_types)]
         total_order_objects.sort()
 
         encoded_result = []
         for object in total_order_objects:
 
+            # Determine all lanes for this object type
             object_lanes = [lane for lane in self.lanes if lane.object_type == object]
+
+            # Determine the maximal number of digits for the new lane_id
+            power_of_ten = len(str(len(object_lanes)))
+
             encoded_lanes = []
             id = 0
+
+            # Encode each lane, enumerate the encodings provisionally
             for lane in object_lanes:
+
                 encoding = f"CAR {lane.cardinality}: "
+
                 for element in lane.elements:
+
                     if(type(element) == CommonConstruct):
                         encoding += f"CO[{element.position}:{element.position}, {element.activity}] "
 
@@ -52,12 +68,17 @@ class SummarizedVariant:
                         encoding += f"IP[{element.position}:{element.position}, {element.activity}] "
                         
                     else:
+                        
+                        # Determine all choice sequences and sort alphabetically
                         choices = []
                         for choice in element.choices:
                             sequence = ""
                             for i in range(len(choice)):
                                 sequence += str(choice[i])
                             choices.append(sequence)
+                        choices.sort()
+
+                        # Encode all choices
                         choices_encoding = ""
                         for choice in choices:
                             choices_encoding += choice
@@ -70,34 +91,49 @@ class SummarizedVariant:
                         elif(type(element) == OptionalConstruct):
                             encoding += f"OP[{element.position_start}:{element.position_end}, [{choices_encoding}]] "
         
+                # Fill up the current id with 0's such that every id has the same number of characters
+                full_id = str(id)
+                while (len(full_id) < power_of_ten):
+                    full_id = str(0) + full_id
+                encoded_lanes.append(full_id + encoding)
 
-                encoded_lanes.append(str(id) + encoding)
-                mapping[str(id) + encoding] = (lane.lane_id,0)
+                # Store a reference between the temporary id and the original lane_id of the lane
+                mapping[full_id + encoding] = (lane.lane_id, 0)
                 id += 1
 
-            encoded_lanes.sort(key = lambda x: x[1:])
-
+            # Sort the encodings aphabetically, excluding its temporary id
+            encoded_lanes.sort(key = lambda x: x[power_of_ten:])
+            
+            # Replace the temporary id with the enumeration of encodings as the new lane_id and add the object type to the prefix
             for i in range(len(encoded_lanes)):
+                full_id = str(i)
+                while (len(full_id) < power_of_ten):
+                    full_id = str(0) + full_id
                 lane_id = mapping[encoded_lanes[i]][0]
-                mapping[encoded_lanes[i]]= (lane_id, object + " " + str(i))
-                self.rename_lane(lane_id, object + " " + str(i))
-                encoded_lanes[i] = object + " " + str(i) + ": " + encoded_lanes[i][1:]
+                mapping[encoded_lanes[i]]= (lane_id, object + " " + full_id)
+                self.rename_lane(lane_id, object + " " + full_id)
+                encoded_lanes[i] = object + " " + full_id + ": " + encoded_lanes[i][power_of_ten:]
+
 
             encoded_result.extend(encoded_lanes)
 
+        # Create dictionary for easy extraction of the new lane_id when encoding the interactions
         mapping = dict((x, y) for x, y in list(mapping.values()))
 
         interactions_result = []
         for interaction in self.interaction_points:
+
+            # Encode references with the new lane_id and sort alphabetically
             interacting_lanes = [mapping[lane_id] for lane_id in interaction.interaction_lanes]
             interacting_lanes.sort()
-            lanes_encoding = "".join(str(x)+", " for x in interacting_lanes)
+            lanes_encoding = "".join(str(x) + ", " for x in interacting_lanes)
             lanes_encoding = lanes_encoding[:-2]
             encoding = f"IP[{interaction.index_in_lanes},[{lanes_encoding}]] "
             interactions_result.append(encoding)
         
         interactions_result.sort() 
 
+        # Concatenate all encodings
         result = ""
         for encoded_lane in encoded_result:
             result += encoded_lane
@@ -105,11 +141,14 @@ class SummarizedVariant:
         for encoded_ip in interactions_result:
             result += encoded_ip
         
+        # Additionally sort the Super Lane itself
         self.lanes.sort(key = lambda x: x.lane_name)
         return result
 
+
     def to_super_variant(self, id):
         return SuperVariant(id, self.lanes, self.object_types, self.interaction_points, self.frequency)
+
 
     def get_lane(self, id):
         for lane in self.lanes:
@@ -237,6 +276,7 @@ class SuperLane:
                 self.elements[i].position_start += offset
                 self.elements[i].position_end += offset      
 
+
 class OptionalSuperLane(SuperLane):
 
     def __str__(self):
@@ -246,8 +286,11 @@ class OptionalSuperLane(SuperLane):
         result_string = result_string[:-1]
         return result_string + "]"
 
+
+
 class SummarizationElement:
     '''The data structure the elements of a summarized variant'''
+
 
 class CommonConstruct(SummarizationElement):
     '''The data structure of common activities in a summarized variant'''
@@ -268,6 +311,7 @@ class CommonConstruct(SummarizationElement):
             return self.activity == other.activity
         return False
 
+
 class InteractionConstruct(CommonConstruct):
     
     def __str__(self):
@@ -277,6 +321,7 @@ class InteractionConstruct(CommonConstruct):
         if isinstance(other, self.__class__):
             return self.activity == other.activity
         return False
+
 
 class GeneralChoiceStructure(SummarizationElement):
     choices = []

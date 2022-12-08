@@ -11,22 +11,24 @@ import Between_Variant_Summarization as BVS
 
 filename = "EventLogs/order_process.jsonocel"
 ocel_order_process = ocel_import_factory.apply(filename)
-#selection = WVSE.within_variant_selection(ocel_order_process)
+selection = WVSE.within_variant_selection(ocel_order_process)
 #summarizations = [summarization[1][0] for summarization in selection.values()]
 #for summarization in (selection.values()):
     #SVV.visualize_super_variant_summarization(summarization[1][0])
 #for key in (selection.keys()):
     #print(key)
 
+print(list(selection.keys())[8])
+
 
 
 filename = "EventLogs/OCEL_example.jsonocel"
 ocel_running_example = ocel_import_factory.apply(filename)
-variant_layouting = variants_visualization_factory.apply(ocel_running_example)
-for variant in ocel_running_example.variants:
-    extracted_variant = IED.extract_lanes(variant_layouting[variant], ocel_running_example.variant_frequencies[5])
-    VV.visualize_variant(extracted_variant)
-    summarizations = WVSU.within_variant_summarization(extracted_variant)
-    for summarization in list(summarizations):
-        SVV.visualize_super_variant_summarization(summarization)
+#variant_layouting = variants_visualization_factory.apply(ocel_running_example)
+#for variant in ocel_running_example.variants:
+    #extracted_variant = IED.extract_lanes(variant_layouting[variant], ocel_running_example.variant_frequencies[5])
+    #VV.visualize_variant(extracted_variant)
+    #summarizations = WVSU.within_variant_summarization(extracted_variant)
+    #for summarization in list(summarizations):
+        #SVV.visualize_super_variant_summarization(summarization)
 
