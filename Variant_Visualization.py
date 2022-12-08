@@ -50,7 +50,6 @@ def __interaction_activity_chevron(ax, activity, horizontal_index, vertical_inde
 
     number_sub_chevrons = len(interaction_point.interaction_lanes)
     length_sub_chevron = (1/number_sub_chevrons)
-
   
     ax.text(horizontal_index * DEFAULT_CHEVRON_LENGTH + 2.0, vertical_index * DEFAULT_CHEVRON_HEIGHT + 0.3 * DEFAULT_CHEVRON_HEIGHT, activity, zorder = 10)
 
@@ -73,7 +72,7 @@ def visualize_variant(variant):
         return
      
     # Defining the colors and heights for each lane
-    all_colors = ['orange','limegreen', 'cornflowerblue', 'gold', 'crimson']
+    all_colors = [(1,0.71,0.44), (0.56,0.81,0.56), (0.38,0.57,0.8), (1,0.87,143), (0.56,0.89,0.97)]
     objects = list(variant.object_types)
     objects.sort()
     number_of_object_types = len(objects)
@@ -83,7 +82,7 @@ def visualize_variant(variant):
     maximal_lane_length = 1
     for type in variant.object_types:
         type_lanes = [lane for lane in variant.lanes if lane.object_type == type]
-        color = colors.to_rgb(color_assignment_types[type])
+        color = color_assignment_types[type]
         offset = 0.15
         scale = 0.9
         for lane in type_lanes:

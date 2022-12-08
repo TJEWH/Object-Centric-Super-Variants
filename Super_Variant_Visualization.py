@@ -46,6 +46,7 @@ def __interaction_activity_chevron(ax, lane, element, lane_properties, interacti
     number_sub_chevrons = len(interacting_lanes)
     length_sub_chevron = (1/number_sub_chevrons)
     frequency = lane_properties[lane]["Frequency"]
+    interacting_lanes.sort(key = lambda x: lane_properties[x]["Height"], reverse=True)
 
     label = element.activity
     label = label + " (" + str(frequency) + ")"
@@ -71,20 +72,14 @@ def __summarized_activity_chevron(ax, element, lane_property, color, current_ver
     elif (isinstance(element, SVD.GeneralChoiceStructure)): 
         if(isinstance(element, SVD.OptionalConstruct)):
             line_style = '--'
-            if(len(element.choices) == 1):
-                for i in range(len(element.choices[0])):
-                    label = str(element.choices[0][i])
-                    label = label + " (" + str(element.frequencies[0]) + ")"
-                    ax.text(element.position_start * DEFAULT_CHEVRON_LENGTH + 2.0 + i * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * DEFAULT_CHEVRON_HEIGHT * lane_property["Height"] - 0.3, label, zorder = 10)
-                    ax.add_patch(patches.PathPatch(__chevron_at_position((element.position_start + i) * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT, 1, lane_property["Height"]  * DEFAULT_CHEVRON_HEIGHT), facecolor = color, lw = 1.3, ls = line_style, zorder = 5))
-                return ax
+            margin_length = 0.0
         else:
             line_style = '-'
+            margin_length = 0.3
 
         ax.add_patch(patches.PathPatch(__chevron_at_position(element.position_start * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT, (element.position_end - element.position_start) + 1, lane_property["Height"]  * DEFAULT_CHEVRON_HEIGHT), facecolor = "None", lw = 1.3, ls = "-", zorder = 5))
 
         sub_default_chevron_lenght = ((((element.position_end - element.position_start) + 1) * DEFAULT_CHEVRON_LENGTH) - 2.5) / ((element.position_end - element.position_start) + 1)
-        margin_length = 0.3
         sub_default_chevron_lenght -= margin_length / ((element.position_end - element.position_start) + 1)
         sub_default_chevron_heigth = DEFAULT_CHEVRON_HEIGHT * 5/6
         margin_height = DEFAULT_CHEVRON_HEIGHT * 1/12
@@ -109,13 +104,13 @@ def scale_lightness(rgb, scale_l):
     return colorsys.hls_to_rgb(h, min(1, l * scale_l), s = s)
 
 
-def visualize_within_variant_summarization(summarization):
+def visualize_super_variant_summarization(summarization):
     if(len(summarization.lanes) > 20):
         print("Summarization too large, cannot be visualized.")
         return
      
     # Defining the colors and heights for each lane
-    all_colors = ['orange','limegreen', 'cornflowerblue', 'gold', 'crimson']
+    all_colors = [(1,0.71,0.44), (0.56,0.81,0.56), (0.38,0.57,0.8), (1,0.87,143), (0.56,0.89,0.97)]
     objects = list(summarization.object_types)
     objects.sort()
     number_of_object_types = len(objects)
@@ -126,7 +121,7 @@ def visualize_within_variant_summarization(summarization):
     maximal_lane_length = 1
     for type in summarization.object_types:
         type_lanes = [lane for lane in summarization.lanes if lane.object_type == type]
-        color = colors.to_rgb(color_assignment_types[type])
+        color = color_assignment_types[type]
         offset = 0.15
         scale = 0.9
         for lane in type_lanes:

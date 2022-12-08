@@ -107,6 +107,14 @@ class SummarizedVariant:
         
         self.lanes.sort(key = lambda x: x.lane_name)
         return result
+
+    def to_super_variant(self, id):
+        return SuperVariant(id, self.lanes, self.object_types, self.interaction_points, self.frequency)
+
+    def get_lane(self, id):
+        for lane in self.lanes:
+            if (lane.lane_id == id):
+                return lane
  
 class SuperVariant(SummarizedVariant):
      
@@ -120,7 +128,7 @@ class SuperVariant(SummarizedVariant):
         self.id = id
 
     def __str__(self):
-        result_string = "Super Variant " + str(id) + "\n Lanes: \n"
+        result_string = "Super Variant " + str(self.id) + "\n Lanes: \n"
         for i in range(len(self.lanes)):
             result_string += str(self.lanes[i]) + "\n"
         result_string += "\nInvolved Objects: \n" + str(self.object_types) +"\n"
