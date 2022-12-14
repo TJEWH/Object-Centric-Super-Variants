@@ -189,16 +189,18 @@ def __between_lane_summarization(lanes, interactions, print_result):
 
         # Checks if the common activity is an interaction point
         is_interacting_activity, interaction_point = IED.is_interaction_point(interactions, [lane.lane_id for lane in lanes][0], list(common_activities.values())[i][0])        
-        
-        if(print_result):
-            print("This is an interaction point: " + str(is_interacting_activity))
-
-        if (is_interacting_activity):
-            for index in (set(list(common_activities.values())[i])):
-                new_interaction_points_mapping[(index, str(interaction_point.interaction_lanes))] = current_horizontal_index
-            elements.append(SVD.InteractionConstruct(list(common_activities.keys())[i][1], len(lanes), current_horizontal_index))
-        else:
+        if(is_interacting_activity and all(elem in [lane.lane_id for lane in lanes] for elem in interaction_point.interaction_lanes)):
             elements.append(SVD.CommonConstruct(list(common_activities.keys())[i][1], len(lanes), current_horizontal_index))
+        else:
+            if(print_result):
+                print("This is an interaction point: " + str(is_interacting_activity))
+
+            if (is_interacting_activity):
+                for index in (set(list(common_activities.values())[i])):
+                    new_interaction_points_mapping[(index, str(interaction_point.interaction_lanes))] = current_horizontal_index
+                elements.append(SVD.InteractionConstruct(list(common_activities.keys())[i][1], len(lanes), current_horizontal_index))
+            else:
+                elements.append(SVD.CommonConstruct(list(common_activities.keys())[i][1], len(lanes), current_horizontal_index))
         current_horizontal_index += 1
             
         # Update indices for the next iteration
@@ -333,27 +335,27 @@ def __re_align_lanes(lanes, mappings, print_result):
     aligned_lanes = copy.deepcopy(lanes)
     updated_mappings = copy.deepcopy(mappings)
     updated_interaction_points = []
-    
     # Align the lanes such that the interaction points have the same horizontal index
     for i in range(len(mappings.keys())):
         earliest_interaction_point = min(updated_mappings.items(), key=lambda x: list(x[1].values()))
+        lanes = [lane for lane in aligned_lanes if lane.lane_id in list(earliest_interaction_point[1].keys())]
         if(print_result):
             print("We have an interaction at the following points in the interacting lanes: " + str(earliest_interaction_point[1]))
-        lanes = [lane for lane in aligned_lanes if lane.lane_id in list(earliest_interaction_point[1].keys())]
-        name = lanes[0].get_element(earliest_interaction_point[1][lanes[0].lane_id]).activity
+        element = lanes[0].get_element(earliest_interaction_point[1][lanes[0].lane_id])
+        name = element.activity
         types = list(earliest_interaction_point[1].keys())
-        
+                
         if(len(set(list(earliest_interaction_point[1].values()))) == 1):
             if(print_result):
                 print("No alignment required.")
             position = list(earliest_interaction_point[1].values())[0]
-            
+                    
         else: 
             target_position = max(set(list(earliest_interaction_point[1].values())))
             position = target_position
             involved_lanes = [lane for lane in aligned_lanes if lane.lane_id in list(earliest_interaction_point[1].keys())]
             for lane in involved_lanes:
-                
+                        
                 # Shift indices by the offset
                 current_position = updated_mappings[earliest_interaction_point[0]][lane.lane_id]
                 offset = target_position - current_position
@@ -361,13 +363,13 @@ def __re_align_lanes(lanes, mappings, print_result):
                 lane.shift_lane(element, offset)
                 if(print_result):
                     print("We have shifted lane " + lane.lane_name + " by " + str(offset) + " starting from activity " + str(element) + ".")
-                
-                
+                        
+                        
                 # Update all values in the dictionary accordingly
                 for key in updated_mappings.keys():
                     if(lane.lane_id in updated_mappings[key].keys() and updated_mappings[key][lane.lane_id]>=current_position):
                         updated_mappings[key][lane.lane_id] += offset
-                
+                        
         del updated_mappings[earliest_interaction_point[0]]
         updated_interaction_points.append(IED.InteractionPoint(name, [lane.lane_id for lane in lanes], types, position))
         
@@ -376,7 +378,7 @@ def __re_align_lanes(lanes, mappings, print_result):
 
 def __max_order_preserving_common_activities(lanes):
     '''
-    Extracts the longest sequence od activities found in all lanes, preserving their order
+    Extracts the longest sequence of activities found in all lanes, preserving their order
     :param lanes: Multiple sequences of activities
     :type lanes: list of VariantLane
     :return: the longest order preserving common activity sequence and their indices in the variant

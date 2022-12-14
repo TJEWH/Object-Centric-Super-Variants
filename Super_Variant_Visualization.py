@@ -34,6 +34,22 @@ def __chevron_at_position(horizontal_index, vertical_index, length, height):
     return Path(verts, codes)
 
 
+def __line_at_position(horizontal_index, vertical_index, length):
+    
+    from matplotlib.path import Path
+    verts = [
+       (horizontal_index, vertical_index),
+       (horizontal_index + DEFAULT_CHEVRON_LENGTH * length, vertical_index),
+    ]
+
+    codes = [
+        Path.MOVETO,
+        Path.LINETO,
+    ]
+
+    return Path(verts, codes)
+
+
 def __interaction_activity_chevron(ax, lane, element, lane_properties, interaction_points, current_vertical_position):
 
     from matplotlib.path import Path
@@ -83,9 +99,21 @@ def __summarized_activity_chevron(ax, element, lane_property, color, current_ver
         sub_default_chevron_lenght -= margin_length / ((element.position_end - element.position_start) + 1)
         sub_default_chevron_heigth = DEFAULT_CHEVRON_HEIGHT * 5/6
         margin_height = DEFAULT_CHEVRON_HEIGHT * 1/12
+        vertical_half = 1/2 * lane_property["Height"]  * DEFAULT_CHEVRON_HEIGHT
+        chevron_vertical_half = current_vertical_position*DEFAULT_CHEVRON_HEIGHT + vertical_half
 
         for i in range(len(element.choices)):
             vertical_position = (current_vertical_position * DEFAULT_CHEVRON_HEIGHT) + i * DEFAULT_CHEVRON_HEIGHT
+
+            # Drawing a separation line
+            if (vertical_position != current_vertical_position):
+                if(vertical_position <= chevron_vertical_half):
+                    line_offset = (vertical_position - current_vertical_position)/vertical_half * 1.25
+                else:
+                    line_offset = (1-((vertical_position - (current_vertical_position + chevron_vertical_half))/vertical_half)) * 1.25
+
+                ax.add_patch(patches.PathPatch(__line_at_position(element.position_start * DEFAULT_CHEVRON_LENGTH + line_offset, vertical_position, (element.position_end - element.position_start) + 1), lw = 1.1, ls = "-", zorder = 5))
+
             length_of_choice = len(element.choices[i])
        
             horizontal_start_position = (element.position_start * DEFAULT_CHEVRON_LENGTH) + 1.25 + margin_length + (((element.position_end - element.position_start) + 1) * (sub_default_chevron_lenght) - (length_of_choice * sub_default_chevron_lenght + margin_length)) / 2

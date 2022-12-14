@@ -237,9 +237,12 @@ class SuperLane:
         return result
 
     def get_realizations(self):
+
+        import copy
         realizations = []
         realizations.append([])
-        for element in self.elements:
+        for elem in self.elements:
+            element = copy.deepcopy(elem)
             if(type(element) == CommonConstruct or type(element) == InteractionConstruct):
                 realizations = [realization + [element] for realization in realizations]
             if(type(element) == ChoiceConstruct or type(element) == OptionalConstruct):
@@ -247,6 +250,8 @@ class SuperLane:
                 for choice in element.choices:
                     sublist = [CommonConstruct(choice[i], None, 0) for i in range(len(choice))]
                     intermediate_result.extend([realization + sublist for realization in realizations])
+                if(type(element) == OptionalConstruct):
+                    intermediate_result.extend(realizations)
                 realizations = intermediate_result
         result = []
         for i in range(len(realizations)):
