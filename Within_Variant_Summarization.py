@@ -189,18 +189,18 @@ def __between_lane_summarization(lanes, interactions, print_result):
 
         # Checks if the common activity is an interaction point
         is_interacting_activity, interaction_point = IED.is_interaction_point(interactions, [lane.lane_id for lane in lanes][0], list(common_activities.values())[i][0])        
-        if(is_interacting_activity and all(elem in [lane.lane_id for lane in lanes] for elem in interaction_point.interaction_lanes)):
-            elements.append(SVD.CommonConstruct(list(common_activities.keys())[i][1], len(lanes), current_horizontal_index))
-        else:
-            if(print_result):
-                print("This is an interaction point: " + str(is_interacting_activity))
+        #if(is_interacting_activity and all(elem in [lane.lane_id for lane in lanes] for elem in interaction_point.interaction_lanes)):
+            #elements.append(SVD.CommonConstruct(list(common_activities.keys())[i][1], len(lanes), current_horizontal_index))
+        #else:
+        if(print_result):
+            print("This is an interaction point: " + str(is_interacting_activity))
 
-            if (is_interacting_activity):
-                for index in (set(list(common_activities.values())[i])):
-                    new_interaction_points_mapping[(index, str(interaction_point.interaction_lanes))] = current_horizontal_index
-                elements.append(SVD.InteractionConstruct(list(common_activities.keys())[i][1], len(lanes), current_horizontal_index))
-            else:
-                elements.append(SVD.CommonConstruct(list(common_activities.keys())[i][1], len(lanes), current_horizontal_index))
+        if (is_interacting_activity):
+            for index in (set(list(common_activities.values())[i])):
+                new_interaction_points_mapping[(index, str(interaction_point.interaction_lanes))] = current_horizontal_index
+            elements.append(SVD.InteractionConstruct(list(common_activities.keys())[i][1], len(lanes), current_horizontal_index))
+        else:
+            elements.append(SVD.CommonConstruct(list(common_activities.keys())[i][1], len(lanes), current_horizontal_index))
         current_horizontal_index += 1
             
         # Update indices for the next iteration
@@ -261,6 +261,7 @@ def __apply_patterns(activities, start_index, print_result):
     longest_option = max(choice_activities, key=len)
     length = len(longest_option)
     unique_choice_sequences = [list(sequence) for sequence in set(tuple(sequence) for sequence in choice_activities) if list(sequence) != []]
+    unique_choice_sequences.sort()
     frequencies = []
     for choice in unique_choice_sequences:
         frequency = 0
@@ -343,7 +344,7 @@ def __re_align_lanes(lanes, mappings, print_result):
             print("We have an interaction at the following points in the interacting lanes: " + str(earliest_interaction_point[1]))
         element = lanes[0].get_element(earliest_interaction_point[1][lanes[0].lane_id])
         name = element.activity
-        types = list(earliest_interaction_point[1].keys())
+        types = set([lane.object_type for lane in lanes])
                 
         if(len(set(list(earliest_interaction_point[1].values()))) == 1):
             if(print_result):
@@ -355,7 +356,7 @@ def __re_align_lanes(lanes, mappings, print_result):
             position = target_position
             involved_lanes = [lane for lane in aligned_lanes if lane.lane_id in list(earliest_interaction_point[1].keys())]
             for lane in involved_lanes:
-                        
+                
                 # Shift indices by the offset
                 current_position = updated_mappings[earliest_interaction_point[0]][lane.lane_id]
                 offset = target_position - current_position
