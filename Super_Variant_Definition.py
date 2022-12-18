@@ -216,16 +216,16 @@ class SuperLane:
         self_contains_choice = any(isinstance(x, ChoiceConstruct) for x in self.elements) or any(isinstance(x, OptionalConstruct) for x in self.elements)
         other_contains_choice = any(isinstance(x, ChoiceConstruct) for x in summarization.elements) or any(isinstance(x, OptionalConstruct) for x in summarization.elements)
         if(self_contains_choice and not other_contains_choice):
-            realizations = self.get_realizations()
+            realizations = self.get_realizations_normalized()
             for realization in realizations:
                 result = result or realization.same_summarization(summarization)
         elif(not self_contains_choice and other_contains_choice):
-            realizations = summarization.get_realizations()
+            realizations = summarization.get_realizations_normalized()
             for realization in realizations:
                 result = result or realization.same_summarization(self)
         else:
-            realizations1 = self.get_realizations()
-            realizations2 = summarization.get_realizations()
+            realizations1 = self.get_realizations_normalized()
+            realizations2 = summarization.get_realizations_normalized()
             subsumed_in_2 = True
             subsumed_in_1 = True
             for realization in realizations1:
@@ -234,6 +234,32 @@ class SuperLane:
                 subsumed_in_1 = subsumed_in_1 and any([realization.same_summarization(other) for other in realizations1])
             result = (subsumed_in_2 or subsumed_in_1)
                 
+        return result
+
+    def get_realizations_normalized(self):
+
+        import copy
+        realizations = []
+        realizations.append([])
+        for elem in self.elements:
+            element = copy.deepcopy(elem)
+            if(type(element) == CommonConstruct or type(element) == InteractionConstruct):
+                realizations = [realization + [element] for realization in realizations]
+            if(type(element) == ChoiceConstruct or type(element) == OptionalConstruct):
+                intermediate_result = []
+                for i in range(len(element.choices)):
+                    sublist = [CommonConstruct(element.choices[i][j], element.frequencies[i], 0) for j in range(len(element.choices[i]))]
+                    intermediate_result.extend([realization + sublist for realization in realizations])
+                if(type(element) == OptionalConstruct):
+                    intermediate_result.extend(realizations)
+                realizations = intermediate_result
+        result = []
+        for i in range(len(realizations)):
+            index = 0
+            for element in realizations[i]:
+                element.position = index
+                index += 1
+            result.append(SuperLane(i, "realization " + str(i), self.object_type, realizations[i], None))
         return result
 
     def get_realizations(self):
@@ -247,18 +273,14 @@ class SuperLane:
                 realizations = [realization + [element] for realization in realizations]
             if(type(element) == ChoiceConstruct or type(element) == OptionalConstruct):
                 intermediate_result = []
-                for choice in element.choices:
-                    sublist = [CommonConstruct(choice[i], None, 0) for i in range(len(choice))]
+                for i in range(len(element.choices)):
+                    sublist = [CommonConstruct(element.choices[i][j], element.frequencies[i], element.position_start+i) for j in range(len(element.choices[i]))]
                     intermediate_result.extend([realization + sublist for realization in realizations])
                 if(type(element) == OptionalConstruct):
                     intermediate_result.extend(realizations)
                 realizations = intermediate_result
         result = []
         for i in range(len(realizations)):
-            index = 0
-            for element in realizations[i]:
-                element.position = index
-                index += 1
             result.append(SuperLane(i, "realization " + str(i), self.object_type, realizations[i], None))
         return result
 

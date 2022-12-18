@@ -1,20 +1,258 @@
 import Super_Variant_Definition as SVD
 import Super_Variant_Visualization as WVV
+import Within_Variant_Summarization as WVS
 
 def join_super_variants(summarization1, summarization2):
     import copy
     WVV.visualize_super_variant_summarization(summarization1)
     WVV.visualize_super_variant_summarization(summarization2)
     mapping, cost = decide_matching(summarization1, summarization2, copy.deepcopy(summarization1.lanes), copy.deepcopy(summarization2.lanes), True, False)
-    print(mapping)
     print("The cost of joining these Super Variants is " + str(cost) + ".")
-    result, cost, mapping = join_super_lanes(summarization1, summarization2, summarization1.lanes[1].lane_id, summarization2.lanes[1].lane_id, summarization1.lanes[1].elements, summarization2.lanes[1].elements, 0)
-    #print(result)
-    for elem in result:
-        print(elem)
+
+    result_lanes = []
+    intermediate_mappings = []
+    result_interaction_points = []
+    for pair in mapping:
+        if(pair[0] == None):
+            print("Lane " + str(pair[1]) + " of the Super Variant 2 is made optional.")
+            lane2 = [lane for lane in summarization2.lanes if lane.lane_id == pair[1]][0]
+            # Make lane two optional
+        elif(pair[1] == None):
+            print("Lane " + str(pair[0]) + " of the Super Variant 1 is made optional.")
+            lane1 = [lane for lane in summarization1.lanes if lane.lane_id == pair[0]][0]
+            # Make lane one optional
+        else:
+            print("Lane " + str(pair[0]) + " of the Super Variant 1 and lane " + str(pair[1]) + " of Super Variant 2 are merged.")
+            lane1 = [lane for lane in summarization1.lanes if lane.lane_id == pair[0]][0]
+            lane2 = [lane for lane in summarization2.lanes if lane.lane_id == pair[1]][0]
+
+            super_lane, mapping = join_super_lanes(summarization1, summarization2, lane1, lane2)
+            print(super_lane)
+            result_lanes.append(super_lane)
+            intermediate_mappings.append(mapping)
+
+    #return SVD.SuperVariant(0, result_lanes, summarization1.object_types.union(summarization2.object_types), result_interaction_points, summarization1.frequency + summarization2.frequency)
     return
 
-def join_super_lanes(summarization1, summarization2, id1, id2, lane1_elements, lane2_elements, current_position):
+
+def join_super_lanes(summarization1, summarization2, lane1, lane2, print_result = True):
+    return __between_lane_summarization(summarization1, summarization2, lane1, lane2, lane1.get_realizations(), lane2.get_realizations(), summarization1.interaction_points, summarization2.interaction_points, print_result)
+
+
+def __between_lane_summarization(summarization1, summarization2, o_lane1, o_lane2, lanes1, lanes2, interactions1, interactions2, print_result):
+
+    import copy
+    # Initializing the values for the summarized lanes object
+    elements = []
+    object_type = o_lane1.object_type
+    lane_name = o_lane1.object_type + " i"
+    lane_id = (o_lane1.lane_id, o_lane2.lane_id)
+    if(o_lane1.cardinality == o_lane2.cardinality):
+        cardinality = o_lane1.cardinality
+    else:
+        cardinality = "1..n"
+    
+    new_interaction_points_mapping = {}
+    current_horizontal_index = 0
+
+    all_lanes = []
+    for lane in lanes1:
+        all_lanes.append((1, lane, len(lane.elements)))
+    for lane in lanes2:
+        all_lanes.append((2, lane, len(lane.elements)))
+
+    longest_common_sequence, value = __get_longest_common_subsequence(copy.deepcopy(all_lanes))
+    start_indices = [0 for lane in all_lanes]
+
+    for common_element in longest_common_sequence:
+
+        # Determine all interval subprocesses and summarize them
+        interval_subprocesses = []
+        for j in range(len(all_lanes)):
+            start_index = start_indices[j]
+            end_index = (common_element[1][j][2])
+            if(end_index - start_index >= 0):
+                interval_subprocesses.append((all_lanes[j][1].elements[start_index:end_index]))
+            else:
+                interval_subprocesses.append([])
+        
+        # Add summarized subprocess to elements
+        interval_elements, interval_length, interval_mapping = __apply_patterns(interval_subprocesses, current_horizontal_index, print_result)
+        elements.extend(interval_elements)
+        new_interaction_points_mapping.update(interval_mapping)
+        current_horizontal_index += interval_length
+                     
+        # Add the common activity to the elements of the summarized lane
+        if(print_result):
+            print("\n")
+            print("Adding the common activity: " + str(common_element[0]))
+
+        # Get frequency of the event
+        frequency1 = 0 
+        frequency2 = 0
+        for i in range(len(all_lanes)):
+            if(all_lanes[i][0] == 1 and frequency1 == 0):
+                frequency1 = all_lanes[i][1].elements[common_element[1][i][2]].frequency
+            elif(all_lanes[i][0] == 2 and frequency2 == 0):
+                frequency2 = all_lanes[i][1].elements[common_element[1][i][2]].frequency
+
+
+        
+        # Checks if the common activity is an interaction point
+        is_interacting_activity = isinstance(all_lanes[0][1].elements[common_element[1][0][2]], SVD.InteractionConstruct)   
+
+        if(print_result):
+            print("This is an interaction point: " + str(is_interacting_activity))
+
+        if (is_interacting_activity):
+
+            interaction_point1 = None
+            interaction_point2 = None
+            for i in range(len(all_lanes)):
+                if(all_lanes[i][0] == 1):
+                    element = all_lanes[i][1].elements[common_element[1][i][2]]
+                    for interaction_point in summarization1.interaction_points:
+                        if(interaction_point.index_in_lanes == element.position and o_lane1.lane_id in interaction_point.interaction_lanes):
+                            interaction_point1 = interaction_point
+                            break
+                elif(all_lanes[i][0] == 2):
+                    element = all_lanes[i][1].elements[common_element[1][i][2]]
+                    for interaction_point in summarization2.interaction_points:
+                        if(interaction_point.index_in_lanes == element.position and o_lane2.lane_id in interaction_point.interaction_lanes):
+                            interaction_point2 = interaction_point
+                            break
+
+            new_interaction_points_mapping[(1, interaction_point1.index_in_lanes, str(interaction_point1.interaction_lanes))] = current_horizontal_index
+            new_interaction_points_mapping[(2, interaction_point2.index_in_lanes, str(interaction_point2.interaction_lanes))] = current_horizontal_index
+
+            elements.append(SVD.InteractionConstruct(common_element[0], frequency1 + frequency2, current_horizontal_index))
+
+        else:
+            elements.append(SVD.CommonConstruct(common_element[0], frequency1 + frequency2, current_horizontal_index))
+
+        current_horizontal_index += 1
+            
+        # Update indices for the next iteration
+        start_indices = []
+        for lane in all_lanes:
+            start_indices.append(common_element[1][j][2]+1)
+
+    # Determine all interval subprocesses and summarize them
+    interval_subprocesses = []
+    for j in range(len(all_lanes)):
+        start_index = start_indices[j]
+        end_index = len(all_lanes[j][1].elements)
+        if(end_index - start_index >= 0):
+            interval_subprocesses.append((all_lanes[j][1].elements[start_index:end_index]))
+        else:
+            interval_subprocesses.append([])
+        
+    # Add summarized subprocess to elements
+    interval_elements, interval_length, interval_mapping = __apply_patterns(interval_subprocesses, current_horizontal_index, print_result)
+    elements.extend(interval_elements)
+    new_interaction_points_mapping.update(interval_mapping)
+    current_horizontal_index += interval_length
+
+    return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality), new_interaction_points_mapping
+
+def __apply_patterns(interval_subprocesses, start_index, print_result):
+
+    if sum([len(elements) for elements in interval_subprocesses]) == 0:
+        return [], 0, dict()
+    
+    if(print_result):
+            print("\n")
+            print("Applying a pattern to the elements: ")
+            for elements in interval_subprocesses:
+                print(elements)
+            
+    returned_elements = []
+    length = 0
+
+    # Determine choices and their frequencies
+    choice_activities = dict()
+
+    for elements in interval_subprocesses:
+        choice = []
+        frequency = 0
+        for element in elements:
+            choice.append(element.activity)
+            frequency = element.frequency
+
+        if(str(choice) in choice_activities.keys()):
+            choice_activities[str(choice)][1] += frequency
+        else:
+            choice_activities[str(choice)] = (choice, frequency)
+
+    unique_choices = [choice for choice in choice_activities.values() if choice[0] != []]
+    unique_choices.sort(key=lambda a: a[0])
+    frequencies = [choice[1] for choice in unique_choices]
+    unique_choice_sequences = [choice[0] for choice in unique_choices]
+
+    longest_option = max(unique_choice_sequences, key=len)
+    length = len(longest_option)
+        
+    # Adding Construct
+    if(str([]) in choice_activities.keys()):
+        if(print_result):
+
+        # Output printing
+            print("\n")
+            print("Adding a optional choice element between the following sequences.")
+            print(unique_choice_sequences)
+
+        returned_elements.append(SVD.OptionalConstruct(unique_choice_sequences, frequencies, start_index, start_index+length-1))
+
+    else:
+
+        if(print_result):
+            # Output printing
+            print("\n")
+            print("Adding a choice element between the following sequences.")
+            print(unique_choice_sequences)
+
+        returned_elements.append(SVD.ChoiceConstruct(unique_choice_sequences, frequencies, start_index, start_index+length-1))
+            
+    return returned_elements, length, dict()
+
+def __get_longest_common_subsequence(lanes):
+
+    base_element = lanes[0][1].elements[lanes[0][2]-1]
+
+    if any([lane[2] == 0 for lane in lanes]):
+        return [], 0 
+
+    elif(all((type(lane[1].elements[lane[2]-1]) == type(base_element) and lane[1].elements[lane[2]-1].activity == base_element.activity) for lane in lanes)):
+        
+        recursive_result, recursive_value = __get_longest_common_subsequence([(lane[0], lane[1], lane[2]-1) for lane in lanes])
+        indices = [(lane[0], lane[1], lane[2]-1) for lane in lanes]
+        return recursive_result + [(base_element.activity, indices)], recursive_value + 1
+
+    else:
+        maximum_value = -1
+        maximum_result = []
+
+        for i in range(1, pow(2,len(lanes))-1):
+            binary = list(bin(i)[2:].zfill(len(lanes)))
+            recursive_call_lanes = []
+            for i in range(len(lanes)):
+                if (binary[i] == '1'):
+                    recursive_call_lanes.append((lanes[i][0], lanes[i][1], lanes[i][2]-1))
+                else:
+                    recursive_call_lanes.append(lanes[i])
+
+            recursive_result, recursive_value = __get_longest_common_subsequence(recursive_call_lanes)
+
+            if (recursive_value > maximum_value):
+                maximum_value = recursive_value
+                maximum_result = recursive_result
+
+        return maximum_result, maximum_value
+
+
+
+
+def join_super_lanes_recursive(summarization1, summarization2, id1, id2, lane1_elements, lane2_elements, current_position):
 
     result_elements = []
     result_cost = 0
