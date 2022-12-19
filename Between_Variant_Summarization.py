@@ -2,7 +2,7 @@ import Super_Variant_Definition as SVD
 import Super_Variant_Visualization as WVV
 import Within_Variant_Summarization as WVS
 
-def join_super_variants(summarization1, summarization2):
+def join_super_variants(id1, id2, summarization1, summarization2):
     import copy
     WVV.visualize_super_variant_summarization(summarization1)
     WVV.visualize_super_variant_summarization(summarization2)
@@ -16,11 +16,19 @@ def join_super_variants(summarization1, summarization2):
         if(pair[0] == None):
             print("Lane " + str(pair[1]) + " of the Super Variant 2 is made optional.")
             lane2 = [lane for lane in summarization2.lanes if lane.lane_id == pair[1]][0]
-            # Make lane two optional
+            super_lane, mapping = optional_super_lane(summarization2, lane2)
+            print(super_lane)
+            result_lanes.append(super_lane)
+            intermediate_mappings.append(mapping)
+
         elif(pair[1] == None):
             print("Lane " + str(pair[0]) + " of the Super Variant 1 is made optional.")
             lane1 = [lane for lane in summarization1.lanes if lane.lane_id == pair[0]][0]
-            # Make lane one optional
+            super_lane, mapping = optional_super_lane(summarization1, lane1)
+            print(super_lane)
+            result_lanes.append(super_lane)
+            intermediate_mappings.append(mapping)
+
         else:
             print("Lane " + str(pair[0]) + " of the Super Variant 1 and lane " + str(pair[1]) + " of Super Variant 2 are merged.")
             lane1 = [lane for lane in summarization1.lanes if lane.lane_id == pair[0]][0]
@@ -31,15 +39,27 @@ def join_super_variants(summarization1, summarization2):
             result_lanes.append(super_lane)
             intermediate_mappings.append(mapping)
 
-    #return SVD.SuperVariant(0, result_lanes, summarization1.object_types.union(summarization2.object_types), result_interaction_points, summarization1.frequency + summarization2.frequency)
-    return
+    return SVD.SuperVariant(id1 + id2, result_lanes, summarization1.object_types.union(summarization2.object_types), result_interaction_points, summarization1.frequency + summarization2.frequency)
 
+def optional_super_lane(summarization, lane):
+    
+    elements = []
+    object_type = lane.object_type
+    lane_name = lane.object_type + " i"
+    lane_id = tuple(lane.lane_id)
+    cardinality = lane.cardinality
+
+    new_interaction_points_mapping = {}
+    current_horizontal_index = 0
+
+    for elem in lane.elements():
+        return
 
 def join_super_lanes(summarization1, summarization2, lane1, lane2, print_result = True):
-    return __between_lane_summarization(summarization1, summarization2, lane1, lane2, lane1.get_realizations(), lane2.get_realizations(), summarization1.interaction_points, summarization2.interaction_points, print_result)
+    return __between_lane_summarization(summarization1, summarization2, lane1, lane2, lane1.get_realizations(), lane2.get_realizations(), print_result)
 
 
-def __between_lane_summarization(summarization1, summarization2, o_lane1, o_lane2, lanes1, lanes2, interactions1, interactions2, print_result):
+def __between_lane_summarization(summarization1, summarization2, o_lane1, o_lane2, lanes1, lanes2, print_result):
 
     import copy
     # Initializing the values for the summarized lanes object

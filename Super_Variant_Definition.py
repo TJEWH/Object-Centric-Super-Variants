@@ -72,10 +72,19 @@ class SummarizedVariant:
                         # Determine all choice sequences and sort alphabetically
                         choices = []
                         for choice in element.choices:
-                            sequence = ""
-                            for i in range(len(choice)):
-                                sequence += str(choice[i])
-                            choices.append(sequence)
+                            single_choice_encoding = "["
+
+                            for elem in choice:
+                                if(type(elem) == CommonConstruct):
+                                    single_choice_encoding += f"CO[{elem.position}:{elem.position}, {elem.activity}] "
+
+                                elif(type(elem) == InteractionConstruct):
+                                    single_choice_encoding += f"IP[{elem.position}:{elem.position}, {elem.activity}] "
+
+                            single_choice_encoding = single_choice_encoding[:-1]
+                            single_choice_encoding += "]"
+                            choices.append(single_choice_encoding)
+
                         choices.sort()
 
                         # Encode all choices
@@ -201,6 +210,7 @@ class SuperLane:
 
 
     def same_summarization(self, summarization):
+        print("Enter same_summarization.")
         if(summarization.object_type != self.object_type or len(self.elements) != len(summarization.elements)):
             return False
         else:
@@ -211,17 +221,28 @@ class SuperLane:
     
     def subsumed_summarization(self, summarization):
         if(summarization.object_type != self.object_type or len(self.elements) != len(summarization.elements)):
+            for elem in self.elements:
+                print(type(elem))
+            print("--------------------")
+            for elem in summarization.elements:
+                print(type(elem))
+
             return False
+
         result = False
         self_contains_choice = any(isinstance(x, ChoiceConstruct) for x in self.elements) or any(isinstance(x, OptionalConstruct) for x in self.elements)
         other_contains_choice = any(isinstance(x, ChoiceConstruct) for x in summarization.elements) or any(isinstance(x, OptionalConstruct) for x in summarization.elements)
+
         if(self_contains_choice and not other_contains_choice):
             realizations = self.get_realizations_normalized()
             for realization in realizations:
+                print(realization)
                 result = result or realization.same_summarization(summarization)
+
         elif(not self_contains_choice and other_contains_choice):
             realizations = summarization.get_realizations_normalized()
             for realization in realizations:
+                print(realization)
                 result = result or realization.same_summarization(self)
         else:
             realizations1 = self.get_realizations_normalized()
@@ -229,15 +250,16 @@ class SuperLane:
             subsumed_in_2 = True
             subsumed_in_1 = True
             for realization in realizations1:
+                print(realization)
                 subsumed_in_2 = subsumed_in_2 and any([realization.same_summarization(other) for other in realizations2])
             for realization in realizations2:
+                print(realization)
                 subsumed_in_1 = subsumed_in_1 and any([realization.same_summarization(other) for other in realizations1])
             result = (subsumed_in_2 or subsumed_in_1)
                 
         return result
 
     def get_realizations_normalized(self):
-
         import copy
         realizations = []
         realizations.append([])
@@ -248,7 +270,7 @@ class SuperLane:
             if(type(element) == ChoiceConstruct or type(element) == OptionalConstruct):
                 intermediate_result = []
                 for i in range(len(element.choices)):
-                    sublist = [CommonConstruct(element.choices[i][j], element.frequencies[i], 0) for j in range(len(element.choices[i]))]
+                    sublist = [elem for elem in element.choices[i]]
                     intermediate_result.extend([realization + sublist for realization in realizations])
                 if(type(element) == OptionalConstruct):
                     intermediate_result.extend(realizations)
@@ -274,7 +296,7 @@ class SuperLane:
             if(type(element) == ChoiceConstruct or type(element) == OptionalConstruct):
                 intermediate_result = []
                 for i in range(len(element.choices)):
-                    sublist = [CommonConstruct(element.choices[i][j], element.frequencies[i], element.position_start+i) for j in range(len(element.choices[i]))]
+                    sublist = [elem for elem in element.choices[i]]
                     intermediate_result.extend([realization + sublist for realization in realizations])
                 if(type(element) == OptionalConstruct):
                     intermediate_result.extend(realizations)
@@ -301,7 +323,10 @@ class SuperLane:
                 self.elements[i].position += offset
             if(type(self.elements[i]) == ChoiceConstruct or type(self.elements[i]) == OptionalConstruct):
                 self.elements[i].position_start += offset
-                self.elements[i].position_end += offset      
+                self.elements[i].position_end += offset 
+                for choice in self.elements[i].choices:
+                    for elem in choice:
+                        elem.position += offset
 
 
 class OptionalSuperLane(SuperLane):
@@ -352,13 +377,11 @@ class InteractionConstruct(CommonConstruct):
 
 class GeneralChoiceStructure(SummarizationElement):
     choices = []
-    frequencies = []
     position_start = 0
     position_end = 0
     
-    def __init__(self, choices, frequencies, start, end):
+    def __init__(self, choices, start, end):
         self.choices = choices
-        self.frequencies = frequencies
         self.position_start = start
         self.position_end = end
     
@@ -371,7 +394,14 @@ class OptionalConstruct(GeneralChoiceStructure):
     '''The data structure of an optional activity in a summarized variant'''
     
     def __str__(self):
-        return f"(Pos: {self.position_start} - {self.position_end}: Optional {self.choices})"
+        result_string = f"(Pos: {self.position_start} - {self.position_end}: Optional Choices "
+        for choice in self.choices:
+            result_string += "["
+            for elem in choice:
+                result_string += str(elem) + ", "
+            result_string = result_string[:-2] + "], "
+        result_string = result_string[:-2] + ")"
+        return result_string
 
 
     
@@ -379,7 +409,14 @@ class ChoiceConstruct(GeneralChoiceStructure):
     '''The data structure of a choice of activities in a summarized variant'''
     
     def __str__(self):
-        return f"(Pos: {self.position_start} - {self.position_end}: Choice {self.choices})"
+        result_string = f"(Pos: {self.position_start} - {self.position_end}: Choices "
+        for choice in self.choices:
+            result_string += "["
+            for elem in choice:
+                result_string += str(elem) + ", "
+            result_string = result_string[:-2] + "], "
+        result_string = result_string[:-2] + ")"
+        return result_string
 
 
 def convert_to_summarized_format(lane):

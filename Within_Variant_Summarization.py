@@ -269,6 +269,16 @@ def __apply_patterns(activities, start_index, print_result):
             if (choice == sequence):
                 frequency += 1
         frequencies.append(frequency)
+
+    unique_choice_sequences_elements = []
+    for i in range(len(unique_choice_sequences)):
+        choice_elements = []
+        position = start_index
+        for activity in unique_choice_sequences[i]:
+            choice_elements.append(SVD.CommonConstruct(activity, frequencies[i], position))
+            position += 1
+        unique_choice_sequences_elements.append(choice_elements)
+
         
     # Adding Construct
     if([] in choice_activities):
@@ -279,7 +289,7 @@ def __apply_patterns(activities, start_index, print_result):
             print("Adding a optional choice element between the following sequences.")
             print(unique_choice_sequences)
 
-        elements.append(SVD.OptionalConstruct(unique_choice_sequences, frequencies, start_index, start_index+length-1))
+        elements.append(SVD.OptionalConstruct(unique_choice_sequences_elements, start_index, start_index+length-1))
 
     else:
 
@@ -289,7 +299,7 @@ def __apply_patterns(activities, start_index, print_result):
             print("Adding a choice element between the following sequences.")
             print(unique_choice_sequences)
 
-        elements.append(SVD.ChoiceConstruct(unique_choice_sequences, frequencies, start_index, start_index+length-1))
+        elements.append(SVD.ChoiceConstruct(unique_choice_sequences_elements, start_index, start_index+length-1))
             
     return elements, length
 
