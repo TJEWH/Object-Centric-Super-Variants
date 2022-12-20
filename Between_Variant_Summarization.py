@@ -51,7 +51,7 @@ def join_super_variants(summarization1, summarization2, print_result = True):
     super_variant = SVD.SuperVariant(summarization1.id + summarization2.id, result_lanes, summarization1.object_types.union(summarization2.object_types), result_interaction_points, summarization1.frequency + summarization2.frequency)
     super_variant.encode_lexicographically()
     print(super_variant)
-    WVV.visualize_super_variant(super_variant)
+    #WVV.visualize_super_variant(super_variant)
     return super_variant
 
 def __merge_interactions(merged_interactions):
@@ -198,7 +198,7 @@ def optional_super_lane(summarization, lane, first):
             if(isinstance(elem, SVD.ChoiceConstruct)):
                 elements.append(SVD.ChoiceConstruct(new_choices, current_horizontal_index, current_horizontal_index + length-1))
             else:
-                elements.append(SVD.ChoiceConstruct(new_choices, current_horizontal_index, current_horizontal_index + length-1))
+                elements.append(SVD.OptionalConstruct(new_choices, current_horizontal_index, current_horizontal_index + length-1))
 
             current_horizontal_index += length
 

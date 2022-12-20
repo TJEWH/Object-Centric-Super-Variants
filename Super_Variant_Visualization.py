@@ -119,7 +119,7 @@ def __summarized_activity_chevron(ax, lane, element, lane_property, lane_propert
                 if(vertical_position <= chevron_vertical_half):
                     line_offset = (vertical_position - current_vertical_position * DEFAULT_CHEVRON_HEIGHT)/vertical_half * 1.25
                 else:
-                    line_offset = (1-((vertical_position - (current_vertical_position * DEFAULT_CHEVRON_HEIGHT + chevron_vertical_half))/vertical_half)) * 1.25
+                    line_offset = 1.25 - (vertical_position - chevron_vertical_half)/vertical_half * 1.25
                 ax.add_patch(patches.PathPatch(__line_at_position(element.position_start * DEFAULT_CHEVRON_LENGTH + line_offset, vertical_position, (element.position_end - element.position_start) + 1), lw = 1.1, ls = overall_line_style, zorder = 5, hatch = hatch, alpha = transparency))
 
             length_of_choice = len(element.choices[i])
