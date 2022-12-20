@@ -319,8 +319,8 @@ def __merge_interaction_mappings(mappings):
         for key in mapping.keys():
             positions = {}
             positions[mappings[i][0]] = mappings[i][1][key]
-            for k in range(len(mappings)):
-                if(k > i and key in list(mappings[k][1].keys())):
+            for k in range(i+1, len(mappings)):
+                if(key in list(mappings[k][1].keys())):
                     positions[mappings[k][0]] = mappings[k][1][key]
             if(len(positions.keys()) > 1 and key not in merged_mappings.keys()):
                 merged_mappings[key] = positions

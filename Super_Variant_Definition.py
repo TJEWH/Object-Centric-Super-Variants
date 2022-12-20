@@ -210,7 +210,6 @@ class SuperLane:
 
 
     def same_summarization(self, summarization):
-        print("Enter same_summarization.")
         if(summarization.object_type != self.object_type or len(self.elements) != len(summarization.elements)):
             return False
         else:
