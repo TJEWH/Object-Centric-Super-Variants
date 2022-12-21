@@ -210,7 +210,7 @@ def visualize_super_variant(summarization):
             else:
                 ax = __summarized_activity_chevron(ax, summarization.lanes[i].lane_id, elem, lane_properties[summarization.lanes[i].lane_id], lane_properties, color, summarization.interaction_points, current_vertical_position)
         current_vertical_position += lane_properties[summarization.lanes[i].lane_id]["Height"]
-
+    ax.text(-7.5, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.7, "Frequency: " + str(round(summarization.frequency, 3)), zorder = 10)
     ax.set_aspect('equal')
     ax.set_xlim(-10, (maximal_lane_length+1)*DEFAULT_CHEVRON_LENGTH+2)
     ax.set_ylim(-2, current_vertical_position*DEFAULT_CHEVRON_HEIGHT+2)

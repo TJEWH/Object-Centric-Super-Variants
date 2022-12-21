@@ -14,10 +14,25 @@ ocel_order_process = ocel_import_factory.apply(filename)
 selection = WVSE.within_variant_selection(ocel_order_process)
 summarizations = [selection[key][1][0].to_super_variant(tuple(selection[key][0])) for key in selection.keys()]
 
-first = summarizations[0]
-for summarization in summarizations[1:6]:
-    first = BVS.join_super_variants(first, summarization)
-SVV.visualize_super_variant(first)   
+
+super_variant1 = BVS.join_super_variants(summarizations[0], summarizations[1])
+SVV.visualize_super_variant(super_variant1)
+super_variant2 = BVS.join_super_variants(summarizations[2], summarizations[3])
+SVV.visualize_super_variant(super_variant2)  
+super_variant3 = BVS.join_super_variants(summarizations[4], summarizations[5])
+SVV.visualize_super_variant(super_variant3)  
+super_variant4 = BVS.join_super_variants(summarizations[6], summarizations[7])
+SVV.visualize_super_variant(super_variant4) 
+
+super_variant12 = BVS.join_super_variants(super_variant1, super_variant2)
+SVV.visualize_super_variant(super_variant12)
+
+super_variant34 = BVS.join_super_variants(super_variant3, super_variant4)
+SVV.visualize_super_variant(super_variant34)
+
+#super_variant1234 = BVS.join_super_variants(super_variant12, super_variant34)
+#SVV.visualize_super_variant(super_variant1234)
+
 
 #for key in (selection.keys()):
     #print(key)

@@ -437,16 +437,19 @@ def __get_longest_common_subsequence(lanes):
 
     elif(all((type(lane[1].elements[lane[2]-1]) == type(base_element) and lane[1].elements[lane[2]-1].activity == base_element.activity) for lane in lanes)):
         
+        print("Match!")
         recursive_result, recursive_value = __get_longest_common_subsequence([(lane[0], lane[1], lane[2]-1) for lane in lanes])
         indices = [(lane[0], lane[1], lane[2]-1) for lane in lanes]
         return recursive_result + [(base_element.activity, indices)], recursive_value + 1
 
     else:
+        print("No Match!")
         maximum_value = -1
         maximum_result = []
 
         for i in range(1, pow(2,len(lanes))-1):
             binary = list(bin(i)[2:].zfill(len(lanes)))
+            print("Testing " + str(binary))
             recursive_call_lanes = []
             for i in range(len(lanes)):
                 if (binary[i] == '1'):
