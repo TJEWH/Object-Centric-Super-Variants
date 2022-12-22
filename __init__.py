@@ -10,25 +10,30 @@ import Variant_Visualization as VV
 import Between_Variant_Summarization as BVS
 
 filename = "EventLogs/order_process.jsonocel"
-ocel_order_process = ocel_import_factory.apply(filename)
+parameters = {"execution_extraction": "leading_type",
+              "leading_type": "delivery",
+              "variant_calculation": "two_phase",
+              "exact_variant_calculation":True}
+ocel_order_process = ocel_import_factory.apply(filename, parameters = parameters)
+#ocel_order_process = ocel_import_factory.apply(filename)
 selection = WVSE.within_variant_selection(ocel_order_process)
 summarizations = [selection[key][1][0].to_super_variant(tuple(selection[key][0])) for key in selection.keys()]
 
 
-super_variant1 = BVS.join_super_variants(summarizations[0], summarizations[1])
+super_variant1 = BVS.join_super_variants(summarizations[0], summarizations[1], False)
 SVV.visualize_super_variant(super_variant1)
-super_variant2 = BVS.join_super_variants(summarizations[2], summarizations[3])
+super_variant2 = BVS.join_super_variants(summarizations[2], summarizations[3], False)
 SVV.visualize_super_variant(super_variant2)  
-super_variant3 = BVS.join_super_variants(summarizations[4], summarizations[5])
-SVV.visualize_super_variant(super_variant3)  
-super_variant4 = BVS.join_super_variants(summarizations[6], summarizations[7])
-SVV.visualize_super_variant(super_variant4) 
+#super_variant3 = BVS.join_super_variants(summarizations[4], summarizations[5])
+#SVV.visualize_super_variant(super_variant3)  
+#super_variant4 = BVS.join_super_variants(summarizations[6], summarizations[7])
+#SVV.visualize_super_variant(super_variant4) 
 
-super_variant12 = BVS.join_super_variants(super_variant1, super_variant2)
+super_variant12 = BVS.join_super_variants(super_variant1, super_variant2, False)
 SVV.visualize_super_variant(super_variant12)
 
-super_variant34 = BVS.join_super_variants(super_variant3, super_variant4)
-SVV.visualize_super_variant(super_variant34)
+#super_variant34 = BVS.join_super_variants(super_variant3, super_variant4)
+#SVV.visualize_super_variant(super_variant34)
 
 #super_variant1234 = BVS.join_super_variants(super_variant12, super_variant34)
 #SVV.visualize_super_variant(super_variant1234)

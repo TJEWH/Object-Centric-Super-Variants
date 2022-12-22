@@ -302,7 +302,12 @@ class SuperLane:
                 realizations = intermediate_result
         result = []
         for i in range(len(realizations)):
-            result.append(SuperLane(i, "realization " + str(i), self.object_type, realizations[i], None))
+            frequency = min([elem.frequency for elem in realizations[i]])
+            elements = []
+            for elem in realizations[i]:
+                elements.append(copy.deepcopy(elem))
+                elements[-1].frequency = frequency
+            result.append(SuperLane(i, "realization " + str(i), self.object_type, elements, self.cardinality))
         return result
 
 
@@ -326,6 +331,14 @@ class SuperLane:
                 for choice in self.elements[i].choices:
                     for elem in choice:
                         elem.position += offset
+
+    def remove_non_common_elements(self):
+        new_elements = []
+        for elem in self.elements:
+            if(isinstance(elem, CommonConstruct) or isinstance(elem, InteractionConstruct)):
+                new_elements.append(elem)
+        return SuperLane(self.lane_id, self.lane_name, self.object_type, new_elements, self.cardinality)
+
 
 
 class OptionalSuperLane(SuperLane):

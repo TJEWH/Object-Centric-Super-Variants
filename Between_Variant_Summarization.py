@@ -213,7 +213,6 @@ def join_super_lanes(summarization1, summarization2, lane1, lane2, print_result 
 
 def __between_lane_summarization(summarization1, summarization2, o_lane1, o_lane2, lanes1, lanes2, print_result):
 
-    import copy
     # Initializing the values for the summarized lanes object
     elements = []
     object_type = o_lane1.object_type
@@ -226,6 +225,8 @@ def __between_lane_summarization(summarization1, summarization2, o_lane1, o_lane
     
     new_interaction_points_mapping = {}
     current_horizontal_index = 0
+    base_lane1 = o_lane1.remove_non_common_elements()
+    base_lane2 = o_lane2.remove_non_common_elements()
 
     all_lanes = []
     for lane in lanes1:
@@ -233,20 +234,36 @@ def __between_lane_summarization(summarization1, summarization2, o_lane1, o_lane
     for lane in lanes2:
         all_lanes.append((2, lane, len(lane.elements)))
 
-    longest_common_sequence, value = __get_longest_common_subsequence(copy.deepcopy(all_lanes))
-    start_indices = [0 for lane in all_lanes]
+    longest_common_sequence, value = __get_longest_common_subsequence([(1, base_lane1, len(base_lane1.elements)), (2, base_lane2, len(base_lane2.elements))])
+    last_position1 = 0
+    last_position2 = 0
 
     for common_element in longest_common_sequence:
+
+        current_position1 = common_element[1][0][2]
+        current_position2 = common_element[1][1][2]
 
         # Determine all interval subprocesses and summarize them
         interval_subprocesses = []
         for j in range(len(all_lanes)):
-            start_index = start_indices[j]
-            end_index = (common_element[1][j][2])
-            if(end_index - start_index >= 0):
-                interval_subprocesses.append((all_lanes[j][0], (all_lanes[j][1].elements[start_index:end_index])))
-            else:
-                interval_subprocesses.append((all_lanes[j][0],[]))
+            if(all_lanes[j][0] == 1):
+                if(current_position1 - last_position1 >= 0):
+                    subprocess = []
+                    for elem in all_lanes[j][1].elements:
+                        if(elem.position >= last_position1 and elem.position < current_position1):
+                            subprocess.append(elem)
+                    interval_subprocesses.append((all_lanes[j][0], subprocess))
+                else:
+                    interval_subprocesses.append((all_lanes[j][0],[]))
+            else: 
+                if(current_position2 - last_position2 >= 0):
+                    subprocess = []
+                    for elem in all_lanes[j][1].elements:
+                        if(elem.position >= last_position2 and elem.position < current_position2):
+                            subprocess.append(elem)
+                    interval_subprocesses.append((all_lanes[j][0], subprocess))
+                else:
+                    interval_subprocesses.append((all_lanes[j][0],[]))
         
         # Add summarized subprocess to elements
         interval_elements, interval_length, interval_mapping = __apply_patterns(interval_subprocesses, current_horizontal_index, summarization1, summarization2, o_lane1, o_lane2, print_result)
@@ -260,18 +277,12 @@ def __between_lane_summarization(summarization1, summarization2, o_lane1, o_lane
             print("Adding the common activity: " + str(common_element[0]))
 
         # Get frequency of the event
-        frequency1 = 0 
-        frequency2 = 0
-        for i in range(len(all_lanes)):
-            if(all_lanes[i][0] == 1 and frequency1 == 0):
-                frequency1 = all_lanes[i][1].elements[common_element[1][i][2]].frequency
-            elif(all_lanes[i][0] == 2 and frequency2 == 0):
-                frequency2 = all_lanes[i][1].elements[common_element[1][i][2]].frequency
-
+        frequency1 = base_lane1.get_element(common_element[1][0][2]).frequency
+        frequency2 = base_lane2.get_element(common_element[1][1][2]).frequency
 
         
         # Checks if the common activity is an interaction point
-        is_interacting_activity = isinstance(all_lanes[0][1].elements[common_element[1][0][2]], SVD.InteractionConstruct)   
+        is_interacting_activity = isinstance(base_lane1.get_element(common_element[1][0][2]), SVD.InteractionConstruct)   
 
         if(print_result):
             print("This is an interaction point: " + str(is_interacting_activity))
@@ -280,19 +291,18 @@ def __between_lane_summarization(summarization1, summarization2, o_lane1, o_lane
 
             interaction_point1 = None
             interaction_point2 = None
-            for i in range(len(all_lanes)):
-                if(all_lanes[i][0] == 1):
-                    element = all_lanes[i][1].elements[common_element[1][i][2]]
-                    for interaction_point in summarization1.interaction_points:
-                        if(interaction_point.index_in_lanes == element.position and o_lane1.lane_id in interaction_point.interaction_lanes):
-                            interaction_point1 = interaction_point
-                            break
-                elif(all_lanes[i][0] == 2):
-                    element = all_lanes[i][1].elements[common_element[1][i][2]]
-                    for interaction_point in summarization2.interaction_points:
-                        if(interaction_point.index_in_lanes == element.position and o_lane2.lane_id in interaction_point.interaction_lanes):
-                            interaction_point2 = interaction_point
-                            break
+
+            element1 = base_lane1.get_element(common_element[1][0][2])
+            for interaction_point in summarization1.interaction_points:
+                if(interaction_point.index_in_lanes == element1.position and o_lane1.lane_id in interaction_point.interaction_lanes):
+                    interaction_point1 = interaction_point
+                    break
+
+            element2 = base_lane2.get_element(common_element[1][1][2])
+            for interaction_point in summarization2.interaction_points:
+                if(interaction_point.index_in_lanes == element2.position and o_lane2.lane_id in interaction_point.interaction_lanes):
+                    interaction_point2 = interaction_point
+                    break
 
             new_interaction_points_mapping[(1, interaction_point1.index_in_lanes, str(interaction_point1.interaction_lanes))] = current_horizontal_index
             new_interaction_points_mapping[(2, interaction_point2.index_in_lanes, str(interaction_point2.interaction_lanes))] = current_horizontal_index
@@ -305,19 +315,35 @@ def __between_lane_summarization(summarization1, summarization2, o_lane1, o_lane
         current_horizontal_index += 1
         
         # Update indices for the next iteration
-        for i in range(len(all_lanes)):
-            start_indices[i] = common_element[1][i][2] + 1
+        last_position1 = current_position1 + 1
+        last_position2 = current_position2 + 1
 
+
+
+    current_position1 = base_lane1.elements[-1].position + 1
+    current_position2 = base_lane2.elements[-1].position + 1
 
     # Determine all interval subprocesses and summarize them
     interval_subprocesses = []
     for j in range(len(all_lanes)):
-        start_index = start_indices[j]
-        end_index = len(all_lanes[j][1].elements)
-        if(end_index - start_index >= 0):
-            interval_subprocesses.append((all_lanes[j][0], (all_lanes[j][1].elements[start_index:end_index])))
-        else:
-            interval_subprocesses.append((all_lanes[j][0],[]))
+        if(all_lanes[j][0] == 1):
+            if(current_position1 - last_position1 >= 0):
+                subprocess = []
+                for elem in all_lanes[j][1].elements:
+                    if(elem.position >= last_position1 and elem.position < current_position1):
+                        subprocess.append(elem)
+                interval_subprocesses.append((all_lanes[j][0], subprocess))
+            else:
+                interval_subprocesses.append((all_lanes[j][0],[]))
+        else: 
+            if(current_position2 - last_position2 >= 0):
+                subprocess = []
+                for elem in all_lanes[j][1].elements:
+                    if(elem.position >= last_position2 and elem.position < current_position2):
+                        subprocess.append(elem)
+                interval_subprocesses.append((all_lanes[j][0], subprocess))
+            else:
+                interval_subprocesses.append((all_lanes[j][0],[]))
         
     # Add summarized subprocess to elements
     interval_elements, interval_length, interval_mapping = __apply_patterns(interval_subprocesses, current_horizontal_index, summarization1, summarization2, o_lane1, o_lane2, print_result)
@@ -437,19 +463,16 @@ def __get_longest_common_subsequence(lanes):
 
     elif(all((type(lane[1].elements[lane[2]-1]) == type(base_element) and lane[1].elements[lane[2]-1].activity == base_element.activity) for lane in lanes)):
         
-        print("Match!")
         recursive_result, recursive_value = __get_longest_common_subsequence([(lane[0], lane[1], lane[2]-1) for lane in lanes])
-        indices = [(lane[0], lane[1], lane[2]-1) for lane in lanes]
+        indices = [(lane[0], lane[1], lane[1].elements[lane[2]-1].position) for lane in lanes]
         return recursive_result + [(base_element.activity, indices)], recursive_value + 1
 
     else:
-        print("No Match!")
         maximum_value = -1
         maximum_result = []
 
         for i in range(1, pow(2,len(lanes))-1):
             binary = list(bin(i)[2:].zfill(len(lanes)))
-            print("Testing " + str(binary))
             recursive_call_lanes = []
             for i in range(len(lanes)):
                 if (binary[i] == '1'):
