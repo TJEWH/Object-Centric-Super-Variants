@@ -45,16 +45,18 @@ def __activity_chevron(ax, activity, horizontal_index, vertical_index, color):
 
 def __interaction_activity_chevron(ax, activity, horizontal_index, vertical_index, colors, interaction_point):
 
-    from matplotlib.path import Path
+    import copy
     import matplotlib.patches as patches
 
     number_sub_chevrons = len(interaction_point.interaction_lanes)
     length_sub_chevron = (1/number_sub_chevrons)
+    sorted_lanes = copy.deepcopy(interaction_point.interaction_lanes)
+    sorted_lanes.sort(key = lambda x: colors[x])
   
     ax.text(horizontal_index * DEFAULT_CHEVRON_LENGTH + 2.0, vertical_index * DEFAULT_CHEVRON_HEIGHT + 0.3 * DEFAULT_CHEVRON_HEIGHT, activity, zorder = 10)
 
-    for i in range(len(interaction_point.interaction_lanes)):
-        ax.add_patch(patches.PathPatch(__chevron_at_position(horizontal_index * DEFAULT_CHEVRON_LENGTH + i*length_sub_chevron*DEFAULT_CHEVRON_LENGTH, vertical_index * DEFAULT_CHEVRON_HEIGHT, length_sub_chevron, DEFAULT_CHEVRON_HEIGHT), facecolor = colors[interaction_point.interaction_lanes[i]], lw = 0, ls = '-', zorder = 5))
+    for i in range(len(sorted_lanes)):
+        ax.add_patch(patches.PathPatch(__chevron_at_position(horizontal_index * DEFAULT_CHEVRON_LENGTH + i*length_sub_chevron*DEFAULT_CHEVRON_LENGTH, vertical_index * DEFAULT_CHEVRON_HEIGHT, length_sub_chevron, DEFAULT_CHEVRON_HEIGHT), facecolor = colors[sorted_lanes[i]], lw = 0, ls = '-', zorder = 5))
     ax.add_patch(patches.PathPatch(__chevron_at_position(horizontal_index * DEFAULT_CHEVRON_LENGTH, vertical_index * DEFAULT_CHEVRON_HEIGHT, 1, DEFAULT_CHEVRON_HEIGHT), facecolor="None", lw = 1.3, ls = '-', zorder = 7))
     return ax
 
@@ -72,7 +74,7 @@ def visualize_variant(variant):
         return
      
     # Defining the colors and heights for each lane
-    all_colors = [(1,0.71,0.44), (0.56,0.81,0.56), (0.38,0.57,0.8), (1,0.87,143), (0.56,0.89,0.97)]
+    all_colors = [(0.56,0.81,0.56), (1,0.71,0.44) , (0.38,0.57,0.8), (1,0.87,143), (0.56,0.89,0.97)]
     objects = list(variant.object_types)
     objects.sort()
     number_of_object_types = len(objects)

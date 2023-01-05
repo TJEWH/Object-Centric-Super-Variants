@@ -193,13 +193,15 @@ class SuperLane:
     lane_name = ""
     elements = []
     cardinality = "0" 
+    frequency = 0
     
-    def __init__(self, lane_id, name, object_type, elements, cardinality):
+    def __init__(self, lane_id, name, object_type, elements, cardinality, frequency):
         self.lane_id = lane_id
         self.object_type = object_type
         self.lane_name = name
         self.elements = elements
         self.cardinality = cardinality
+        self.frequency = frequency
     
     def __str__(self):
         result_string = f"ID: {self.lane_id}, Name: {self.lane_name}, Cardinality: {self.cardinality}:  ["
@@ -219,13 +221,7 @@ class SuperLane:
             return result
     
     def subsumed_summarization(self, summarization):
-        if(summarization.object_type != self.object_type or len(self.elements) != len(summarization.elements)):
-            for elem in self.elements:
-                print(type(elem))
-            print("--------------------")
-            for elem in summarization.elements:
-                print(type(elem))
-
+        if(summarization.object_type != self.object_type):
             return False
 
         result = False
@@ -235,13 +231,11 @@ class SuperLane:
         if(self_contains_choice and not other_contains_choice):
             realizations = self.get_realizations_normalized()
             for realization in realizations:
-                print(realization)
                 result = result or realization.same_summarization(summarization)
 
         elif(not self_contains_choice and other_contains_choice):
             realizations = summarization.get_realizations_normalized()
             for realization in realizations:
-                print(realization)
                 result = result or realization.same_summarization(self)
         else:
             realizations1 = self.get_realizations_normalized()
@@ -249,10 +243,8 @@ class SuperLane:
             subsumed_in_2 = True
             subsumed_in_1 = True
             for realization in realizations1:
-                print(realization)
                 subsumed_in_2 = subsumed_in_2 and any([realization.same_summarization(other) for other in realizations2])
             for realization in realizations2:
-                print(realization)
                 subsumed_in_1 = subsumed_in_1 and any([realization.same_summarization(other) for other in realizations1])
             result = (subsumed_in_2 or subsumed_in_1)
                 
@@ -280,7 +272,7 @@ class SuperLane:
             for element in realizations[i]:
                 element.position = index
                 index += 1
-            result.append(SuperLane(i, "realization " + str(i), self.object_type, realizations[i], None))
+            result.append(SuperLane(i, "realization " + str(i), self.object_type, realizations[i], None, 0))
         return result
 
     def get_realizations(self):
@@ -307,7 +299,7 @@ class SuperLane:
             for elem in realizations[i]:
                 elements.append(copy.deepcopy(elem))
                 elements[-1].frequency = frequency
-            result.append(SuperLane(i, "realization " + str(i), self.object_type, elements, self.cardinality))
+            result.append(SuperLane(i, "realization " + str(i), self.object_type, elements, self.cardinality, frequency))
         return result
 
 
@@ -337,7 +329,7 @@ class SuperLane:
         for elem in self.elements:
             if(isinstance(elem, CommonConstruct) or isinstance(elem, InteractionConstruct)):
                 new_elements.append(elem)
-        return SuperLane(self.lane_id, self.lane_name, self.object_type, new_elements, self.cardinality)
+        return SuperLane(self.lane_id, self.lane_name, self.object_type, new_elements, self.cardinality, self.frequency)
 
 
 
@@ -443,7 +435,7 @@ def convert_to_summarized_format(lane):
     for i in range(len(lane.activities)):
         elements.append(CommonConstruct(lane.activities[i], 1, i))
     
-    result = SuperLane(tuple()+(lane.lane_id,), lane.object_type ,lane.object_type, elements)
+    result = SuperLane(tuple()+(lane.lane_id,), lane.object_type ,lane.object_type, elements, "1", 1)
     return result
 
 

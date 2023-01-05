@@ -136,6 +136,7 @@ def optional_super_lane(summarization, lane, first):
     lane_name = lane.object_type + " i"
     lane_id = tuple(lane.lane_id)
     cardinality = lane.cardinality
+    frequency = lane.frequency
 
     new_interaction_points_mapping = {}
     current_horizontal_index = 0
@@ -203,7 +204,7 @@ def optional_super_lane(summarization, lane, first):
             current_horizontal_index += length
 
 
-    return SVD.OptionalSuperLane(lane_id, lane_name, object_type, elements, cardinality), new_interaction_points_mapping
+    return SVD.OptionalSuperLane(lane_id, lane_name, object_type, elements, cardinality, frequency), new_interaction_points_mapping
 
 
 
@@ -218,6 +219,7 @@ def __between_lane_summarization(summarization1, summarization2, o_lane1, o_lane
     object_type = o_lane1.object_type
     lane_name = o_lane1.object_type + " i"
     lane_id = (o_lane1.lane_id, o_lane2.lane_id)
+    frequency = o_lane1.frequency + o_lane2.frequency
     if(o_lane1.cardinality == o_lane2.cardinality):
         cardinality = o_lane1.cardinality
     else:
@@ -351,7 +353,7 @@ def __between_lane_summarization(summarization1, summarization2, o_lane1, o_lane
     new_interaction_points_mapping.update(interval_mapping)
     current_horizontal_index += interval_length
 
-    return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality), new_interaction_points_mapping
+    return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality, frequency), new_interaction_points_mapping
 
 
 

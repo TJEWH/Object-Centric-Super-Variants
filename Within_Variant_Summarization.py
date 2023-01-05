@@ -225,10 +225,10 @@ def __between_lane_summarization(lanes, interactions, print_result):
     current_horizontal_index += interval_length
         
     cardinality = "1"
-    if len(lanes)>1:
+    if len(lanes) > 1:
         cardinality = "n"
         
-    return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality), new_interaction_points_mapping
+    return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality, len(lanes)), new_interaction_points_mapping
 
 
 def __apply_patterns(activities, start_index, print_result):

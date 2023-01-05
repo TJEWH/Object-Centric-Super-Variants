@@ -70,7 +70,7 @@ def __interaction_activity_chevron(ax, lane, element, lane_properties, interacti
     interacting_lanes.sort(key = lambda x: lane_properties[x]["Height"], reverse=True)
 
     label = element.activity
-    label = label + " (" + str(frequency) + ")"
+    label = label + " (100.0%)"
     ax.text(element.position * DEFAULT_CHEVRON_LENGTH + 2.0, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * DEFAULT_CHEVRON_HEIGHT * lane_properties[lane]["Height"] - 0.3, label, zorder = 10, fontsize=9)
 
     for i in range(len(interacting_lanes)):
@@ -91,7 +91,7 @@ def __summarized_activity_chevron(ax, lane, element, lane_property, lane_propert
         
     if (isinstance(element, SVD.CommonConstruct)):
         label = element.activity
-        label = label + " (" + str(element.frequency) + ")"
+        label = label + " (" + str(round((element.frequency/lane_property["Frequency"])*100 ,2)) + "%)"
         ax.text(element.position * DEFAULT_CHEVRON_LENGTH + 2.0, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * DEFAULT_CHEVRON_HEIGHT * lane_property["Height"] - 0.3, label, zorder = 10, fontsize=9)
         ax.add_patch(patches.PathPatch(__chevron_at_position(element.position * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT, 1, lane_property["Height"]  * DEFAULT_CHEVRON_HEIGHT), facecolor = color, lw = 1.3, ls = overall_line_style, zorder = 5, hatch = hatch, alpha = transparency))
         return ax
@@ -107,7 +107,7 @@ def __summarized_activity_chevron(ax, lane, element, lane_property, lane_propert
         ax.add_patch(patches.PathPatch(__chevron_at_position(element.position_start * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT, (element.position_end - element.position_start) + 1, lane_property["Height"]  * DEFAULT_CHEVRON_HEIGHT), facecolor = "None", lw = 1.3, ls = overall_line_style, zorder = 5, hatch = hatch, alpha = transparency))
         sub_default_chevron_length = ((((element.position_end - element.position_start) + 1) * DEFAULT_CHEVRON_LENGTH) - 2.5) / ((element.position_end - element.position_start) + 1)
         sub_default_chevron_length -= margin_length / ((element.position_end - element.position_start) + 1)
-        sub_default_chevron_heigth = DEFAULT_CHEVRON_HEIGHT * 5/6
+        sub_default_chevron_heigth = DEFAULT_CHEVRON_HEIGHT * (lane_property["Height"] - len(element.choices) + 1) - 1/6 * DEFAULT_CHEVRON_HEIGHT
         margin_height = DEFAULT_CHEVRON_HEIGHT * 1/12
         vertical_half = 1/2 * lane_property["Height"]  * DEFAULT_CHEVRON_HEIGHT
         chevron_vertical_half = current_vertical_position*DEFAULT_CHEVRON_HEIGHT + vertical_half
@@ -128,7 +128,7 @@ def __summarized_activity_chevron(ax, lane, element, lane_property, lane_propert
             
             for j in range(len(element.choices[i])):
                 label = str(element.choices[i][j].activity)
-                label = label + " (" + str(element.choices[i][j].frequency) + ")"
+                label = label + " (" + str(round((element.choices[i][j].frequency/lane_property["Frequency"])*100, 2)) + "%)"
                 ax.text(horizontal_start_position + j * sub_default_chevron_length + 2.0, vertical_position + margin_height + 0.5 * sub_default_chevron_heigth - 0.3, label, zorder = 10, fontsize=7)
                 if(isinstance(element.choices[i][j], SVD.CommonConstruct)):
                     ax.add_patch(patches.PathPatch(__chevron_at_position(horizontal_start_position + j * sub_default_chevron_length, vertical_position + margin_height, sub_default_chevron_length/DEFAULT_CHEVRON_LENGTH, sub_default_chevron_heigth), facecolor = color, lw = 1.3, ls = line_style, zorder = 7, hatch = hatch, alpha = transparency))
@@ -192,6 +192,7 @@ def visualize_super_variant(summarization):
             lane_properties[lane.lane_id]["Height"] = vertical_height
             lane_properties[lane.lane_id]["Frequency"] = frequency
             lane_properties[lane.lane_id]["IsOptional"] = isinstance(lane, SVD.OptionalSuperLane)
+            lane_properties[lane.lane_id]["Frequency"] = lane.frequency
 
     
     fig, ax = plt.subplots()
