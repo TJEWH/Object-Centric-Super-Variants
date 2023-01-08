@@ -1,6 +1,8 @@
+#from ocpa.objects.log.importer.csv import factory as ocel_import_factory
 from ocpa.objects.log.importer.ocel import factory as ocel_import_factory
 from ocpa.visualization.log.variants import factory as variants_visualization_factory
-import pm4py
+from ocpa.algo.util.filtering.log import case_filtering
+from ocpa.objects.log.exporter.ocel import factory as ocel_export_factory
 
 import Input_Extraction_Definition as IED
 import Super_Variant_Definition as SVD
@@ -11,48 +13,35 @@ import Variant_Visualization as VV
 import Between_Variant_Summarization as BVS
 
 
-#filename = "EventLogs/BPIChallenge2017.csv"
-#object_types = ["Application", "Workflow", "Offer"]
-#parameters = {"obj_names":"EventOrigin",
-              #"val_names":["FirstWithdrawalAmount", "NumberOfTerms", "Accepted", "MonthlyCost", "Selected", "CreditScore", "OfferedAmount", "OfferID"],
-              #"val_names":[],
-              #"act_name":"concept:name",
-              #"time_name":"time:timestamp",
-              #"sep":","}
-#ocel = ocel_import_factory.apply(file_path= filename,parameters = parameters)
+filename = "EventLogs/BPI2017-Top10.jsonocel"
+parameters = {"execution_extraction": "leading_type",
+              "leading_type": "offer"}
+ocel = ocel_import_factory.apply(file_path = filename , parameters = parameters)
 
-filename = "EventLogs/order_process.jsonocel"
-#parameters = {"execution_extraction": "leading_type",
-              #"leading_type": "delivery",
-              #"variant_calculation": "two_phase",
-              #"exact_variant_calculation":True}
-#ocel_order_process = ocel_import_factory.apply(filename, parameters = parameters)
-ocel_order_process = ocel_import_factory.apply(filename)
-#variant_layouting = variants_visualization_factory.apply(ocel_order_process)
-#for i in range(len(ocel_order_process.variants)):
-    #extracted_variant = IED.extract_lanes(variant_layouting[ocel_order_process.variants[i]], ocel_order_process.variant_frequencies[i])
+#variant_layouting = variants_visualization_factory.apply(ocel)
+#for i in range(len(ocel.variants)):
+    #extracted_variant = IED.extract_lanes(variant_layouting[ocel.variants[i]], ocel.variant_frequencies[-1])
     #VV.visualize_variant(extracted_variant)
-selection = WVSE.within_variant_selection(ocel_order_process)
+
+selection = WVSE.within_variant_selection(ocel)
 summarizations = [selection[key][1][0].to_super_variant(tuple(selection[key][0])) for key in selection.keys()]
 
+for i in range(len(summarizations)):
+    for j in range(len(summarizations)):
+        if(j>i):
+            print("Joining " + str(i) + " and " + str(j) )
+            super_variant, cost = BVS.join_super_variants(summarizations[i], summarizations[j], False)
+            SVV.visualize_super_variant(super_variant)
+            print("At cost " + str(cost))
 
-super_variant1 = BVS.join_super_variants(summarizations[0], summarizations[1], False)
-SVV.visualize_super_variant(super_variant1)
-super_variant2 = BVS.join_super_variants(summarizations[2], summarizations[3], False)
-SVV.visualize_super_variant(super_variant2)  
-super_variant3 = BVS.join_super_variants(summarizations[4], summarizations[5])
-SVV.visualize_super_variant(super_variant3)  
-super_variant4 = BVS.join_super_variants(summarizations[6], summarizations[7])
-SVV.visualize_super_variant(super_variant4) 
+#super_variant12 = BVS.join_super_variants(super_variant1, super_variant4, False)
+#SVV.visualize_super_variant(super_variant12)
 
-super_variant12 = BVS.join_super_variants(super_variant1, super_variant2, False)
-SVV.visualize_super_variant(super_variant12)
+#super_variant34 = BVS.join_super_variants(super_variant3, super_variant4)
+#SVV.visualize_super_variant(super_variant34)
 
-super_variant34 = BVS.join_super_variants(super_variant3, super_variant4)
-SVV.visualize_super_variant(super_variant34)
-
-super_variant1234 = BVS.join_super_variants(super_variant12, super_variant34)
-SVV.visualize_super_variant(super_variant1234)
+#super_variant1234 = BVS.join_super_variants(super_variant12, super_variant34)
+#SVV.visualize_super_variant(super_variant1234)
 
 
 #for key in (selection.keys()):

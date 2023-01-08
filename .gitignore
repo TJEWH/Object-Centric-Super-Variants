@@ -151,3 +151,6 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 EventLogs/BPIChallenge2017.csv
+EventLogs/BPI2017-Final.csv
+EventLogs/BPI2017.jsonocel
+ocpa/

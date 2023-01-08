@@ -67,10 +67,10 @@ def __interaction_activity_chevron(ax, lane, element, lane_properties, interacti
     number_sub_chevrons = len(interacting_lanes)
     length_sub_chevron = (1/number_sub_chevrons)
     frequency = lane_properties[lane]["Frequency"]
-    interacting_lanes.sort(key = lambda x: lane_properties[x]["Height"], reverse=True)
+    interacting_lanes.sort(key = lambda x: lane_properties[x]["Color"])
 
     label = element.activity
-    label = label + " (100.0%)"
+    #label = label + " (100.0%)"
     ax.text(element.position * DEFAULT_CHEVRON_LENGTH + 2.0, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * DEFAULT_CHEVRON_HEIGHT * lane_properties[lane]["Height"] - 0.3, label, zorder = 10, fontsize=9)
 
     for i in range(len(interacting_lanes)):
@@ -91,7 +91,7 @@ def __summarized_activity_chevron(ax, lane, element, lane_property, lane_propert
         
     if (isinstance(element, SVD.CommonConstruct)):
         label = element.activity
-        label = label + " (" + str(round((element.frequency/lane_property["Frequency"])*100 ,2)) + "%)"
+        #label = label + " (" + str(round((element.frequency/lane_property["Frequency"])*100 ,2)) + "%)"
         ax.text(element.position * DEFAULT_CHEVRON_LENGTH + 2.0, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * DEFAULT_CHEVRON_HEIGHT * lane_property["Height"] - 0.3, label, zorder = 10, fontsize=9)
         ax.add_patch(patches.PathPatch(__chevron_at_position(element.position * DEFAULT_CHEVRON_LENGTH, current_vertical_position * DEFAULT_CHEVRON_HEIGHT, 1, lane_property["Height"]  * DEFAULT_CHEVRON_HEIGHT), facecolor = color, lw = 1.3, ls = overall_line_style, zorder = 5, hatch = hatch, alpha = transparency))
         return ax
@@ -121,31 +121,29 @@ def __summarized_activity_chevron(ax, lane, element, lane_property, lane_propert
                 else:
                     line_offset = 1.25 - (vertical_position - chevron_vertical_half)/vertical_half * 1.25
                 ax.add_patch(patches.PathPatch(__line_at_position(element.position_start * DEFAULT_CHEVRON_LENGTH + line_offset, vertical_position, (element.position_end - element.position_start) + 1), lw = 1.1, ls = overall_line_style, zorder = 5, hatch = hatch, alpha = transparency))
-
-            length_of_choice = len(element.choices[i])
        
-            horizontal_start_position = (element.position_start * DEFAULT_CHEVRON_LENGTH) + 1.25 + margin_length + (((element.position_end - element.position_start) + 1) * (sub_default_chevron_length) - (length_of_choice * sub_default_chevron_length + margin_length)) / 2
+            horizontal_start_position = (element.position_start * DEFAULT_CHEVRON_LENGTH) + 1.25 + margin_length
             
             for j in range(len(element.choices[i])):
+                current_horizontal_position = horizontal_start_position + (element.choices[i][j].position - element.position_start) * sub_default_chevron_length
                 label = str(element.choices[i][j].activity)
                 label = label + " (" + str(round((element.choices[i][j].frequency/lane_property["Frequency"])*100, 2)) + "%)"
-                ax.text(horizontal_start_position + j * sub_default_chevron_length + 2.0, vertical_position + margin_height + 0.5 * sub_default_chevron_heigth - 0.3, label, zorder = 10, fontsize=7)
-                if(isinstance(element.choices[i][j], SVD.CommonConstruct)):
-                    ax.add_patch(patches.PathPatch(__chevron_at_position(horizontal_start_position + j * sub_default_chevron_length, vertical_position + margin_height, sub_default_chevron_length/DEFAULT_CHEVRON_LENGTH, sub_default_chevron_heigth), facecolor = color, lw = 1.3, ls = line_style, zorder = 7, hatch = hatch, alpha = transparency))
+                ax.text(current_horizontal_position + 2.0, vertical_position + margin_height + 0.5 * sub_default_chevron_heigth - 0.3, label, zorder = 10, fontsize=7)
+                
+                if(not isinstance(element.choices[i][j], SVD.InteractionConstruct)):
+                    ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position, vertical_position + margin_height, sub_default_chevron_length/DEFAULT_CHEVRON_LENGTH, sub_default_chevron_heigth), facecolor = color, lw = 1.3, ls = line_style, zorder = 7, hatch = hatch, alpha = transparency))
                 else:
                     interacting_lanes = [lane]
                     for interaction in interaction_points:
-                        if (interaction.index_in_lanes == element.position and lane in interaction.interaction_lanes):
+                        if (interaction.index_in_lanes == element.choices[i][j].position and lane in interaction.interaction_lanes):
                             interacting_lanes = interaction.interaction_lanes
-
                     number_sub_chevrons = len(interacting_lanes)
                     length_sub_chevron = ((sub_default_chevron_length/DEFAULT_CHEVRON_LENGTH)/number_sub_chevrons)
-                    interacting_lanes.sort(key = lambda x: lane_properties[x]["Height"], reverse=True)
+                    interacting_lanes.sort(key = lambda x: lane_properties[x]["Color"])
 
                     for k in range(len(interacting_lanes)):
-                        ax.add_patch(patches.PathPatch(__chevron_at_position(horizontal_start_position + j * sub_default_chevron_length + k * length_sub_chevron * sub_default_chevron_length, vertical_position + margin_height, length_sub_chevron, sub_default_chevron_heigth), facecolor = lane_properties[interacting_lanes[i]]["Color"], lw = 0, ls = overall_line_style, zorder = 5, hatch = hatch, alpha = transparency))
-                    ax.add_patch(patches.PathPatch(__chevron_at_position(horizontal_start_position + j * sub_default_chevron_length, vertical_position + margin_height, sub_default_chevron_length/DEFAULT_CHEVRON_LENGTH, sub_default_chevron_heigth), facecolor = "None", lw = 1.3, ls = line_style, zorder = 7, hatch = hatch, alpha = transparency))
-                    return ax
+                        ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + k * length_sub_chevron* DEFAULT_CHEVRON_LENGTH, vertical_position + margin_height, length_sub_chevron, sub_default_chevron_heigth), facecolor = lane_properties[interacting_lanes[k]]["Color"], lw = 0, ls = overall_line_style, zorder = 5, hatch = hatch, alpha = transparency))
+                    ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position, vertical_position + margin_height, sub_default_chevron_length/DEFAULT_CHEVRON_LENGTH, sub_default_chevron_heigth), facecolor = "None", lw = 1.3, ls = line_style, zorder = 7, hatch = hatch, alpha = transparency))
 
         return ax  
 
@@ -190,7 +188,6 @@ def visualize_super_variant(summarization):
                     maximal_lane_length = max(maximal_lane_length, elem.position)
                     frequency = elem.frequency
             lane_properties[lane.lane_id]["Height"] = vertical_height
-            lane_properties[lane.lane_id]["Frequency"] = frequency
             lane_properties[lane.lane_id]["IsOptional"] = isinstance(lane, SVD.OptionalSuperLane)
             lane_properties[lane.lane_id]["Frequency"] = lane.frequency
 

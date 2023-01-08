@@ -5,8 +5,8 @@ import Input_Extraction_Definition as IED
 
 def join_super_variants(summarization1, summarization2, print_result = True):
     import copy
-    WVV.visualize_super_variant(summarization1)
-    WVV.visualize_super_variant(summarization2)
+    #WVV.visualize_super_variant(summarization1)
+    #WVV.visualize_super_variant(summarization2)
     mapping, cost = decide_matching(summarization1, summarization2, copy.deepcopy(summarization1.lanes), copy.deepcopy(summarization2.lanes), True, print_result)
     if(print_result):
         print("The cost of joining these Super Variants is " + str(cost) + ".")
@@ -52,7 +52,7 @@ def join_super_variants(summarization1, summarization2, print_result = True):
     super_variant.encode_lexicographically()
     print(super_variant)
     #WVV.visualize_super_variant(super_variant)
-    return super_variant
+    return super_variant, cost
 
 def __merge_interactions(merged_interactions):
     result_interactions = dict()
@@ -85,46 +85,79 @@ def __re_align_lanes(lanes, mappings, print_result):
     aligned_lanes = copy.deepcopy(lanes)
     updated_mappings = copy.deepcopy(mappings)
     updated_interaction_points = []
+
     # Align the lanes such that the interaction points have the same horizontal index
     for i in range(len(mappings.keys())):
-        earliest_interaction_point = min(updated_mappings.items(), key=lambda x: list(x[1].values()))
+        earliest_interaction_point = min(updated_mappings.items(), key=lambda x: list(list(x[1].values())[1]))
         lanes = [lane for lane in aligned_lanes if lane.lane_id in list(earliest_interaction_point[1].keys())]
         if(print_result):
             print("We have an interaction at the following points in the interacting lanes: " + str(earliest_interaction_point[1]))
-        element = lanes[0].get_element(earliest_interaction_point[1][lanes[0].lane_id])
-        if(isinstance(element, SVD.GeneralChoiceStructure)):
-            name = "Choice"
-        else:
-            name = element.activity
+        
         types = set([lane.object_type for lane in lanes])
-                
-        if(len(set(list(earliest_interaction_point[1].values()))) == 1):
+        element = lanes[0].get_element(updated_mappings[earliest_interaction_point[0]][lanes[0].lane_id][1])
+        if(type(element) == SVD.ChoiceConstruct or type(element) == SVD.OptionalConstruct):
+            for elem in element.choices[updated_mappings[earliest_interaction_point[0]][lanes[0].lane_id][0]]:
+                if (elem.position == updated_mappings[earliest_interaction_point[0]][lanes[0].lane_id][1]):
+                    activity_label = elem.activity
+                    break
+        else:
+            activity_label = element.activity
+        all_positions = [value[1] for value in earliest_interaction_point[1].values()]
+
+        if(len(set(all_positions)) == 1):
             if(print_result):
                 print("No alignment required.")
-            position = list(earliest_interaction_point[1].values())[0]
+            position = all_positions[0]
                     
         else: 
-            target_position = max(set(list(earliest_interaction_point[1].values())))
+
+            target_position = max(all_positions)
             position = target_position
-            involved_lanes = [lane for lane in aligned_lanes if lane.lane_id in list(earliest_interaction_point[1].keys())]
-            for lane in involved_lanes:
+            
+            for lane in lanes:
                 
                 # Shift indices by the offset
-                current_position = updated_mappings[earliest_interaction_point[0]][lane.lane_id]
+                original_lane = copy.deepcopy(lane)
+                current_position = updated_mappings[earliest_interaction_point[0]][lane.lane_id][1]
+                choice_id = updated_mappings[earliest_interaction_point[0]][lane.lane_id][0]
                 offset = target_position - current_position
-                element = lane.get_element(current_position)
-                lane.shift_lane(element, offset)
-                if(print_result):
-                    print("We have shifted lane " + lane.lane_name + " by " + str(offset) + " starting from activity " + str(element) + ".")
-                        
+                partial_shift, element_index, previous_start_position, previous_end_position = lane.shift_lane_exact(current_position, offset, choice_id)
+                
+                if(print_result and not partial_shift):
+                    print("We have shifted lane " + lane.lane_name + " by " + str(offset) + " starting from element " + str(original_lane.elements[element_index]) + ".")
+
+                if(print_result and partial_shift):
+                    print("We have shifted lane " + lane.lane_name + " by " + str(offset) + " starting with a partial shift in option " + str(choice_id) + " of the element " + str(original_lane.elements[element_index]) + ".")
                         
                 # Update all values in the dictionary accordingly
+                if(offset == 0):
+                    continue 
+
                 for key in updated_mappings.keys():
-                    if(lane.lane_id in updated_mappings[key].keys() and updated_mappings[key][lane.lane_id]>=current_position):
-                        updated_mappings[key][lane.lane_id] += offset
+
+                    if(lane.lane_id in updated_mappings[key].keys() and updated_mappings[key][lane.lane_id][1]>=current_position):
+                        if(not partial_shift):
+                            tuple = updated_mappings[key][lane.lane_id]
+                            updated_mappings[key][lane.lane_id]= (tuple[0], tuple[1] + offset)
+
+                        else:
+                            elem = original_lane.get_element(updated_mappings[key][lane.lane_id][1])
+
+                            if(type(elem) == SVD.InteractionConstruct):
+                                tuple = updated_mappings[key][lane.lane_id]
+                                updated_mappings[key][lane.lane_id]= (tuple[0], tuple[1] + offset)
+
+                            elif(isinstance(elem,SVD.GeneralChoiceStructure)):
+                                if(updated_mappings[key][lane.lane_id][1] >= previous_start_position and updated_mappings[key][lane.lane_id][1] <= previous_end_position):
+                                    if(updated_mappings[key][lane.lane_id][0] == choice_id):
+                                        tuple = updated_mappings[key][lane.lane_id]
+                                        updated_mappings[key][lane.lane_id]= (tuple[0], tuple[1] + offset)
+                                else:
+                                    tuple = updated_mappings[key][lane.lane_id]
+                                    updated_mappings[key][lane.lane_id]= (tuple[0], tuple[1] + offset)
                         
         del updated_mappings[earliest_interaction_point[0]]
-        updated_interaction_points.append(IED.InteractionPoint(name, [lane.lane_id for lane in lanes], types, position))
+        updated_interaction_points.append(IED.InteractionPoint(activity_label, [lane.lane_id for lane in lanes], types, position))
         
     return aligned_lanes, updated_interaction_points
 
@@ -146,7 +179,7 @@ def optional_super_lane(summarization, lane, first):
         if(isinstance(elem, SVD.CommonConstruct) or isinstance(elem, SVD.InteractionConstruct)):
             activity = elem.activity
             frequency = elem.frequency
-            if(isinstance(elem, SVD.CommonConstruct)):
+            if(not isinstance(elem, SVD.InteractionConstruct)):
                 elements.append(SVD.CommonConstruct(activity, frequency, current_horizontal_index))
             else:
                 elements.append(SVD.InteractionConstruct(activity, frequency, current_horizontal_index))
@@ -158,9 +191,9 @@ def optional_super_lane(summarization, lane, first):
                             break
 
                 if(first):
-                    new_interaction_points_mapping[(1, current_interaction_point.index_in_lanes, str(current_interaction_point.interaction_lanes))] = current_horizontal_index
+                    new_interaction_points_mapping[(1, current_interaction_point.index_in_lanes, str(current_interaction_point.interaction_lanes))] = (0,current_horizontal_index)
                 else:
-                    new_interaction_points_mapping[(2, current_interaction_point.index_in_lanes, str(current_interaction_point.interaction_lanes))] = current_horizontal_index
+                    new_interaction_points_mapping[(2, current_interaction_point.index_in_lanes, str(current_interaction_point.interaction_lanes))] = (0,current_horizontal_index)
 
             current_horizontal_index += 1
                 
@@ -168,14 +201,14 @@ def optional_super_lane(summarization, lane, first):
             new_choices = []
             length = 0
 
-            for choice in elem.choices:
+            for i in range(len(elem.choices)):
                 index = current_horizontal_index
                 new_choice = []
-                for c_elem in choice:
+                for c_elem in elem.choices[i]:
                     c_activity = c_elem.activity
                     c_frequency = c_elem.frequency
 
-                    if(isinstance(c_elem, SVD.CommonConstruct)):
+                    if(not isinstance(c_elem, SVD.InteractionConstruct)):
                         new_choice.append(SVD.CommonConstruct(c_activity, c_frequency, index))
                     else:
                         new_choice.append(SVD.InteractionConstruct(c_activity, c_frequency, index))
@@ -187,9 +220,9 @@ def optional_super_lane(summarization, lane, first):
                                     break
 
                         if(first):
-                            new_interaction_points_mapping[(1, current_interaction_point.index_in_lanes, str(current_interaction_point.interaction_lanes))] = index
+                            new_interaction_points_mapping[(1, current_interaction_point.index_in_lanes, str(current_interaction_point.interaction_lanes))] = (i,index)
                         else:
-                            new_interaction_points_mapping[(2, current_interaction_point.index_in_lanes, str(current_interaction_point.interaction_lanes))] = index
+                            new_interaction_points_mapping[(2, current_interaction_point.index_in_lanes, str(current_interaction_point.interaction_lanes))] = (i,index)
 
                     index += 1
                 
@@ -203,7 +236,7 @@ def optional_super_lane(summarization, lane, first):
 
             current_horizontal_index += length
 
-
+    print(new_interaction_points_mapping)
     return SVD.OptionalSuperLane(lane_id, lane_name, object_type, elements, cardinality, frequency), new_interaction_points_mapping
 
 
@@ -306,8 +339,8 @@ def __between_lane_summarization(summarization1, summarization2, o_lane1, o_lane
                     interaction_point2 = interaction_point
                     break
 
-            new_interaction_points_mapping[(1, interaction_point1.index_in_lanes, str(interaction_point1.interaction_lanes))] = current_horizontal_index
-            new_interaction_points_mapping[(2, interaction_point2.index_in_lanes, str(interaction_point2.interaction_lanes))] = current_horizontal_index
+            new_interaction_points_mapping[(1, interaction_point1.index_in_lanes, str(interaction_point1.interaction_lanes))] = (0,current_horizontal_index)
+            new_interaction_points_mapping[(2, interaction_point2.index_in_lanes, str(interaction_point2.interaction_lanes))] = (0,current_horizontal_index)
 
             elements.append(SVD.InteractionConstruct(common_element[0], frequency1 + frequency2, current_horizontal_index))
 
@@ -373,12 +406,17 @@ def __apply_patterns(interval_subprocesses, start_index, summarization1, summari
     length = 0
 
     # Determine choices and their frequencies
-    choice_activities = dict()
+    choices = []
+    frequencies = []
+    is_optional = False
 
     for elements in interval_subprocesses:
+        position = start_index
         choice = []
         frequency = 0
         lane_id = elements[0]
+        current_mappings = dict()
+
         for i in range(len(elements[1])):
 
             if(isinstance(elements[1][i], SVD.InteractionConstruct)):
@@ -390,7 +428,7 @@ def __apply_patterns(interval_subprocesses, start_index, summarization1, summari
                             interaction_point1 = interaction_point
                             break
 
-                    new_mapping[(1, interaction_point1.index_in_lanes, str(interaction_point1.interaction_lanes))] = start_index + i
+                    current_mappings[(1, interaction_point1.index_in_lanes, str(interaction_point1.interaction_lanes))] = start_index + i
 
                 else:
                     interaction_point2 = None
@@ -400,47 +438,62 @@ def __apply_patterns(interval_subprocesses, start_index, summarization1, summari
                             interaction_point2 = interaction_point
                             break
 
-                    new_mapping[(2, interaction_point2.index_in_lanes, str(interaction_point2.interaction_lanes))] = start_index + i
+                    current_mappings[(2, interaction_point2.index_in_lanes, str(interaction_point2.interaction_lanes))] = start_index + i
 
 
-            choice.append(elements[1][i].activity)
+                choice.append(SVD.InteractionConstruct(elements[1][i].activity, elements[1][i].frequency, position))
+            else:
+                choice.append(SVD.CommonConstruct(elements[1][i].activity, elements[1][i].frequency, position))
+
+            position += 1
             frequency = elements[1][i].frequency
 
-        if(str(choice) in choice_activities.keys()):
-            current_frequency = choice_activities[str(choice)][1]
-            elements = choice_activities[str(choice)][0]
-            choice_activities[str(choice)] = (elements, current_frequency + frequency)
+        if(choice == []):
+            is_optional = True
+
         else:
-            choice_activities[str(choice)] = (choice, frequency)
-            
+            duplicate = False
+            for i in range(len(choices)):
+                equal = True
+                for j in range(len(choices[i])):
+                    equal = equal and ((type(choices[i][j]) == type(choice[j])) and (choices[i][j].activity == choice[j].activity))
 
-    unique_choices = [choice for choice in choice_activities.values() if choice[0] != []]
-    unique_choices.sort(key=lambda a: a[0])
-    frequencies = [choice[1] for choice in unique_choices]
-    unique_choice_sequences = [choice[0] for choice in unique_choices]
+                    if(not equal):
+                        break
 
-    longest_option = max(unique_choice_sequences, key=len)
+                if(equal):
+                    duplicate = True
+                    frequencies[i] += frequency
+                    for j in range(len(choices[i])):
+                        choices[i][j].frequency += choice[j].frequency
+                    for key in current_mappings.keys():
+                        new_mapping[key] = (i,current_mappings[key])
+                    break
+
+            if(not duplicate):
+                frequencies.append(frequency)
+                current_index = len(choices)
+                choices.append(choice)
+                for key in current_mappings.keys():
+                    new_mapping[key] = (current_index,current_mappings[key])
+
+
+    longest_option = max(choices, key=len)
     length = len(longest_option)
-
-    unique_choice_sequences_elements = []
-    for i in range(len(unique_choice_sequences)):
-        choice_elements = []
-        position = start_index
-        for activity in unique_choice_sequences[i]:
-            choice_elements.append(SVD.CommonConstruct(activity, frequencies[i], position))
-            position += 1
-        unique_choice_sequences_elements.append(choice_elements)
         
     # Adding Construct
-    if(str([]) in choice_activities.keys()):
+    if(is_optional):
         if(print_result):
 
         # Output printing
             print("\n")
             print("Adding a optional choice element between the following sequences.")
-            print(unique_choice_sequences)
+            for choice in choices:
+                for elem in choice:
+                    print(elem)
+                print("----------")
 
-        returned_elements.append(SVD.OptionalConstruct(unique_choice_sequences_elements, start_index, start_index+length-1))
+        returned_elements.append(SVD.OptionalConstruct(choices, start_index, start_index + length - 1))
 
     else:
 
@@ -448,9 +501,12 @@ def __apply_patterns(interval_subprocesses, start_index, summarization1, summari
             # Output printing
             print("\n")
             print("Adding a choice element between the following sequences.")
-            print(unique_choice_sequences)
+            for choice in choices:
+                for elem in choice:
+                    print(elem)
+                print("----------")
 
-        returned_elements.append(SVD.ChoiceConstruct(unique_choice_sequences_elements, start_index, start_index+length-1))
+        returned_elements.append(SVD.ChoiceConstruct(choices, start_index, start_index + length - 1))
             
     return returned_elements, length, new_mapping
 

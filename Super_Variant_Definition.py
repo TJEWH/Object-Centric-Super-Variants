@@ -176,7 +176,7 @@ class SuperVariant(SummarizedVariant):
         self.id = id
 
     def __str__(self):
-        result_string = "Super Variant " + str(self.id) + "\n Lanes: \n"
+        result_string = "Super Variant " + str(self.id) + "\nLanes: \n"
         for i in range(len(self.lanes)):
             result_string += str(self.lanes[i]) + "\n"
         result_string += "\nInvolved Objects: \n" + str(self.object_types) +"\n"
@@ -302,7 +302,6 @@ class SuperLane:
             result.append(SuperLane(i, "realization " + str(i), self.object_type, elements, self.cardinality, frequency))
         return result
 
-
     def get_element(self, position):
         for element in self.elements:
             if((type(element) == CommonConstruct or type(element) == InteractionConstruct) and element.position == position):
@@ -310,7 +309,6 @@ class SuperLane:
             if((type(element) == ChoiceConstruct or type(element) == OptionalConstruct) and position >= element.position_start and position <= element.position_end):
                 return element
         return None
-
     
     def shift_lane(self, start_element, offset):
         index = self.elements.index(start_element)
@@ -323,6 +321,34 @@ class SuperLane:
                 for choice in self.elements[i].choices:
                     for elem in choice:
                         elem.position += offset
+
+    def shift_lane_exact(self, start_position, offset, choice_id):
+        
+        # Case 1: Start shifting from a Common Activity
+        for i in range(len(self.elements)):
+            if((type(self.elements[i]) == InteractionConstruct) and self.elements[i].position == start_position):
+                self.shift_lane(self.elements[i], offset)
+                return False, i, start_position, start_position
+        
+            if((type(self.elements[i]) == ChoiceConstruct or type(self.elements[i]) == OptionalConstruct) and self.elements[i].position_end >= start_position):
+                shift = False
+                for elem in self.elements[i].choices[choice_id]:
+                    if(type(elem) == InteractionConstruct and elem.position == start_position):
+                        elem.position += offset
+                        shift = True
+                        continue
+                    if(shift):
+                        elem.position += offset
+
+                start_position_c = self.elements[i].position_start
+                end_position_c = self.elements[i].position_end
+                self.elements[i].position_start = min([choice[0].position for choice in self.elements[i].choices])
+                self.elements[i].position_end = max([choice[-1].position for choice in self.elements[i].choices])
+                if(i < len(self.elements)-1):
+                    self.shift_lane(self.elements[i+1], offset)
+                return True, i, start_position_c, end_position_c
+                
+
 
     def remove_non_common_elements(self):
         new_elements = []
@@ -366,7 +392,6 @@ class CommonConstruct(SummarizationElement):
         if isinstance(other, self.__class__):
             return self.activity == other.activity
         return False
-
 
 class InteractionConstruct(CommonConstruct):
     
