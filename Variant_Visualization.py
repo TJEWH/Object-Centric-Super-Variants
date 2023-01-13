@@ -67,7 +67,7 @@ def scale_lightness(rgb, scale_l):
     return colorsys.hls_to_rgb(h, min(1, l * scale_l), s = s)
 
 
-def visualize_variant(variant):
+def visualize_variant(variant, frequency):
 
     if(len(variant.lanes) > 20):
         print("Summarization too large, cannot be visualized.")
@@ -97,8 +97,8 @@ def visualize_variant(variant):
     current_vertical_position = 0
     for i in range(len(variant.lanes)):
         color = color_assignment_lanes[variant.lanes[i].lane_id]
-        ax.text(-7.5, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.3 * DEFAULT_CHEVRON_HEIGHT, variant.lanes[i].lane_name, zorder = 10)
-        ax.add_patch(patches.Rectangle((-8.0, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length+2) * DEFAULT_CHEVRON_LENGTH, DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0))
+        ax.text(-12.5, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.3 * DEFAULT_CHEVRON_HEIGHT, variant.lanes[i].lane_name, zorder = 10)
+        ax.add_patch(patches.Rectangle((-13.0, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length+2) * DEFAULT_CHEVRON_LENGTH, DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0))
         for j in range(len(variant.lanes[i].horizontal_indices)):
             is_interacting_activity, interaction_point = IED.is_interaction_point(variant.interaction_points, variant.lanes[i].lane_id, variant.lanes[i].horizontal_indices[j]) 
             if (is_interacting_activity):
@@ -107,6 +107,7 @@ def visualize_variant(variant):
                 ax = __activity_chevron(ax, variant.lanes[i].activities[j], variant.lanes[i].horizontal_indices[j], current_vertical_position, color)
         current_vertical_position += 1
 
+    ax.text(-13.0, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.7, "Frequency: " + str(round(frequency, 3)), zorder = 10)
     ax.set_aspect('equal')
     ax.set_xlim(-10, (maximal_lane_length + 1)*DEFAULT_CHEVRON_LENGTH+2)
     ax.set_ylim(-2, current_vertical_position*DEFAULT_CHEVRON_HEIGHT+2)

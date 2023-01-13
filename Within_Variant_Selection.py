@@ -70,7 +70,7 @@ def __solve_hitting_set_problem(T, S):
     print("-----------------------------")
     return model, solution
 
-def within_variant_selection(process):
+def intra_variant_summarization_selection(process):
 
     universe, summarization_dictionary = get_unique_summarizations(process)
     T, S = __determine_subsets(universe, summarization_dictionary)

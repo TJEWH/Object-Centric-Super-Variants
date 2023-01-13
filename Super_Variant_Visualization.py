@@ -6,7 +6,7 @@ import matplotlib.patches as patches
 from matplotlib import colors
 
 DEFAULT_CHEVRON_LENGTH = 15.
-DEFAULT_CHEVRON_HEIGHT = 4.
+DEFAULT_CHEVRON_HEIGHT = 6.
 
 def __chevron_at_position(horizontal_index, vertical_index, length, height):
     
@@ -127,7 +127,7 @@ def __summarized_activity_chevron(ax, lane, element, lane_property, lane_propert
             for j in range(len(element.choices[i])):
                 current_horizontal_position = horizontal_start_position + (element.choices[i][j].position - element.position_start) * sub_default_chevron_length
                 label = str(element.choices[i][j].activity)
-                label = label + " (" + str(round((element.choices[i][j].frequency/lane_property["Frequency"])*100, 2)) + "%)"
+                label = label + "\n(" + str(round((element.choices[i][j].frequency/lane_property["Frequency"])*100, 2)) + "%)"
                 ax.text(current_horizontal_position + 2.0, vertical_position + margin_height + 0.5 * sub_default_chevron_heigth - 0.3, label, zorder = 10, fontsize=7)
                 
                 if(not isinstance(element.choices[i][j], SVD.InteractionConstruct)):
@@ -196,21 +196,21 @@ def visualize_super_variant(summarization):
     current_vertical_position = 0
     for i in range(len(summarization.lanes)):
         color = lane_properties[summarization.lanes[i].lane_id]["Color"]
-        ax.text(-10, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * lane_properties[summarization.lanes[i].lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT - 0.3, summarization.lanes[i].cardinality, zorder = 10)
-        ax.text(-7.5, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * lane_properties[summarization.lanes[i].lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT - 0.3, summarization.lanes[i].lane_name, zorder = 10)
+        ax.text(-15, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * lane_properties[summarization.lanes[i].lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT - 0.3, summarization.lanes[i].cardinality, zorder = 10)
+        ax.text(-12.5, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * lane_properties[summarization.lanes[i].lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT - 0.3, summarization.lanes[i].lane_name, zorder = 10)
         if(lane_properties[summarization.lanes[i].lane_id]["IsOptional"]):
-            ax.add_patch(patches.Rectangle((-8.0, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length+2) * DEFAULT_CHEVRON_LENGTH, lane_properties[summarization.lanes[i].lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0, hatch='///'))
+            ax.add_patch(patches.Rectangle((-13, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length+2) * DEFAULT_CHEVRON_LENGTH, lane_properties[summarization.lanes[i].lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0, hatch='///'))
         else:
-            ax.add_patch(patches.Rectangle((-8.0, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length+2) * DEFAULT_CHEVRON_LENGTH, lane_properties[summarization.lanes[i].lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0))
+            ax.add_patch(patches.Rectangle((-13, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length+2) * DEFAULT_CHEVRON_LENGTH, lane_properties[summarization.lanes[i].lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0))
         for elem in summarization.lanes[i].elements:
             if (isinstance(elem,SVD.InteractionConstruct)):
                 ax = __interaction_activity_chevron(ax, summarization.lanes[i].lane_id, elem, lane_properties, summarization.interaction_points, current_vertical_position)
             else:
                 ax = __summarized_activity_chevron(ax, summarization.lanes[i].lane_id, elem, lane_properties[summarization.lanes[i].lane_id], lane_properties, color, summarization.interaction_points, current_vertical_position)
         current_vertical_position += lane_properties[summarization.lanes[i].lane_id]["Height"]
-    ax.text(-7.5, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.7, "Frequency: " + str(round(summarization.frequency, 3)), zorder = 10)
+    ax.text(-13, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.7, "Frequency: " + str(round(summarization.frequency, 3)), zorder = 10)
     ax.set_aspect('equal')
-    ax.set_xlim(-10, (maximal_lane_length+1)*DEFAULT_CHEVRON_LENGTH+2)
+    ax.set_xlim(-15, (maximal_lane_length+1)*DEFAULT_CHEVRON_LENGTH+2)
     ax.set_ylim(-2, current_vertical_position*DEFAULT_CHEVRON_HEIGHT+2)
     plt.axis('off')
     plt.show()
