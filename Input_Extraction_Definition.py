@@ -21,6 +21,15 @@ class VariantLane:
         return result_string + "]"
     
     def has_type(self, input_type):
+        '''
+        Determines whether the lane corresponds to an object instances of the given type
+        :param self: The lane
+        :type variant: VariantLane
+        :param input_type: The object type label
+        :type input_type: str
+        :return: Whether the object type of the lane equals the given object type
+        :rtype: bool
+        '''
         return self.object_type == input_type
 
 
@@ -31,8 +40,8 @@ class InteractionPoint:
     interacting_types = {}
     index_in_lanes = 0
     
-    def __init__(self, name, lanes, types, index):
-        self.activity_name = name                                                                      
+    def __init__(self, activity_label, lanes, types, index):
+        self.activity_name = activity_label                                                                    
         self.interaction_lanes = lanes                                                                      
         self.interacting_types = types
         self.index_in_lanes = index
@@ -65,30 +74,49 @@ class ExtractedVariant:
         return result_string + "Frequency: " + str(self.frequency)
     
     def get_lanes_of_type(self, object_type):
+        '''
+        Returns all lanes of the variant that correspond to object instances of the given object type
+        :param self: The variant
+        :type variant: ExtractedVariant
+        :param object_type: The object type label
+        :type object_type: str
+        :return: A list of type VariantLane
+        :rtype: list
+        '''
         return [lane for lane in self.lanes if lane.object_type == object_type]
     
     def get_lane(self, lane_id):
-        return [lane for lane in self.lanes if lane.lane_id == lane_id][0]
+        '''
+        Returns the lane of the variant with the given lane id
+        :param self: The variant
+        :type variant: ExtractedVariant
+        :param lane_id: The lane id
+        :type lane_id: int
+        :return: The VariantLane with the given id
+        :rtype: VariantLane
+        '''
+        for lane in self.lanes:
+            if (lane.lane_id == lane_id):
+                return lane
+        return None
 
 
 def extract_lanes(variant, frequency):
     '''
-    Converts a layouted variant into another format used by the summarization methods
-    :param variant: The single flattened lane of one involved object
-    :type variant: List
-    :return: The conversion of the input variant into the ExtractedVariant format
+    Extracts the variant from the corresponding variant layouting and its frequency
+    :param variant: The layouting of a variant
+    :type variant: dict
+    :param frequency: The relative frequency of the variant
+    :type frequency: float
+    :return: The extracted variant
     :rtype: ExtractedVariant
     '''
-    
-    # Separate event elements and objects
+
     objects = variant[1]
     events = sorted(variant[0],key=lambda x: (x[1][0]))
     
-    # Store the interaction points for preservation
     extracted_lanes = []
             
-    # Create element for each lane in the variant, storing a lists of activities
-    # and the object specification
     for i in range(len(objects)):
         lane = []
         positions = []
@@ -114,15 +142,15 @@ def extract_lanes(variant, frequency):
 
 def is_interaction_point(interactions, lane, position):
     '''
-    Determines whether one of the merged original activities of a summarized activity is an interaction point
-    :param interactions: The interaction points of the variant
-    :type interaction: List of type InteractionPoint
-    :param activity_name: The name of the activity that is checked
-    :type activity_name: String
-    :param positions: The original indices of the merged activities
-    :type positions: Tuple
-    :return: Whether the activity at any of the given positions is listed as an interaction point
-    :rtype: Boolean
+    Determines whether the activity in a certain lane at a given position is an interaction point
+    :param interactions: The interaction points of the corresponding variant
+    :type interaction: list of type InteractionPoint
+    :param lane: The lane id
+    :type lane: int
+    :param position: The position index
+    :type position: int
+    :return: Whether the activity at the position is an interaction point, The corresponding interaction point
+    :rtype: bool, InteractionType
     '''
     for interaction in interactions:
         if lane in interaction.interaction_lanes and interaction.index_in_lanes == position:
