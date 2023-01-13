@@ -3,7 +3,7 @@ import Super_Variant_Definition as SVD
 
 def __get_candidates(lanes, interactions):
     '''
-    Yields all maximal merging candidate sets for a set of lanes, thus, all sets of lanes that share all interaction points
+    Yields all maximal merging candidate sets for a set of lanes, thus, all sets of lanes that share all interactions with other lanes
     :param lanes: The lanes of the variant
     :type lanes: List of VariantLane
     :param interactions: The interactions of the variant
@@ -28,6 +28,7 @@ def __get_candidates(lanes, interactions):
                         comparison_interactions.extend(interaction.interaction_lanes)
                 if (set(candidate_interactions) == set(comparison_interactions)):
                     candidate_set.add(lane2)
+        
         if(candidate_set not in result):
             result.append(candidate_set)
         
@@ -138,7 +139,9 @@ def within_variant_summarization(variant, print_result = True):
 
     return result
 
-
+##########################################################################################################################################################
+##########################################################################################################################################################
+##########################################################################################################################################################
 def __between_lane_summarization(lanes, interactions, print_result):
     '''
     Yields a generic summarizations of lanes of the same object type
@@ -304,6 +307,62 @@ def __apply_patterns(activities, start_index, print_result):
     return elements, length
 
 
+def __max_order_preserving_common_activities(lanes):
+    '''
+    Extracts the longest sequence of activities found in all lanes, preserving their order
+    :param lanes: Multiple sequences of activities
+    :type lanes: list of VariantLane
+    :return: the longest order preserving common activity sequence and their indices in the variant
+    :rtype: dict
+    '''
+    # Initialization, copy elements
+    activity_sets = []
+    l = [lane.activities for lane in lanes]
+    base_lane = l[0]
+    base_indices = lanes[0].horizontal_indices
+    
+    # Retrieves all common sublists that ensure the precise order
+    for i in range(len(base_lane)):
+        
+        # Keeping track of the original indices and the remaining sublists
+        comparison = [] 
+        indices = []
+        for lane in range(1,len(l)):
+            comparison.append(lanes[lane].activities)
+            indices.append(lanes[lane].horizontal_indices)
+            
+        set = dict()
+        
+        # For each activity in base lane as starting point find the list of activities
+        # that appear in all other lanes
+        for j in range(i,len(base_lane)):
+            
+            if (all(base_lane[j] in lane for lane in comparison)):
+
+                #Create result tuple
+                indices_of_lane = ()
+                indices_of_lane = indices_of_lane + (base_indices[j],)
+                
+                # Add the corresponding index for each other variant and adjust the lists
+                for k in range(len(comparison)):
+                    indices_of_lane = indices_of_lane + (indices[k][comparison[k].index(base_lane[j])],)
+                    indices[k] = indices[k][comparison[k].index(base_lane[j])+1:]
+                    comparison[k] = comparison[k][comparison[k].index(base_lane[j])+1:]
+                
+                duplicate_key_set = [key for key in list(set.keys()) if key[1] == base_lane[j]]
+                if (len(duplicate_key_set) > 0):
+                    maximum = max([key[0] for key in duplicate_key_set])
+                    set[maximum+1, base_lane[j]] = (indices_of_lane)
+                else:
+                    set[0, base_lane[j]] = (indices_of_lane)
+        activity_sets.append(set)
+        
+    # Return the maximal list of activities for optimality
+    return max(activity_sets, key=len)
+##########################################################################################################################################################
+##########################################################################################################################################################
+##########################################################################################################################################################
+
 def __merge_interaction_mappings(mappings):
     '''
     Pre-processes the mappings from the summarization for easy handling
@@ -385,60 +444,6 @@ def __re_align_lanes(lanes, mappings, print_result):
         updated_interaction_points.append(IED.InteractionPoint(name, [lane.lane_id for lane in lanes], types, position))
         
     return aligned_lanes, updated_interaction_points
-
-
-def __max_order_preserving_common_activities(lanes):
-    '''
-    Extracts the longest sequence of activities found in all lanes, preserving their order
-    :param lanes: Multiple sequences of activities
-    :type lanes: list of VariantLane
-    :return: the longest order preserving common activity sequence and their indices in the variant
-    :rtype: dict
-    '''
-    # Initialization, copy elements
-    activity_sets = []
-    l = [lane.activities for lane in lanes]
-    base_lane = l[0]
-    base_indices = lanes[0].horizontal_indices
-    
-    # Retrieves all common sublists that ensure the precise order
-    for i in range(len(base_lane)):
-        
-        # Keeping track of the original indices and the remaining sublists
-        comparison = [] 
-        indices = []
-        for lane in range(1,len(l)):
-            comparison.append(lanes[lane].activities)
-            indices.append(lanes[lane].horizontal_indices)
-            
-        set = dict()
-        
-        # For each activity in base lane as starting point find the list of activities
-        # that appear in all other lanes
-        for j in range(i,len(base_lane)):
-            
-            if (all(base_lane[j] in lane for lane in comparison)):
-
-                #Create result tuple
-                indices_of_lane = ()
-                indices_of_lane = indices_of_lane + (base_indices[j],)
-                
-                # Add the corresponding index for each other variant and adjust the lists
-                for k in range(len(comparison)):
-                    indices_of_lane = indices_of_lane + (indices[k][comparison[k].index(base_lane[j])],)
-                    indices[k] = indices[k][comparison[k].index(base_lane[j])+1:]
-                    comparison[k] = comparison[k][comparison[k].index(base_lane[j])+1:]
-                
-                duplicate_key_set = [key for key in list(set.keys()) if key[1] == base_lane[j]]
-                if (len(duplicate_key_set) > 0):
-                    maximum = max([key[0] for key in duplicate_key_set])
-                    set[maximum+1, base_lane[j]] = (indices_of_lane)
-                else:
-                    set[0, base_lane[j]] = (indices_of_lane)
-        activity_sets.append(set)
-        
-    # Return the maximal list of activities for optimality
-    return max(activity_sets, key=len)
 
 
 def __partition(collection):

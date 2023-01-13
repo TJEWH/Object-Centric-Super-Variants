@@ -1,8 +1,5 @@
 import matplotlib.pyplot as plt
-from matplotlib.path import Path
 import matplotlib.patches as patches
-from matplotlib import colors
-
 import Input_Extraction_Definition as IED
 
 DEFAULT_CHEVRON_LENGTH = 15.
@@ -36,7 +33,6 @@ def __chevron_at_position( horizontal_index, vertical_index, length, height):
 
 def __activity_chevron(ax, activity, horizontal_index, vertical_index, color):
 
-    from matplotlib.path import Path
     import matplotlib.patches as patches
 
     ax.text(horizontal_index * DEFAULT_CHEVRON_LENGTH + 2.0, vertical_index * DEFAULT_CHEVRON_HEIGHT + 0.3 * DEFAULT_CHEVRON_HEIGHT, activity, zorder = 10)
@@ -73,7 +69,6 @@ def visualize_variant(variant, frequency):
         print("Summarization too large, cannot be visualized.")
         return
      
-    # Defining the colors and heights for each lane
     all_colors = [(0.56,0.81,0.56), (1,0.71,0.44) , (0.38,0.57,0.8), (1,0.87,143), (0.56,0.89,0.97)]
     objects = list(variant.object_types)
     objects.sort()
@@ -109,7 +104,7 @@ def visualize_variant(variant, frequency):
 
     ax.text(-13.0, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.7, "Frequency: " + str(round(frequency, 3)), zorder = 10)
     ax.set_aspect('equal')
-    ax.set_xlim(-10, (maximal_lane_length + 1)*DEFAULT_CHEVRON_LENGTH+2)
+    ax.set_xlim(-15, (maximal_lane_length + 1)*DEFAULT_CHEVRON_LENGTH+2)
     ax.set_ylim(-2, current_vertical_position*DEFAULT_CHEVRON_HEIGHT+2)
     plt.axis('off')
     plt.show()

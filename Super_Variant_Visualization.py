@@ -1,9 +1,6 @@
-import Super_Variant_Definition as SVD
-
 import matplotlib.pyplot as plt
-from matplotlib.path import Path
 import matplotlib.patches as patches
-from matplotlib import colors
+import Super_Variant_Definition as SVD
 
 DEFAULT_CHEVRON_LENGTH = 15.
 DEFAULT_CHEVRON_HEIGHT = 6.
