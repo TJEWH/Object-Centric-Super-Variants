@@ -357,7 +357,24 @@ class SuperLane:
                 new_elements.append(elem)
         return SuperLane(self.lane_id, self.lane_name, self.object_type, new_elements, self.cardinality, self.frequency)
 
+def to_super_lane(lane, interactions):
+        elements = []
+        for i in range(len(lane.activities)):
+            position = lane.horizontal_indices[i]
+            activity_label = lane.activities[i]
+            is_interaction_point = False
+            for interaction_point in interactions:
+                if(interaction_point.index_in_lanes == position and lane.lane_id in interaction_point.interaction_lanes):
+                        interaction_point = interaction_point
+                        is_interaction_point = True
+                        break
+            if(is_interaction_point):
+                elements.append(InteractionConstruct(activity_label, 1, position))
 
+            else:
+                elements.append(CommonConstruct(activity_label, 1, position))
+
+        return SuperLane(lane.lane_id, lane.lane_name, lane.object_type, elements, "1", 1)
 
 class OptionalSuperLane(SuperLane):
 

@@ -1,5 +1,5 @@
 import Input_Extraction_Definition as IED
-import Within_Variant_Summarization as WVS
+import Intra_Variant_Summarization as WVS
 
 def get_unique_summarizations(process):
     from ocpa.visualization.log.variants import factory as variants_visualization_factory
