@@ -15,7 +15,7 @@ import Inter_Variant_Summarization as BVS
 
 filename = "EventLogs/BPI2017-Top10.jsonocel"
 parameters = {"execution_extraction": "leading_type",
-              "leading_type": "offer"}
+              "leading_type": "application"}
 ocel = ocel_import_factory.apply(file_path = filename , parameters = parameters)
 
 #variant_layouting = variants_visualization_factory.apply(ocel)
@@ -28,20 +28,28 @@ ocel = ocel_import_factory.apply(file_path = filename , parameters = parameters)
 #extracted_variant = IED.extract_lanes(variant_layouting[ocel.variants[7]], ocel.variant_frequencies[7])
 #VV.visualize_variant(extracted_variant, ocel.variant_frequencies[7])
 
-selection = WVSE.intra_variant_summarization_selection(ocel)
-summarizations = [selection[key][1][0].to_super_variant(tuple(selection[key][0])) for key in selection.keys()]
+#selection = WVSE.intra_variant_summarization_selection(ocel)
+#summarizations = [selection[key][1][0].to_super_variant(tuple(selection[key][0])) for key in selection.keys()]
+#for summarization in summarizations:
+ #   SVV.visualize_super_variant(summarization)
 
-for i in range(len(summarizations)):
-    for j in range(i+1, len(summarizations)):
-        super_variant_ij, cost = BVS.join_super_variants(summarizations[i], summarizations[j], False)
-        SVV.visualize_super_variant(super_variant_ij)
+#variant_layouting = variants_visualization_factory.apply(ocel)
+#extracted_variant = IED.extract_lanes(variant_layouting[ocel.variants[5]], ocel.variant_frequencies[5]) # Extract the variants frequency
+#extracted_summarizations = WVSU.within_variant_summarization(extracted_variant, False)
+#for summarization in extracted_summarizations:
+    #SVV.visualize_super_variant(summarization)
+
+#for i in range(len(summarizations)):
+    #for j in range(i+1, len(summarizations)):
+        #super_variant_ij, cost = BVS.join_super_variants(summarizations[i], summarizations[j], False)
+        #SVV.visualize_super_variant(super_variant_ij)
 #SVV.visualize_super_variant(summarizations[4])
 
 #SVV.visualize_super_variant(super_variant_14)
 #SVV.visualize_super_variant(super_variant_14)
 #SVV.visualize_super_variant(super_variant_14)
 #SVV.visualize_super_variant(super_variant_14)
-#super_variant_14, cost = BVS.join_super_variants(summarizations[1], summarizations[4], False)
+#super_variant_14, cost = BVS.join_super_variants(summarizations[1], summarizations[10], True)
 #SVV.visualize_super_variant(super_variant_14)
 #super_variant_07, cost = BVS.join_super_variants(summarizations[0], summarizations[7], False)
 #SVV.visualize_super_variant(super_variant_07)
@@ -55,7 +63,7 @@ for i in range(len(summarizations)):
 #SVV.visualize_super_variant(super_variant_35)
 
 
-#super_variant1407, cost = BVS.join_super_variants(super_variant_14, super_variant_07)
+#super_variant1407, cost = BVS.join_super_variants(super_variant_14, super_variant_07, True)
 #SVV.visualize_super_variant(super_variant1407)
 #super_variant6935, cost = BVS.join_super_variants(super_variant_69, super_variant_35)
 #SVV.visualize_super_variant(super_variant6935)

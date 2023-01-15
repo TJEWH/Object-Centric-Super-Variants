@@ -323,7 +323,7 @@ class SuperLane:
                         elem.position += offset
 
     def shift_lane_exact(self, start_position, offset, choice_id):
-        
+
         # Case 1: Start shifting from a Common Activity
         for i in range(len(self.elements)):
             if((type(self.elements[i]) == InteractionConstruct) and self.elements[i].position == start_position):
@@ -331,6 +331,10 @@ class SuperLane:
                 return False, i, start_position, start_position
         
             if((type(self.elements[i]) == ChoiceConstruct or type(self.elements[i]) == OptionalConstruct) and self.elements[i].position_end >= start_position):
+
+                start_position_c = self.elements[i].position_start
+                end_position_c = self.elements[i].position_end
+                
                 shift = False
                 for elem in self.elements[i].choices[choice_id]:
                     if(type(elem) == InteractionConstruct and elem.position == start_position):
@@ -340,15 +344,14 @@ class SuperLane:
                     if(shift):
                         elem.position += offset
 
-                start_position_c = self.elements[i].position_start
-                end_position_c = self.elements[i].position_end
                 self.elements[i].position_start = min([choice[0].position for choice in self.elements[i].choices])
                 self.elements[i].position_end = max([choice[-1].position for choice in self.elements[i].choices])
+
                 if(i < len(self.elements)-1):
-                    self.shift_lane(self.elements[i+1], offset)
+                    self.shift_lane(self.elements[i+1], self.elements[i].position_end - end_position_c)
+
                 return True, i, start_position_c, end_position_c
                 
-
 
     def remove_non_common_elements(self):
         new_elements = []
@@ -356,6 +359,7 @@ class SuperLane:
             if(isinstance(elem, CommonConstruct) or isinstance(elem, InteractionConstruct)):
                 new_elements.append(elem)
         return SuperLane(self.lane_id, self.lane_name, self.object_type, new_elements, self.cardinality, self.frequency)
+
 
 def to_super_lane(lane, interactions):
         elements = []

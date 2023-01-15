@@ -3,10 +3,11 @@ import Super_Variant_Visualization as WVV
 import Intra_Variant_Summarization as WVS
 import Input_Extraction_Definition as IED
 import Inter_Lane_Summarization as ILS
+
 def join_super_variants(summarization1, summarization2, print_result = True):
     import copy
-    #WVV.visualize_super_variant(summarization1)
-    #WVV.visualize_super_variant(summarization2)
+    WVV.visualize_super_variant(summarization1)
+    WVV.visualize_super_variant(summarization2)
     mapping, cost = decide_matching(summarization1, summarization2, copy.deepcopy(summarization1.lanes), copy.deepcopy(summarization2.lanes), True, print_result)
     if(print_result):
         print("The cost of joining these Super Variants is " + str(cost) + ".")
