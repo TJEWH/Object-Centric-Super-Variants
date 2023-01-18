@@ -321,13 +321,14 @@ def __re_align_lanes(lanes, mappings, print_result):
     '''
     # Initialize variables and return values
     import copy
-    aligned_lanes = copy.deepcopy(lanes)
-    updated_mappings = copy.deepcopy(mappings)
+    import math
+    updated_mappings, aligned_lanes = split_interactions(copy.deepcopy(mappings), copy.deepcopy(lanes))
+    #updated_mappings, aligned_lanes = copy.deepcopy(mappings), copy.deepcopy(lanes)
     updated_interaction_points = []
 
     # Align the lanes such that the interaction points have the same horizontal index
     for i in range(len(mappings.keys())):
-        earliest_interaction_point = min(updated_mappings.items(), key=lambda x: list(list(x[1].values())[1]))
+        earliest_interaction_point = min(updated_mappings.items(), key=lambda x: min([position[1] for position in x[1].values()]))
         lanes = [lane for lane in aligned_lanes if lane.lane_id in list(earliest_interaction_point[1].keys())]
         if(print_result):
             print("We have an interaction at the following points in the interacting lanes: " + str(earliest_interaction_point[1]))
@@ -349,7 +350,6 @@ def __re_align_lanes(lanes, mappings, print_result):
             position = all_positions[0]
                     
         else: 
-
             target_position = max(all_positions)
             position = target_position
             
@@ -398,8 +398,90 @@ def __re_align_lanes(lanes, mappings, print_result):
                                 else:
                                     tuple = updated_mappings[key][lane.lane_id]
                                     updated_mappings[key][lane.lane_id]= (tuple[0], tuple[1] + offset_after_choice)
+
                         
         del updated_mappings[earliest_interaction_point[0]]
         updated_interaction_points.append(IED.InteractionPoint(activity_label, [lane.lane_id for lane in lanes], types, position))
         
     return aligned_lanes, updated_interaction_points
+
+
+def split_interactions(mappings, lanes):
+    import copy
+    new_mappings = copy.deepcopy(mappings)
+    duplicates = []
+
+    for i in range(len(list(mappings.keys()))):
+        mapping1 = list(mappings.keys())[i]
+        duplicate_mappings = dict()
+        lane_id = 0
+
+        for key1 in mappings[mapping1].keys():
+            position1 = mappings[mapping1][key1]
+
+            for j in range(i+1,len(list(mappings.keys()))):
+                mapping2 = list(mappings.keys())[j]
+
+                for key2 in mappings[mapping2].keys():
+                    position2 = mappings[mapping2][key2]
+
+                    if(key1 == key2 and position1 == position2):
+                         del new_mappings[mapping1]
+                         del new_mappings[mapping2]
+                         duplicate_mappings[mapping1] = mappings[mapping1]
+                         duplicate_mappings[mapping2] = mappings[mapping2]
+                         lane_id = key1
+
+        if (len(duplicate_mappings)):
+            duplicates.append((duplicate_mappings, lane_id))
+    
+    new_lanes = []
+
+    for duplicate in duplicates:
+        empty_frequency = len(duplicate[0]) - 1
+        earliest_interaction_point = min(duplicate[0].items(), key=lambda x: min([position[1] for position in x[1].values()]))
+        del duplicate[0][earliest_interaction_point[0]]
+  
+        for lane in lanes:
+            if (lane.lane_id == duplicate[1]):
+                positions = earliest_interaction_point[1][duplicate[1]]
+                new_lane, new_element = copy.deepcopy(lane).make_optional(positions[1], empty_frequency, positions[0])
+                new_mappings[earliest_interaction_point[0]] = earliest_interaction_point[1]
+                break
+        
+        for i in range(len(list(duplicate[0].keys()))):
+            current_interaction_point = min(duplicate[0].items(), key=lambda x: list(list(x[1].values())[1]))
+            del duplicate[0][current_interaction_point[0]]
+            lower_bound = new_element.position_start
+
+            # Problem: Must also consider if it is an entirely different lane 
+            #for key in mappings.keys():
+                #if(key != earliest_interaction_point[0] and key != current_interaction_point[0]):
+                    #if(duplicate[1] in mappings[key].keys() and mappings[key][duplicate[1]][1] > lower_bound):
+                        #print(mappings[key])
+
+                        #for key2 in mappings[key].keys():
+                            #if(key2 != duplicate[1] and key2 in current_interaction_point[1].keys()):
+                                #if(mappings[key][key2][1] < current_interaction_point[1][key2][1]):
+                                    #lower_bound = max(mappings[key][duplicate[1]][1] + 1, lower_bound)
+
+            # Update all mappings due to the shift of element positions
+            new_position_mapping = (positions[0], lower_bound + 1)
+            new_mappings[current_interaction_point[0]] = current_interaction_point[1]
+            new_mappings[current_interaction_point[0]][duplicate[1]] = new_position_mapping
+            new_lane = new_lane.add_activity(lower_bound + 1, copy.deepcopy(new_element), current_interaction_point[1][duplicate[1]][0])
+            for key in new_mappings.keys():
+                if(key != earliest_interaction_point[0] and key != current_interaction_point[0]):
+                    if(duplicate[1] in mappings[key].keys() and mappings[key][duplicate[1]][1] > lower_bound):
+                        old_position = new_mappings[key][duplicate[1]]
+                        new_mappings[key][duplicate[1]] = (old_position[0], old_position[1]+1)
+                        
+        new_lanes.append(new_lane)
+        
+
+    for lane in lanes:
+        if (lane.lane_id not in [new_lane.lane_id for new_lane in new_lanes]):
+            new_lanes.append(lane)
+
+    return new_mappings, new_lanes
+

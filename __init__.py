@@ -15,7 +15,7 @@ import Inter_Variant_Summarization as BVS
 
 filename = "EventLogs/BPI2017-Top10.jsonocel"
 parameters = {"execution_extraction": "leading_type",
-              "leading_type": "application"}
+              "leading_type": "offer"}
 ocel = ocel_import_factory.apply(file_path = filename , parameters = parameters)
 
 #variant_layouting = variants_visualization_factory.apply(ocel)
@@ -28,8 +28,8 @@ ocel = ocel_import_factory.apply(file_path = filename , parameters = parameters)
 #extracted_variant = IED.extract_lanes(variant_layouting[ocel.variants[7]], ocel.variant_frequencies[7])
 #VV.visualize_variant(extracted_variant, ocel.variant_frequencies[7])
 
-#selection = WVSE.intra_variant_summarization_selection(ocel)
-#summarizations = [selection[key][1][0].to_super_variant(tuple(selection[key][0])) for key in selection.keys()]
+selection = WVSE.intra_variant_summarization_selection(ocel)
+summarizations = [selection[key][1][0].to_super_variant(tuple(selection[key][0])) for key in selection.keys()]
 #for summarization in summarizations:
  #   SVV.visualize_super_variant(summarization)
 
@@ -45,12 +45,8 @@ ocel = ocel_import_factory.apply(file_path = filename , parameters = parameters)
         #SVV.visualize_super_variant(super_variant_ij)
 #SVV.visualize_super_variant(summarizations[4])
 
-#SVV.visualize_super_variant(super_variant_14)
-#SVV.visualize_super_variant(super_variant_14)
-#SVV.visualize_super_variant(super_variant_14)
-#SVV.visualize_super_variant(super_variant_14)
-#super_variant_14, cost = BVS.join_super_variants(summarizations[1], summarizations[10], True)
-#SVV.visualize_super_variant(super_variant_14)
+super_variant_14, cost = BVS.join_super_variants(summarizations[10], summarizations[12], True)
+SVV.visualize_super_variant(super_variant_14)
 #super_variant_07, cost = BVS.join_super_variants(summarizations[0], summarizations[7], False)
 #SVV.visualize_super_variant(super_variant_07)
 #super_variant_12, cost = BVS.join_super_variants(summarizations[11], summarizations[10], False)

@@ -310,8 +310,9 @@ class SuperLane:
                 return element
         return None
     
-    def shift_lane(self, start_element, offset):
-        index = self.elements.index(start_element)
+    def shift_lane(self, start_element, offset, index = None):
+        if(index == None):
+            index = self.elements.index(start_element)
         for i in range(index, len(self.elements)):
             if(type(self.elements[i]) == CommonConstruct or type(self.elements[i]) == InteractionConstruct):
                 self.elements[i].position += offset
@@ -327,7 +328,7 @@ class SuperLane:
         # Case 1: Start shifting from a Common Activity
         for i in range(len(self.elements)):
             if((type(self.elements[i]) == InteractionConstruct) and self.elements[i].position == start_position):
-                self.shift_lane(self.elements[i], offset)
+                self.shift_lane(self.elements[i], offset, i)
                 return False, i, start_position, start_position
         
             if((type(self.elements[i]) == ChoiceConstruct or type(self.elements[i]) == OptionalConstruct) and self.elements[i].position_end >= start_position):
@@ -346,9 +347,9 @@ class SuperLane:
 
                 self.elements[i].position_start = min([choice[0].position for choice in self.elements[i].choices])
                 self.elements[i].position_end = max([choice[-1].position for choice in self.elements[i].choices])
-
+                
                 if(i < len(self.elements)-1):
-                    self.shift_lane(self.elements[i+1], self.elements[i].position_end - end_position_c)
+                    self.shift_lane(self.elements[i+1], self.elements[i].position_end - end_position_c, i+1)
 
                 return True, i, start_position_c, end_position_c
                 
@@ -360,6 +361,46 @@ class SuperLane:
                 new_elements.append(elem)
         return SuperLane(self.lane_id, self.lane_name, self.object_type, new_elements, self.cardinality, self.frequency)
 
+
+    def make_optional(self, position, empty_frequency, choice_id):
+        for i in range(len(self.elements)):
+            if (isinstance(self.elements[i], InteractionConstruct) and self.elements[i].position == position):
+                self.elements[i] = self.elements[i].make_optional(empty_frequency)
+                return self, self.elements[i]
+            elif(isinstance(self.elements[i], GeneralChoiceStructure) and self.elements[i].position_start <= position and self.elements[i].position_end >= position):
+                for j in range(len(self.elements[i].choices[choice_id])):
+                    if (self.elements[i].choices[choice_id][j].position == position):
+                        self.elements[i].choices[choice_id][j] = self.elements[i].choices[choice_id][j].make_optional(empty_frequency)
+                        return self, self.elements[i].choices[choice_id][j]
+        return self, None
+
+    def add_activity(self, position, activity, choice_id):
+        activity.position_start = position
+        activity.position_end = position
+        activity.choices[0][0].position = position 
+        for i in range(len(self.elements)):
+            if (isinstance(self.elements[i], CommonConstruct) and self.elements[i].position >= position):
+                self.shift_lane(self.elements[i], 1, i)
+                predecessors = []
+                if(i > 0):
+                    predecessors = self.elements[:i]
+                successors = self.elements[i:]
+                self.elements = predecessors + [activity] + successors
+                return self
+
+            elif(isinstance(self.elements[i], GeneralChoiceStructure) and self.elements[i].position_start <= position and self.elements[i].position_end >= position):
+                for j in range(len(self.elements[i].choices[choice_id])):
+                    if (self.elements[i].choices[choice_id][j].position >= position):
+                        self.shift_lane_exact(self.elements[i].choices[choice_id][j].position, 1, choice_id)
+                        predecessors = []
+                        if(j > 0):
+                            predecessors = self.elements[i].choices[choice_id][:j]
+                        successors = self.elements[i].choices[choice_id][j:]
+                        self.elements[i].choices[choice_id] = predecessors + [activity] + successors
+                        return self
+        
+        self.elements = self.elements + [activity]
+        return self
 
 def to_super_lane(lane, interactions):
         elements = []
@@ -414,6 +455,11 @@ class CommonConstruct(SummarizationElement):
             return self.activity == other.activity
         return False
 
+    def make_optional(self, empty_frequency):
+        self.frequency -= empty_frequency
+        return OptionalConstruct([[self]], self.position, self.position)
+
+
 class InteractionConstruct(CommonConstruct):
     
     def __str__(self):
@@ -423,6 +469,8 @@ class InteractionConstruct(CommonConstruct):
         if isinstance(other, self.__class__):
             return self.activity == other.activity
         return False
+
+    
 
 
 class GeneralChoiceStructure(SummarizationElement):

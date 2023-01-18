@@ -1,4 +1,4 @@
-import Summarization_Utils as SU
+import Inter_Lane_Summarization as SU
 import Super_Variant_Definition as SVD
 
 def powerset(s):
