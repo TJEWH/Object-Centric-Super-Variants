@@ -4,10 +4,11 @@ import Intra_Variant_Summarization as WVS
 import Input_Extraction_Definition as IED
 import Inter_Lane_Summarization as ILS
 
-def join_super_variants(summarization1, summarization2, print_result = True):
+def join_super_variants(summarization1, summarization2, print_result = True, visualize_input = False, visualize_output = True):
     import copy
-    WVV.visualize_super_variant(summarization1)
-    WVV.visualize_super_variant(summarization2)
+    if(visualize_input):
+        WVV.visualize_super_variant(summarization1)
+        WVV.visualize_super_variant(summarization2)
     mapping, cost = decide_matching(summarization1, summarization2, copy.deepcopy(summarization1.lanes), copy.deepcopy(summarization2.lanes), True, print_result)
     if(print_result):
         print("The cost of joining these Super Variants is " + str(cost) + ".")
@@ -52,7 +53,8 @@ def join_super_variants(summarization1, summarization2, print_result = True):
     super_variant = SVD.SuperVariant(summarization1.id + summarization2.id, result_lanes, summarization1.object_types.union(summarization2.object_types), result_interaction_points, summarization1.frequency + summarization2.frequency)
     super_variant.encode_lexicographically()
     print(super_variant)
-    #WVV.visualize_super_variant(super_variant)
+    if (visualize_output):
+        WVV.visualize_super_variant(super_variant)
     return super_variant, cost
 
 
@@ -366,12 +368,15 @@ def levenshtein_distance(lane1, lane2):
     realizations2 = lane2.get_realizations()
     minimum = math.inf
 
+    # Adjust cost function -> Earth Mover Distance
+    distances = dict()
     for realization1 in realizations1:
         for realization2 in realizations2:
-            minimum = min(minimum, __levenshtein_distance_realizations(realization1.elements, realization2.elements))
+            distance = __levenshtein_distance_realizations(realization1.elements, realization2.elements)
+            minimum = min(minimum, distance)
+            distances[(realization1.lane_id, realization2.lane_id)] = distance
 
     return minimum
-
 
 def __levenshtein_distance_realizations(lane1, lane2):
     if(len(lane2) == 0):

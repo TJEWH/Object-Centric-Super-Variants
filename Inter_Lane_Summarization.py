@@ -3,7 +3,6 @@ import Input_Extraction_Definition as IED
 
 def __inter_lane_summarization(lanes, interactions, print_result):
 
-
     elements = []
     new_interaction_points_mapping = {}
     current_horizontal_index = 0
@@ -20,7 +19,7 @@ def __inter_lane_summarization(lanes, interactions, print_result):
     for i in range(len(base_lanes)):
             base_lanes_indexed.append((i, base_lanes[i], len(base_lanes[i].elements)))
 
-    longest_common_sequence, length = __get_longest_common_subsequence(base_lanes_indexed)
+    longest_common_sequence, length, number_of_interactions = __get_longest_common_subsequence(base_lanes_indexed)
     last_positions = [0 for lane in base_lanes]
 
     for common_element in longest_common_sequence:
@@ -201,10 +200,12 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
                     new_mapping[key] = (current_index,current_mappings[key])
 
 
+    # TODO Apply recursive summarizations with only 1 nested level and height 1 (number of choices)
+
     longest_option = max(choices, key=len)
     length = len(longest_option)
         
-    # Adding Construct
+    # Applying Optional Pattern
     if(is_optional):
         if(print_result):
 
@@ -218,6 +219,7 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
 
         returned_elements.append(SVD.OptionalConstruct(choices, start_index, start_index + length - 1))
 
+    #Applying Exclusive Choice Pattern Pattern
     else:
 
         if(print_result):
@@ -240,17 +242,20 @@ def __get_longest_common_subsequence(lanes):
     base_element = lanes[0][1].elements[lanes[0][2]-1]
 
     if any([lane[2] == 0 for lane in lanes]):
-        return [], 0 
+        return [], 0, 0
 
     elif(all((type(lane[1].elements[lane[2]-1]) == type(base_element) and lane[1].elements[lane[2]-1].activity == base_element.activity) for lane in lanes)):
         
-        recursive_result, recursive_value = __get_longest_common_subsequence([(lane[0], lane[1], lane[2]-1) for lane in lanes])
+        recursive_result, recursive_value, recursive_interactions = __get_longest_common_subsequence([(lane[0], lane[1], lane[2]-1) for lane in lanes])
         indices = [(lane[0], lane[1], lane[1].elements[lane[2]-1].position) for lane in lanes]
-        return recursive_result + [(base_element.activity, indices)], recursive_value + 1
+        if(type(base_element) == SVD.InteractionConstruct):
+            recursive_interactions = recursive_interactions + 1
+        return recursive_result + [(base_element.activity, indices)], recursive_value + 1, recursive_interactions
 
     else:
         maximum_value = -1
         maximum_result = []
+        maximum_recursions = -1
 
         for i in range(1, pow(2,len(lanes))-1):
             binary = list(bin(i)[2:].zfill(len(lanes)))
@@ -261,13 +266,15 @@ def __get_longest_common_subsequence(lanes):
                 else:
                     recursive_call_lanes.append(lanes[i])
 
-            recursive_result, recursive_value = __get_longest_common_subsequence(recursive_call_lanes)
+            recursive_result, recursive_value, recursive_interactions = __get_longest_common_subsequence(recursive_call_lanes)
 
-            if (recursive_value > maximum_value):
+            if ((recursive_value > maximum_value) or (recursive_value == maximum_value and recursive_interactions > maximum_recursions)):
                 maximum_value = recursive_value
                 maximum_result = recursive_result
+                maximum_recursions = recursive_interactions
 
-        return maximum_result, maximum_value
+
+        return maximum_result, maximum_value, maximum_recursions
 
 
 def __merge_interactions(merged_interactions):
