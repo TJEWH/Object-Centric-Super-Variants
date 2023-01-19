@@ -157,9 +157,8 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
                     if(interaction_point.index_in_lanes == elements[1][i].position and base_lanes[elements[0]].lane_id in interaction_point.interaction_lanes):
                         interaction_point = interaction_point
                         break
-
+                
                 current_mappings[(elements[0], interaction_point.index_in_lanes, str(interaction_point.interaction_lanes))] = start_index + i
-
                 choice.append(SVD.InteractionConstruct(elements[1][i].activity, elements[1][i].frequency, position))
             else:
                 choice.append(SVD.CommonConstruct(elements[1][i].activity, elements[1][i].frequency, position))
@@ -198,6 +197,7 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
                 choices.append(choice)
                 for key in current_mappings.keys():
                     new_mapping[key] = (current_index,current_mappings[key])
+                    print(new_mapping)
 
 
     # TODO Apply recursive summarizations with only 1 nested level and height 1 (number of choices)
@@ -410,7 +410,12 @@ def __re_align_lanes(lanes, mappings, print_result):
         del updated_mappings[earliest_interaction_point[0]]
         updated_interaction_points.append(IED.InteractionPoint(activity_label, [lane.lane_id for lane in lanes], types, position))
         
-    return aligned_lanes, updated_interaction_points
+    final_lanes = []
+    for lane in aligned_lanes:
+        print(lane.lane_name)
+        final_lanes.append(copy.deepcopy(lane).shift_activities_up())
+
+    return final_lanes, updated_interaction_points
 
 
 def split_interactions(mappings, lanes):

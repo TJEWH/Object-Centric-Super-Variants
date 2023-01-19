@@ -220,6 +220,7 @@ class SuperLane:
                 result = result and self.elements[i] == summarization.elements[i]
             return result
     
+    # Might need an update for nested structures
     def subsumed_summarization(self, summarization):
         if(summarization.object_type != self.object_type):
             return False
@@ -250,6 +251,7 @@ class SuperLane:
                 
         return result
 
+    # Might need an update for nested structures
     def get_realizations_normalized(self):
         import copy
         realizations = []
@@ -275,6 +277,7 @@ class SuperLane:
             result.append(SuperLane(i, "realization " + str(i), self.object_type, realizations[i], None, 0))
         return result
 
+    # Might need an update for nested structures
     def get_realizations(self):
 
         import copy
@@ -294,7 +297,11 @@ class SuperLane:
                 realizations = intermediate_result
         result = []
         for i in range(len(realizations)):
-            frequency = min([elem.frequency for elem in realizations[i]])
+            frequency = 1
+            for elem in realizations[i]:
+                frequency = frequency*elem.frequency
+            frequency = self.frequency
+            frequency = frequency/len(realizations)
             elements = []
             for elem in realizations[i]:
                 elements.append(copy.deepcopy(elem))
@@ -302,6 +309,7 @@ class SuperLane:
             result.append(SuperLane(i, "realization " + str(i), self.object_type, elements, self.cardinality, frequency))
         return result
 
+    # Might need an update for nested structures
     def get_element(self, position):
         for element in self.elements:
             if((type(element) == CommonConstruct or type(element) == InteractionConstruct) and element.position == position):
@@ -310,6 +318,7 @@ class SuperLane:
                 return element
         return None
     
+    # Might need an update for nested structures
     def shift_lane(self, start_element, offset, index = None):
         if(index == None):
             index = self.elements.index(start_element)
@@ -321,8 +330,13 @@ class SuperLane:
                 self.elements[i].position_end += offset 
                 for choice in self.elements[i].choices:
                     for elem in choice:
-                        elem.position += offset
+                        if(isinstance(elem, CommonConstruct)):
+                            elem.position += offset
+                        else: 
+                            elem.position_start += offset
+                            elem.position_end += offset
 
+    # Might need an update for nested structures
     def shift_lane_exact(self, start_position, offset, choice_id):
 
         # Case 1: Start shifting from a Common Activity
@@ -354,6 +368,7 @@ class SuperLane:
                 return True, i, start_position_c, end_position_c
                 
 
+    # Might need an update for nested structures
     def remove_non_common_elements(self):
         new_elements = []
         for elem in self.elements:
@@ -362,6 +377,7 @@ class SuperLane:
         return SuperLane(self.lane_id, self.lane_name, self.object_type, new_elements, self.cardinality, self.frequency)
 
 
+    # Might need an update for nested structures
     def make_optional(self, position, empty_frequency, choice_id):
         for i in range(len(self.elements)):
             if (isinstance(self.elements[i], InteractionConstruct) and self.elements[i].position == position):
@@ -374,6 +390,7 @@ class SuperLane:
                         return self, self.elements[i].choices[choice_id][j]
         return self, None
 
+    # Might need an update for nested structures
     def add_activity(self, position, activity, choice_id):
         activity.position_start = position
         activity.position_end = position
@@ -402,24 +419,108 @@ class SuperLane:
         self.elements = self.elements + [activity]
         return self
 
-def to_super_lane(lane, interactions):
-        elements = []
-        for i in range(len(lane.activities)):
-            position = lane.horizontal_indices[i]
-            activity_label = lane.activities[i]
-            is_interaction_point = False
-            for interaction_point in interactions:
-                if(interaction_point.index_in_lanes == position and lane.lane_id in interaction_point.interaction_lanes):
-                        interaction_point = interaction_point
-                        is_interaction_point = True
+    # Might need an update for nested structures
+    def shift_activities_up(self):
+
+        if(isinstance(self.elements[-1], GeneralChoiceStructure)):
+            for j in range(len(self.elements[-1].choices)):
+
+                        for k in range(len(self.elements[-1].choices[j])-1):
+                            index_choice = len(self.elements[-1].choices[j])-1 - k
+                            if (isinstance(self.elements[-1].choices[j][index_choice-1], CommonConstruct) and not isinstance(self.elements[-1].choices[j][index_choice-1], InteractionConstruct)):
+
+                                offset = self.elements[-1].choices[j][index_choice].position - self.elements[-1].choices[j][index_choice-1].position - 1
+                                self.elements[-1].choices[j][index_choice-1].position += offset
+
+            self.elements[-1].position_start = min([choice[0].position for choice in self.elements[-1].choices])
+            self.elements[-1].position_end = max([choice[-1].position for choice in self.elements[-1].choices])
+
+        for i in range(len(self.elements) - 1):
+            index = len(self.elements) - 1 - i
+            if (isinstance(self.elements[index-1], CommonConstruct) and not isinstance(self.elements[index-1], InteractionConstruct)):
+
+                if (isinstance(self.elements[index], CommonConstruct)):
+                    offset = self.elements[index].position - self.elements[index-1].position - 1
+                elif (isinstance(self.elements[index], GeneralChoiceStructure)):
+                    offset = self.elements[index].position_start - self.elements[index-1].position - 1
+                else:
+                    offset = 0
+
+                self.elements[index-1].position += offset
+
+
+            elif(isinstance(self.elements[index-1], GeneralChoiceStructure)):
+
+                contains_interaction_point = False
+                for j in range(len(self.elements[index-1].choices)):
+                    for k in range(len(self.elements[index-1].choices[j])):
+                        if (isinstance(self.elements[index-1].choices[j][k], InteractionConstruct)):
+                            contains_interaction_point = True
+                            break
+                    if(contains_interaction_point):
                         break
-            if(is_interaction_point):
-                elements.append(InteractionConstruct(activity_label, 1, position))
 
-            else:
-                elements.append(CommonConstruct(activity_label, 1, position))
+                if(contains_interaction_point):
+                    for j in range(len(self.elements[index-1].choices)):
 
-        return SuperLane(lane.lane_id, lane.lane_name, lane.object_type, elements, "1", 1)
+                        if (isinstance(self.elements[index-1].choices[j][-1], CommonConstruct) and not isinstance(self.elements[index-1].choices[j][-1], InteractionConstruct)):
+
+                            if (isinstance(self.elements[index], CommonConstruct)):
+                                offset = self.elements[index].position - self.elements[index-1].choices[j][-1].position - 1
+                            elif (isinstance(self.elements[index], GeneralChoiceStructure)):
+                                offset = self.elements[index].position_start - self.elements[index-1].choices[j][-1].position - 1
+                            else:
+                                offset = 0
+
+                            self.elements[index-1].choices[j][-1].position += offset
+
+                        for k in range(len(self.elements[index-1].choices[j])-1):
+                            index_choice = len(self.elements[index-1].choices[j])-1 - k
+                            if (isinstance(self.elements[index-1].choices[j][index_choice-1], CommonConstruct) and not isinstance(self.elements[index-1].choices[j][index_choice-1], InteractionConstruct)):
+
+                                offset = self.elements[index-1].choices[j][index_choice].position - self.elements[index-1].choices[j][index_choice-1].position - 1
+                                self.elements[index-1].choices[j][index_choice-1].position += offset
+
+                    self.elements[index-1].position_start = min([choice[0].position for choice in self.elements[index-1].choices])
+                    self.elements[index-1].position_end = max([choice[-1].position for choice in self.elements[index-1].choices])
+
+                else:
+                    if (isinstance(self.elements[index], CommonConstruct)):
+                        offset = self.elements[index].position - self.elements[index-1].position_end - 1
+                    elif (isinstance(self.elements[index], GeneralChoiceStructure)):
+                        offset = self.elements[index].position_start - self.elements[index-1].position_end - 1
+                    else:
+                        offset = 0
+
+                    for j in range(len(self.elements[index-1].choices)):
+                        for k in range(len(self.elements[index-1].choices[j])):
+                            self.elements[index-1].choices[j][k].position += offset
+
+                    self.elements[index-1].position_start += offset
+                    self.elements[index-1].position_end += offset
+
+        return self
+
+    
+
+def to_super_lane(lane, interactions):
+    elements = []
+    for i in range(len(lane.activities)):
+        position = lane.horizontal_indices[i]
+        activity_label = lane.activities[i]
+        is_interaction_point = False
+        for interaction_point in interactions:
+            if(interaction_point.index_in_lanes == position and lane.lane_id in interaction_point.interaction_lanes):
+                interaction_point = interaction_point
+                is_interaction_point = True
+                break
+        if(is_interaction_point):
+            elements.append(InteractionConstruct(activity_label, 1, position))
+
+        else:
+            elements.append(CommonConstruct(activity_label, 1, position))
+
+    return SuperLane(lane.lane_id, lane.lane_name, lane.object_type, elements, "1", 1)
 
 class OptionalSuperLane(SuperLane):
 
