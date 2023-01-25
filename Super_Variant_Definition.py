@@ -407,7 +407,7 @@ class SuperLane:
 
             elif(isinstance(self.elements[i], GeneralChoiceStructure) and self.elements[i].position_start <= position and self.elements[i].position_end >= position):
                 for j in range(len(self.elements[i].choices[choice_id])):
-                    if (self.elements[i].choices[choice_id][j].position >= position):
+                    if (isinstance(self.elements[i].choices[choice_id][j], CommonConstruct) and self.elements[i].choices[choice_id][j].position >= position):
                         self.shift_lane_exact(self.elements[i].choices[choice_id][j].position, 1, choice_id)
                         predecessors = []
                         if(j > 0):

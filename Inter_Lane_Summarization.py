@@ -197,7 +197,6 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
                 choices.append(choice)
                 for key in current_mappings.keys():
                     new_mapping[key] = (current_index,current_mappings[key])
-                    print(new_mapping)
 
 
     # TODO Apply recursive summarizations with only 1 nested level and height 1 (number of choices)
@@ -412,7 +411,6 @@ def __re_align_lanes(lanes, mappings, print_result):
         
     final_lanes = []
     for lane in aligned_lanes:
-        print(lane.lane_name)
         final_lanes.append(copy.deepcopy(lane).shift_activities_up())
 
     return final_lanes, updated_interaction_points

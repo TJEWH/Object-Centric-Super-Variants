@@ -13,6 +13,9 @@ def join_super_variants(summarization1, summarization2, print_result = True, vis
     if(print_result):
         print("The cost of joining these Super Variants is " + str(cost) + ".")
 
+    return inter_variant_summarization(summarization1, summarization2, mapping, print_result, visualize_output)
+    
+def inter_variant_summarization(summarization1, summarization2, mapping, print_result, visualize_output):
     intermediate_lanes = []
     intermediate_mappings = []
 
@@ -55,7 +58,7 @@ def join_super_variants(summarization1, summarization2, print_result = True, vis
     print(super_variant)
     if (visualize_output):
         WVV.visualize_super_variant(super_variant)
-    return super_variant, cost
+    return super_variant
 
 
 def optional_super_lane(summarization, lane, first):
