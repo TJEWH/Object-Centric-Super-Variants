@@ -22,7 +22,8 @@ filename = "EventLogs/order_process.jsonocel"
 ocel = ocel_import_factory.apply(file_path = filename)
 selection = SS.intra_variant_summarization_selection(ocel)
 summarizations = [selection[key][1][0].to_super_variant(tuple(selection[key][0])) for key in selection.keys()]
-hierarchy = SVG.generate_super_variant_hierarchy_uniform(summarizations[0:7], 3)
+#hierarchy = SVG.generate_super_variant_hierarchy_uniform(summarizations[0:7], 3)
+hierarchy = SVG.generate_super_variant_hierarchy_normal(summarizations[0:8], 4)
 #for summarization in summarizations:
  #   SVV.visualize_super_variant(summarization)
 

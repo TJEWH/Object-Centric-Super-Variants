@@ -13,7 +13,7 @@ def join_super_variants(summarization1, summarization2, print_result = True, vis
     if(print_result):
         print("The cost of joining these Super Variants is " + str(cost) + ".")
 
-    return inter_variant_summarization(summarization1, summarization2, mapping, print_result, visualize_output)
+    return inter_variant_summarization(summarization1, summarization2, mapping, print_result, visualize_output), cost
     
 def inter_variant_summarization(summarization1, summarization2, mapping, print_result, visualize_output):
     intermediate_lanes = []
