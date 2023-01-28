@@ -317,6 +317,31 @@ class SuperLane:
             if((type(element) == ChoiceConstruct or type(element) == OptionalConstruct) and position >= element.position_start and position <= element.position_end):
                 return element
         return None
+
+    def contains_activity(self, activity_label):
+        for element in self.elements:
+            if((type(element) == CommonConstruct or type(element) == InteractionConstruct) and element.activity == activity_label):
+                return True
+            if((type(element) == ChoiceConstruct or type(element) == OptionalConstruct)):
+                for choice in element.choices:
+                    for elem in choice:
+                        if((type(elem) == CommonConstruct or type(elem) == InteractionConstruct) and elem.activity == activity_label):
+                            return True
+
+        return False
+
+    def count_activity(self, activity_label):
+        count = 0
+        for element in self.elements:
+            if((type(element) == CommonConstruct or type(element) == InteractionConstruct) and element.activity == activity_label):
+                count += 1
+            if((type(element) == ChoiceConstruct or type(element) == OptionalConstruct)):
+                for choice in element.choices:
+                    for elem in choice:
+                        if((type(elem) == CommonConstruct or type(elem) == InteractionConstruct) and elem.activity == activity_label):
+                            count += 1
+
+        return count
     
     # Might need an update for nested structures
     def shift_lane(self, start_element, offset, index = None):

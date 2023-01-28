@@ -23,7 +23,9 @@ ocel = ocel_import_factory.apply(file_path = filename)
 selection = SS.intra_variant_summarization_selection(ocel)
 summarizations = [selection[key][1][0].to_super_variant(tuple(selection[key][0])) for key in selection.keys()]
 #hierarchy = SVG.generate_super_variant_hierarchy_uniform(summarizations[0:7], 3)
-hierarchy = SVG.generate_super_variant_hierarchy_normal(summarizations[0:8], 4)
+#classification = SVG.classify_initial_super_variants_by_expression(summarizations[0:8], SVG.containes_3_payment_reminder)
+classification = SVG.classify_initial_super_variants_by_activity(summarizations[0:8], "Payment Reminder")
+hierarchy = SVG.generate_super_variant_hierarchy_by_classification(classification, 4, print_results = True)
 #for summarization in summarizations:
  #   SVV.visualize_super_variant(summarization)
 
