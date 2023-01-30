@@ -156,7 +156,14 @@ def visualize_super_variant(summarization):
         print("Summarization too large, cannot be visualized.")
         return
      
-    # Defining the colors and heights for each lane
+    else:
+        fig, ax = plt.subplots()
+        ax = arrange_super_variant(summarization, ax, 0, 0 )
+        plt.axis('off')
+        plt.show()
+
+def arrange_super_variant(summarization, ax, vertical_start_position, horizontal_start_position):
+    
     all_colors = [(1,0.71,0.44), (0.56,0.81,0.56), (0.38,0.57,0.8), (1,0.87,143), (0.56,0.89,0.97)]
     objects = list(summarization.object_types)
     objects.sort()
@@ -176,39 +183,36 @@ def visualize_super_variant(summarization):
             lane_properties[lane.lane_id]["Color"] = scale_lightness(color, scale)
             scale += offset
             vertical_height = 1
-            frequency = 0
             for elem in lane.elements:
                 if (isinstance(elem, SVD.GeneralChoiceStructure)):
                     vertical_height = max(vertical_height, len(elem.choices))
                     maximal_lane_length = max(maximal_lane_length, elem.position_end)
                 else:
                     maximal_lane_length = max(maximal_lane_length, elem.position)
-                    frequency = elem.frequency
             lane_properties[lane.lane_id]["Height"] = vertical_height
             lane_properties[lane.lane_id]["IsOptional"] = isinstance(lane, SVD.OptionalSuperLane)
             lane_properties[lane.lane_id]["Frequency"] = lane.frequency
 
     
-    fig, ax = plt.subplots()
-    current_vertical_position = 0
+    current_vertical_position = vertical_start_position
     for i in range(len(summarization.lanes)):
         color = lane_properties[summarization.lanes[i].lane_id]["Color"]
-        ax.text(-15, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * lane_properties[summarization.lanes[i].lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT - 0.3, summarization.lanes[i].cardinality, zorder = 10)
-        ax.text(-12.5, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * lane_properties[summarization.lanes[i].lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT - 0.3, summarization.lanes[i].lane_name, zorder = 10)
+        ax.text(-15 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * lane_properties[summarization.lanes[i].lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT - 0.3, summarization.lanes[i].cardinality, zorder = 10)
+        ax.text(-12.5 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * lane_properties[summarization.lanes[i].lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT - 0.3, summarization.lanes[i].lane_name, zorder = 10)
         if(lane_properties[summarization.lanes[i].lane_id]["IsOptional"]):
-            ax.add_patch(patches.Rectangle((-13, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length+2) * DEFAULT_CHEVRON_LENGTH, lane_properties[summarization.lanes[i].lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0, hatch='///'))
+            ax.add_patch(patches.Rectangle((-13 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length+2) * DEFAULT_CHEVRON_LENGTH, lane_properties[summarization.lanes[i].lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0, hatch='///'))
         else:
-            ax.add_patch(patches.Rectangle((-13, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length+2) * DEFAULT_CHEVRON_LENGTH, lane_properties[summarization.lanes[i].lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0))
+            ax.add_patch(patches.Rectangle((-13 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length+2) * DEFAULT_CHEVRON_LENGTH, lane_properties[summarization.lanes[i].lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0))
         for elem in summarization.lanes[i].elements:
             if (isinstance(elem,SVD.InteractionConstruct)):
                 ax = __interaction_activity_chevron(ax, summarization.lanes[i].lane_id, elem, lane_properties, summarization.interaction_points, current_vertical_position)
             else:
                 ax = __summarized_activity_chevron(ax, summarization.lanes[i].lane_id, elem, lane_properties[summarization.lanes[i].lane_id], lane_properties, color, summarization.interaction_points, current_vertical_position)
         current_vertical_position += lane_properties[summarization.lanes[i].lane_id]["Height"]
-    ax.text(-13, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.7, "Frequency: " + str(round(summarization.frequency, 3)), zorder = 10)
+    
+    ax.text(-13 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.7, "Frequency: " + str(round(summarization.frequency, 3)), zorder = 10)
     ax.set_aspect('equal')
-    ax.set_xlim(-15, (maximal_lane_length+1)*DEFAULT_CHEVRON_LENGTH+2)
-    ax.set_ylim(-2, current_vertical_position*DEFAULT_CHEVRON_HEIGHT+2)
-    plt.axis('off')
-    plt.show()
+    ax.set_xlim(-15 + horizontal_start_position, (maximal_lane_length+1)*DEFAULT_CHEVRON_LENGTH+2)
+    ax.set_ylim(-2 + horizontal_start_position, current_vertical_position*DEFAULT_CHEVRON_HEIGHT+2)
+
 
