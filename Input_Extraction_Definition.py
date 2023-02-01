@@ -1,5 +1,7 @@
+import Super_Variant_Definition as SVD
+
 class VariantLane:
-    '''The data structure of one lane of a variant'''
+    '''The data structure of a lane of a variant correponding to the activity execution of an object instance'''
     lane_id = 0
     object_type = ""
     lane_name = ""
@@ -24,13 +26,41 @@ class VariantLane:
         '''
         Determines whether the lane corresponds to an object instances of the given type
         :param self: The lane
-        :type variant: VariantLane
+        :type self: VariantLane
         :param input_type: The object type label
         :type input_type: str
         :return: Whether the object type of the lane equals the given object type
         :rtype: bool
         '''
         return self.object_type == input_type
+
+    def to_super_lane(self, interactions):
+        ''' 
+        Converts a variant lane into a Super Lane.
+        :param self: The variant lane
+        :type self: VariantLane
+        :param interactions: The interactions of the variant
+        :type interactions: set of type InteractionPoints
+        :return: The corresponding Super Lane
+        :rtype: SuperLane
+        '''
+        elements = []
+        for i in range(len(self.activities)):
+            position = self.horizontal_indices[i]
+            activity_label = self.activities[i]
+            is_interaction_point = False
+            for interaction_point in interactions:
+                if(interaction_point.index_in_lanes == position and self.lane_id in interaction_point.interaction_lanes):
+                    interaction_point = interaction_point
+                    is_interaction_point = True
+                    break
+            if(is_interaction_point):
+                elements.append(SVD.InteractionConstruct(activity_label, 1, position))
+
+            else:
+                elements.append(SVD.CommonConstruct(activity_label, 1, position))
+
+        return SVD.SuperLane(self.lane_id, self.lane_name, self.object_type, elements, "1", 1)
 
 
 class InteractionPoint:
@@ -99,6 +129,9 @@ class ExtractedVariant:
             if (lane.lane_id == lane_id):
                 return lane
         return None
+
+    def to_super_variant(self):
+        return SVD.SummarizedVariant([lane.to_super_lane(self.interaction_points) for lane in self.lanes], self.object_types, self.interaction_points, self.frequency)
 
 
 def extract_lanes(variant, frequency):

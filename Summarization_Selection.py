@@ -1,51 +1,14 @@
-import Input_Extraction_Definition as IED
-import Intra_Variant_Summarization as WVS
-
-def get_unique_summarizations(process):
-    from ocpa.visualization.log.variants import factory as variants_visualization_factory
-    from tqdm.auto import tqdm
-
-    variant_layouting = variants_visualization_factory.apply(process)
-    all_unique_summarizations_dict = dict()
-    all_unique_summarizations_set = []
-    all_summarizations = []
-
-    for i in tqdm(range(len(process.variants))):
-        print(' \n' + "Summarizing variant " + str(i) + " of the process...")
-        extracted_variant = IED.extract_lanes(variant_layouting[process.variants[i]], process.variant_frequencies[i]) # Extract the variants frequency
-        extracted_summarizations = WVS.within_variant_summarization(extracted_variant, False)
-
-        for summarization in extracted_summarizations:
-            all_summarizations.append(summarization)
-            encoding = summarization.encode_lexicographically()
-
-            if(encoding in all_unique_summarizations_dict.keys()):
-                all_unique_summarizations_dict[encoding][0].append(i)
-                all_unique_summarizations_dict[encoding][1].append(summarization)
-                for item in all_unique_summarizations_set:
-                    if (item[0] == encoding):
-                        item[1].append(summarization)
-            else:
-                all_unique_summarizations_dict[encoding] = ([i], [summarization])
-                all_unique_summarizations_set.append((encoding, [summarization]))
-
-    return all_unique_summarizations_set, all_unique_summarizations_dict
-
-
-def __determine_subsets(universe, unique_summarizations):
-    universe_T = list(zip(range(len(universe)), universe))
-    subsets_S = dict()
-    for key in list(unique_summarizations.keys()):
-        for variant in unique_summarizations[key][0]:
-            if(variant in subsets_S.keys()):
-                subsets_S[variant].extend([elem for elem in universe_T if elem[1][0] == key])
-            else:
-                subsets_S[variant] = [elem for elem in universe_T if elem[1][0] == key]
-
-    return universe_T, subsets_S
-
 
 def __solve_hitting_set_problem(T, S):
+    '''
+    Solves the Hitting Set Problem for a universe T and subsets S in an IP.
+    :param T: The universe of all instances
+    :type T: list
+    :param S: The subsets over the instances of T
+    :type S: dict
+    :return: A list containing all selected instances in T
+    :rtype: list
+    '''
     import gurobipy
     model = gurobipy.Model("hittingSet")
     x = {}
@@ -68,20 +31,30 @@ def __solve_hitting_set_problem(T, S):
         if(x[elem[1][0]].X == 1.0):
             solution.append(elem)
     print("-----------------------------")
-    return model, solution
+    return solution
 
-def intra_variant_summarization_selection(process):
 
-    universe, summarization_dictionary = get_unique_summarizations(process)
-    T, S = __determine_subsets(universe, summarization_dictionary)
-    model, solution = __solve_hitting_set_problem(T, S)
+def intra_variant_summarization_selection(all_summarizations, summarizations_per_variant, summarizations_per_encoding):
+    '''
+    The initial set of Super Variants is selected using the Hitting Set Problem based on given Intra-Variant-Summarizations.
+    :param all_summarizations: A list of all unique_summarizations
+    :type all_summarizations: list
+    :param summarizations_per_variant: A dictionary mapping variant to it's set of summarizations
+    :type summarizations_per_variant: dict
+    :param summarizations_per_encoding: A dictionary mapping unique summarizations to their SummarizedVariant instances
+    :type summarizations_per_encoding: dict
+    :return: A list containing all selected Intra-Variant Summarizations
+    :rtype: dict
+    '''
+    solution = __solve_hitting_set_problem(all_summarizations, summarizations_per_variant)
 
     result = {}
-    for key in summarization_dictionary.keys():
+    for key in summarizations_per_encoding.keys():
         if ([elem for elem in solution if elem[1][0] == key]):
-            result[key] = summarization_dictionary[key]
+            result[key] = summarizations_per_encoding[key]
     
-    print(str(len(result)) + "/" + str(len(summarization_dictionary)) + " unique summarizations have been selected for the Between-Lane Summarizatation.")
+    print(str(len(result)) + "/" + str(len(summarizations_per_encoding)) + " unique summarizations have been selected for the Between-Lane Summarizatation.")
     return result
+
 
 

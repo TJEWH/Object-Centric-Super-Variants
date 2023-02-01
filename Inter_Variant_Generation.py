@@ -117,7 +117,7 @@ def generate_super_variant_hierarchy_by_cost(initial_super_variant_set, max_numb
             super_variant1 = indexed_initial_set[cluster[0]]
             for i in range(1, len(cluster)):
                 super_variant2 = indexed_initial_set[cluster[i]]
-                super_variant, cost = IVS.join_super_variants(super_variant1, super_variant2 ,False, False, False)
+                super_variant, cost = IVS.join_super_variants(super_variant1, super_variant2 ,False)
                 accumulated_cost += cost
                 super_variant1 = copy.deepcopy(super_variant)
             level_result.append(super_variant1)

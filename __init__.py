@@ -9,9 +9,9 @@ import Super_Variant_Definition as SVD
 import Super_Variant_Visualization as SVV
 import Intra_Variant_Summarization as IAVS
 import Summarization_Selection as SS
-import Variant_Visualization as VV
+import Intra_Variant_Generation as IAVG
 import Inter_Variant_Summarization as IEVS
-import Super_Variant_Generation as SVG
+import Inter_Variant_Generation as IEVG
 
 
 #filename = "EventLogs/BPI2017-Top10.jsonocel"
@@ -20,12 +20,16 @@ import Super_Variant_Generation as SVG
 #ocel = ocel_import_factory.apply(file_path = filename , parameters = parameters)
 filename = "EventLogs/order_process.jsonocel"
 ocel = ocel_import_factory.apply(file_path = filename)
-selection = SS.intra_variant_summarization_selection(ocel)
+#variant_layouting = variants_visualization_factory.apply(ocel)
+#extracted_variant = IED.extract_lanes(variant_layouting[ocel.variants[2]], ocel.variant_frequencies[1])
+#SVV.visualize_variant(extracted_variant)
+all_summarizations, per_variant_dict, per_encoding_dict = IAVG.complete_intra_variant_summarization(ocel, print_results=False)
+selection = SS.intra_variant_summarization_selection(all_summarizations, per_variant_dict, per_encoding_dict)
 summarizations = [selection[key][1][0].to_super_variant(tuple(selection[key][0])) for key in selection.keys()]
-#hierarchy = SVG.generate_super_variant_hierarchy_uniform(summarizations[0:7], 3)
+#hierarchy = IEVG.generate_super_variant_hierarchy_uniform(summarizations[0:7], 3)
 #classification = SVG.classify_initial_super_variants_by_expression(summarizations[0:8], SVG.containes_3_payment_reminder)
-classification = SVG.classify_initial_super_variants_by_activity(summarizations[0:8], "Payment Reminder")
-hierarchy = SVG.generate_super_variant_hierarchy_by_classification(classification, 4, print_results = True)
+#classification = SVG.classify_initial_super_variants_by_activity(summarizations[0:8], "Payment Reminder")
+hierarchy = IEVG.generate_super_variant_hierarchy(summarizations[0:7], 3, print_results = True, frequency_distribution_type = IEVG.Distribution.UNIFORM)
 #for summarization in summarizations:
  #   SVV.visualize_super_variant(summarization)
 

@@ -1,8 +1,18 @@
 import Super_Variant_Definition as SVD
 import Input_Extraction_Definition as IED
 
-def __inter_lane_summarization(lanes, interactions, print_result):
-
+def __inter_lane_summarization(lanes, interactions, print_results):
+    '''
+    Performs the summarization of the given Super Lanes using the set of defined patterns.
+    :param lanes: The Super Lanes that should be summarized
+    :type lanes: list of type SuperLane
+    :param interactions: The sets of interaction points corresponding to the involved Super Lanes
+    :type interactions: list
+    :param print_results: Whether the results should be output in the console
+    :type print_results: bool
+    :return: The summarizing elements, a mapping from original interaction positions to the new positions
+    :rtype: list of type SummarizationElement, dict
+    '''
     elements = []
     new_interaction_points_mapping = {}
     current_horizontal_index = 0
@@ -44,13 +54,13 @@ def __inter_lane_summarization(lanes, interactions, print_result):
     
         
         # Add summarized subprocess to elements
-        interval_elements, interval_length, interval_mapping = __apply_patterns(interval_subprocesses, current_horizontal_index, interactions, base_lanes, print_result)
+        interval_elements, interval_length, interval_mapping = __apply_patterns(interval_subprocesses, current_horizontal_index, interactions, base_lanes, print_results)
         elements.extend(interval_elements)
         new_interaction_points_mapping.update(interval_mapping)
         current_horizontal_index += interval_length
                      
         # Add the common activity to the elements of the summarized lane
-        if(print_result):
+        if(print_results):
             print("\n")
             print("Adding the common activity: " + str(common_element[0]))
 
@@ -65,7 +75,7 @@ def __inter_lane_summarization(lanes, interactions, print_result):
         for i in range(len(base_lanes)):
             is_interacting_activity = is_interacting_activity or isinstance(base_lanes[i].get_element(common_element[1][i][2]), SVD.InteractionConstruct)
 
-        if(print_result):
+        if(print_results):
             print("This is an interaction point: " + str(is_interacting_activity))
 
         if (is_interacting_activity):
@@ -111,7 +121,7 @@ def __inter_lane_summarization(lanes, interactions, print_result):
             interval_subprocesses.append((all_lanes[j][0],[]))
 
     # Add summarized subprocess to elements
-    interval_elements, interval_length, interval_mapping = __apply_patterns(interval_subprocesses, current_horizontal_index, interactions, base_lanes, print_result)
+    interval_elements, interval_length, interval_mapping = __apply_patterns(interval_subprocesses, current_horizontal_index, interactions, base_lanes, print_results)
     elements.extend(interval_elements)
     new_interaction_points_mapping.update(interval_mapping)
     current_horizontal_index += interval_length
@@ -119,14 +129,27 @@ def __inter_lane_summarization(lanes, interactions, print_result):
     return elements, new_interaction_points_mapping
 
 
-
-def __apply_patterns(interval_subprocesses, start_index, interactions, base_lanes, print_result):
+#TODO
+def __apply_patterns(interval_subprocesses, start_index, interactions, base_lanes, print_results):
+    '''
+    Applies the defined patterns "Exclusive Choice Pattern" and "Optional Pattern" to the extracted subsequences of the initial Super Lanes between their common activities.
+    :param interval_subprocesses: The extracted subprocess for each Super Lane between a pair of common activities
+    :type interval_subprocesses: list
+    :param interactions: The sets of interaction points corresponding to the involved Super Lanes
+    :type interactions: list
+    :param base_lanes: The set of Super Lanes with only the corresponding common and interaction elements
+    :type base_lanes: list of type SuperLanes
+    :param print_results: Whether or not the print commands should be executed
+    :type print_results: bool
+    :return: An element summarizing the extracted subprocesses for each initial Super Lane, the length of the element, the mapping from original interaction points to their positions in the element
+    :rtype: SummarizationElement, int, dict
+    '''
 
     if sum([len(elements[1]) for elements in interval_subprocesses]) == 0:
         return [], 0, dict()
     
     new_mapping = dict()
-    if(print_result):
+    if(print_results):
             print("\n")
             print("Applying a pattern to the elements: ")
             for elements in interval_subprocesses:
@@ -144,7 +167,6 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
         position = start_index
         choice = []
         frequency = 0
-        lane_id = elements[0]
         current_mappings = dict()
 
         for i in range(len(elements[1])):
@@ -173,9 +195,9 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
             duplicate = False
             for i in range(len(choices)):
                 equal = True
-                if(len(choices[i]) == len(choice)):
-                    for j in range(len(choices[i])):
-                        equal = equal and ((type(choices[i][j]) == type(choice[j])) and (choices[i][j].activity == choice[j].activity))
+                if(len(choices[i][0]) == len(choice)):
+                    for j in range(len(choices[i][0])):
+                        equal = equal and ((type(choices[i][0][j]) == type(choice[j])) and (choices[i][0][j].activity == choice[j].activity))
 
                         if(not equal):
                             break
@@ -185,8 +207,10 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
                 if(equal):
                     duplicate = True
                     frequencies[i] += frequency
-                    for j in range(len(choices[i])):
-                        choices[i][j].frequency += choice[j].frequency
+                    cardinality = "n"
+                    for j in range(len(choices[i][0])):
+                        choices[i][0][j].frequency += choice[j].frequency
+                    choices[i] = (choices[i][0], cardinality, frequencies[i])
                     for key in current_mappings.keys():
                         new_mapping[key] = (i,current_mappings[key])
                     break
@@ -194,7 +218,7 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
             if(not duplicate):
                 frequencies.append(frequency)
                 current_index = len(choices)
-                choices.append(choice)
+                choices.append(tuple((choice, "1", frequency)))
                 for key in current_mappings.keys():
                     new_mapping[key] = (current_index,current_mappings[key])
 
@@ -203,10 +227,14 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
 
     longest_option = max(choices, key=len)
     length = len(longest_option)
+
+    for i in range(len(choices)):
+        choices[i] = SVD.SuperLane(i, "option " + str(i), base_lanes[0].object_type, choices[i][0], choices[i][1], choices[i][2])
+
         
     # Applying Optional Pattern
     if(is_optional):
-        if(print_result):
+        if(print_results):
 
         # Output printing
             print("\n")
@@ -221,7 +249,7 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
     #Applying Exclusive Choice Pattern Pattern
     else:
 
-        if(print_result):
+        if(print_results):
             # Output printing
             print("\n")
             print("Adding a choice element between the following sequences.")
@@ -237,7 +265,14 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
 
 
 def __get_longest_common_subsequence(lanes):
-
+    '''
+    Computes the Longest Common Subsequence among the activity sequences of a set of Super Lanes.
+    that interaction points between multiple lanes have the same horizontal index
+    :param lanes: The lanes among which the longest common subsequence should be computed
+    :type lanes: List of type SuperLane
+    :return: The Longest Common Subsequence and the corresponding positions in the lanes, the length of the longest_common_subsequence, the number of common interactions in the subsequence
+    :rtype: list, int, int
+    '''
     base_element = lanes[0][1].elements[lanes[0][2]-1]
 
     if any([lane[2] == 0 for lane in lanes]):
@@ -254,7 +289,7 @@ def __get_longest_common_subsequence(lanes):
     else:
         maximum_value = -1
         maximum_result = []
-        maximum_recursions = -1
+        maximum_interaction = -1
 
         for i in range(1, pow(2,len(lanes))-1):
             binary = list(bin(i)[2:].zfill(len(lanes)))
@@ -267,16 +302,23 @@ def __get_longest_common_subsequence(lanes):
 
             recursive_result, recursive_value, recursive_interactions = __get_longest_common_subsequence(recursive_call_lanes)
 
-            if ((recursive_value > maximum_value) or (recursive_value == maximum_value and recursive_interactions > maximum_recursions)):
+            if ((recursive_value > maximum_value) or (recursive_value == maximum_value and recursive_interactions > recursive_interactions)):
                 maximum_value = recursive_value
                 maximum_result = recursive_result
-                maximum_recursions = recursive_interactions
+                maximum_interaction = recursive_interactions
 
 
-        return maximum_result, maximum_value, maximum_recursions
+        return maximum_result, maximum_value, maximum_interaction
 
-
+# TODO refine
 def __merge_interactions(merged_interactions):
+    '''
+    Merges the interaction point mappings that are at the same position in the final Super Lane.
+    :param merged_interactions: The already combined mappings of original interaction points to new indices in the summarized lanes
+    :type merged_interactions: dict
+    :return: Each interaction point of the final Super Lanes and their current positions in the involved lanes, merged by position
+    :rtype: dict
+    '''
     result_interactions = dict()
     for key1 in merged_interactions.keys():
         exists = False
@@ -288,13 +330,14 @@ def __merge_interactions(merged_interactions):
 
     return result_interactions
 
+# TODO refine
 def __merge_interaction_mappings(mappings):
     '''
-    Pre-processes the mappings from the summarization for easy handling
+    Pre-processes the mappings from the summarization for later alignment by merging the mappings for each Super Lane.
     :param mappings: The mappings of original interaction points to new indices in the summarized lanes
-    :type mappings: Dictionary
-    :return: Each interaction point of the summarized lanes and their current positions in the involved lanes
-    :rtype: Dictionary
+    :type mappings: dict
+    :return: Each interaction point of the final Super Lanes and their current positions in the involved lanes
+    :rtype: dict
     '''
     merged_mappings = {}
     # merge the individual dictionaries for all lanes
@@ -312,18 +355,18 @@ def __merge_interaction_mappings(mappings):
     return merged_mappings
 
 
+# TODO refine
 def __re_align_lanes(lanes, mappings, print_result):
     '''
-    Given the summarized lanes and the mappings from original interaction points to new indices, this method aligns the lane, such
-    that interaction points between multiple lanes have the same horizontal index
-    :param lanes: The summarized lanes
-    :type lanes: List of type SummarizedLane
+    Given the summarized Super Lanes and the mappings from original interaction points to new indices, the lanes are aligned according to the interaction points.
+    :param lanes: The summarized lanes of the Super Variant
+    :type lanes: list of type SuperLane
     :param mappings: The mappings of original interaction points to new indices in the summarized lanes for each lane
-    :type mappings: Dictionary
+    :type mappings: dict
     :param print_result: Whether or not the print commands should be executed
-    :type print_result: Boolean
-    :return: The lanes with updated horizontal indices and a list of the corresponding interaction points
-    :rtype: List of type SummarizedLane, List of type InteractionPoint
+    :type print_result: bool
+    :return: The Super Lanes with updated horizontal indices and a list of the corresponding interaction points
+    :rtype: list of type SuperLane, list of type InteractionPoint
     '''
     # Initialize variables and return values
     import copy
@@ -416,6 +459,7 @@ def __re_align_lanes(lanes, mappings, print_result):
     return final_lanes, updated_interaction_points
 
 
+# TODO refine
 def split_interactions(mappings, lanes):
     import copy
     new_mappings = copy.deepcopy(mappings)
@@ -479,7 +523,7 @@ def split_interactions(mappings, lanes):
             new_position_mapping = (positions[0], lower_bound + 1)
             new_mappings[current_interaction_point[0]] = current_interaction_point[1]
             new_mappings[current_interaction_point[0]][duplicate[1]] = new_position_mapping
-            new_lane = new_lane.add_activity(lower_bound + 1, copy.deepcopy(new_element), current_interaction_point[1][duplicate[1]][0])
+            new_lane = new_lane.add_optional_activity(lower_bound + 1, copy.deepcopy(new_element), current_interaction_point[1][duplicate[1]][0])
             for key in new_mappings.keys():
                 if(key != earliest_interaction_point[0] and key != current_interaction_point[0]):
                     if(duplicate[1] in mappings[key].keys() and mappings[key][duplicate[1]][1] > lower_bound):

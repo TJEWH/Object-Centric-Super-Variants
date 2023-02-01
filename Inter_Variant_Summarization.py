@@ -1,21 +1,41 @@
 import Super_Variant_Definition as SVD
-import Super_Variant_Visualization as WVV
-import Intra_Variant_Summarization as WVS
-import Input_Extraction_Definition as IED
 import Inter_Lane_Summarization as ILS
 
-def join_super_variants(summarization1, summarization2, print_result = True, visualize_input = False, visualize_output = True):
-    import copy
-    if(visualize_input):
-        WVV.visualize_super_variant(summarization1)
-        WVV.visualize_super_variant(summarization2)
-    mapping, cost = decide_matching(summarization1, summarization2, copy.deepcopy(summarization1.lanes), copy.deepcopy(summarization2.lanes), True, print_result)
-    if(print_result):
-        print("The cost of joining these Super Variants is " + str(cost) + ".")
 
-    return inter_variant_summarization(summarization1, summarization2, mapping, print_result, visualize_output), cost
+def join_super_variants(super_variant1, super_variant2, print_result = True):
+    '''
+    Determines the lanes of the two Super Variants are are to be merged and performs the summarization of the Super Variants.
+    :param super_variant1: A Super Variant that is to be joined with another Super Variant
+    :type super_variant1: SuperVariant
+    :param super_variant2: The second Super Variant that is joined
+    :type super_variant2: SuperVariant
+    :param print_result: Whether the results should be output in the console
+    :type print_result: bool
+    :return: The generalizing Super Variant
+    :rtype: SuperVariant
+    '''
+    import copy
+    mapping, cost = decide_matching(super_variant1, super_variant2, copy.deepcopy(super_variant1.lanes), copy.deepcopy(super_variant2.lanes), True, print_result)
+    if(print_result):
+        print("The estimated cost of joining these Super Variants is " + str(cost) + ".")
+
+    return inter_variant_summarization(super_variant1, super_variant2, mapping, print_result), cost
     
-def inter_variant_summarization(summarization1, summarization2, mapping, print_result, visualize_output):
+
+def inter_variant_summarization(summarization1, summarization2, mapping, print_result):
+    '''
+    Summarizes two Super Variants based on a given mapping of the corresponding Super Lanes and aligns the final Super Variant correctly.
+    :param summarization1: The first Super Variant of the summarization
+    :type summarization1: SuperVariant
+    :param summarization2: The second Super Variant of the summarization
+    :type summarization2: SuperVariant
+    :param mapping: The mapping from Super Lanes in Super Variant 1 to Super Lanes in Super Variant 2
+    :type mapping: list
+    :param print_result: Whether the results should be output in the console
+    :type print_result: bool
+    :return: The summarization of the two Super Variants
+    :rtype: SuperVariant
+    '''
     intermediate_lanes = []
     intermediate_mappings = []
 
@@ -55,23 +75,52 @@ def inter_variant_summarization(summarization1, summarization2, mapping, print_r
     result_lanes, result_interaction_points = ILS.__re_align_lanes(intermediate_lanes, ILS.__merge_interactions(ILS.__merge_interaction_mappings(intermediate_mappings)), print_result)
     super_variant = SVD.SuperVariant(summarization1.id + summarization2.id, result_lanes, summarization1.object_types.union(summarization2.object_types), result_interaction_points, summarization1.frequency + summarization2.frequency)
     super_variant.encode_lexicographically()
-    print(super_variant)
-    if (visualize_output):
-        WVV.visualize_super_variant(super_variant)
+    if(print_result):
+        print(super_variant)
     return super_variant
 
 
 def optional_super_lane(summarization, lane, first):
-    
+    '''
+    Creates a new normalized lane from the given Super Lane and makes it optional.
+    :param summarization: The Super Variant corresponding to the given lane
+    :type summarization: SuperVariant
+    :param lane: The Super Lane that is made optional
+    :type lane: SuperLane
+    :param first: Whether the given Super Lane relates to Super Variant 1 of the joining process
+    :type first: bool
+    :return: The optional equivalence to the lane
+    :rtype: OptionalSuperLane
+    '''
+
+    new_lane, new_interaction_points_mapping = new_super_lane(summarization, lane, first)
+    return SVD.OptionalSuperLane(tuple(lane.lane_id), lane.object_type + " i", new_lane.object_type, new_lane.elements, new_lane.cardinality, new_lane.frequency), new_interaction_points_mapping
+
+
+def new_super_lane(summarization, lane, first, start_index = 0):
+    '''
+    Creates a new normalized lane from a given Super Lane and stores the new mappings to the new interaction points
+    :param summarization: The Super Variant corresponding to the given lane
+    :type summarization: SuperVariant
+    :param lane: The Super Lane that is normalized
+    :type lane: SuperLane
+    :param first: Whether the given Super Lane relates to Super Variant 1 of the joining process
+    :type first: bool
+    :param start_index: The horizontal start value for the normalized positions
+    :type start_index: int
+    :return: The normalized equivalence to the lane
+    :rtype: SuperLane
+    '''
+   
     elements = []
     object_type = lane.object_type
-    lane_name = lane.object_type + " i"
-    lane_id = tuple(lane.lane_id)
+    lane_name = lane.lane_name
+    lane_id = lane.lane_id
     cardinality = lane.cardinality
-    frequency = lane.frequency
+    lane_frequency = lane.frequency
 
     new_interaction_points_mapping = {}
-    current_horizontal_index = 0
+    current_horizontal_index = start_index
 
     for elem in lane.elements:
 
@@ -102,29 +151,9 @@ def optional_super_lane(summarization, lane, first):
 
             for i in range(len(elem.choices)):
                 index = current_horizontal_index
-                new_choice = []
-                for c_elem in elem.choices[i]:
-                    c_activity = c_elem.activity
-                    c_frequency = c_elem.frequency
-
-                    if(not isinstance(c_elem, SVD.InteractionConstruct)):
-                        new_choice.append(SVD.CommonConstruct(c_activity, c_frequency, index))
-                    else:
-                        new_choice.append(SVD.InteractionConstruct(c_activity, c_frequency, index))
-
-                        current_interaction_point = None
-                        for interaction_point in summarization.interaction_points:
-                            if(interaction_point.index_in_lanes == c_elem.position and lane.lane_id in interaction_point.interaction_lanes):
-                                    current_interaction_point = interaction_point
-                                    break
-
-                        if(first):
-                            new_interaction_points_mapping[(1, current_interaction_point.index_in_lanes, str(current_interaction_point.interaction_lanes))] = (i,index)
-                        else:
-                            new_interaction_points_mapping[(2, current_interaction_point.index_in_lanes, str(current_interaction_point.interaction_lanes))] = (i,index)
-
-                    index += 1
-                
+                new_choice, new_choice_mapping = new_super_lane(summarization, elem.choices[i], first, index)
+                for mapping in new_choice_mapping.keys():
+                    new_interaction_points_mapping[mapping] = new_choice_mapping[mapping]
                 new_choices.append(new_choice)
                 length = max(length, len(new_choice))
 
@@ -135,13 +164,26 @@ def optional_super_lane(summarization, lane, first):
 
             current_horizontal_index += length
 
-    print(new_interaction_points_mapping)
-    return SVD.OptionalSuperLane(lane_id, lane_name, object_type, elements, cardinality, frequency), new_interaction_points_mapping
+    return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality, lane_frequency), new_interaction_points_mapping
 
 
 
 def join_super_lanes(summarization1, summarization2, lane1, lane2, print_result = True):
-
+    '''
+    Summarizes two lanes of two Super Variants.
+    :param summarization1: The Super Variant corresponding to the first lane
+    :type summarization1: SuperVariant
+    :param summarization2: The Super Variant corresponding to the second lane
+    :type summarization2: SuperVariant
+    :param lane1: The first Super Lane that should be summarized
+    :type lane1: SuperLane
+    :param lane2: The second Super Lane that should be summarized
+    :type lane2: SuperLane
+    :param print_result: Whether the results should be output in the console
+    :type print_result: bool
+    :return: The summarization of the two Super Lanes
+    :rtype: SuperLane
+    '''
     object_type = lane1.object_type
     lane_name = lane1.object_type + " i"
     lane_id = (lane1.lane_id, lane2.lane_id)
@@ -155,7 +197,25 @@ def join_super_lanes(summarization1, summarization2, lane1, lane2, print_result 
     return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality, frequency), mappings
 
 
+
 def decide_matching(summarization1, summarization2, remaining_lanes1, remaining_lanes2, propagate = True, print_result = True):
+    '''
+    Performs a mapping between the lanes of one Super Variant to the lanes of the other Super Variant based on the Levenshtein distance.
+    :param summarization1: The Super Variant corresponding to the first set of lanes
+    :type summarization1: SuperVariant
+    :param summarization2: The Super Variant corresponding to the second set of lanes
+    :type summarization2: SuperVariant
+    :param remaining_lanes1: The set of Super Lanes of Super Variant 1 that have not yet been mapped
+    :type remaining_lanes1: list of type SuperLane
+    :param remaining_lanes2: The set of Super Lanes of Super Variant 2 that have not yet been mapped
+    :type remaining_lanes2: list of type SuperLane
+    :param propagate: Whether the decision made should be propagated among the interacting lanes
+    :type propagate: bool
+    :param print_result: Whether the results should be output in the console
+    :type print_result: bool
+    :return: A list containing the decided mappings and the accumulated cost
+    :rtype: list, int
+    '''
     import math
 
     # Base case 1: All lanes of summarization1 are matched
@@ -279,7 +339,25 @@ def decide_matching(summarization1, summarization2, remaining_lanes1, remaining_
 
 
 def propagate_decision(summarization1, summarization2, all_remaining_lanes1, all_remaining_lanes2, current_candidates_lanes1, current_candidates_lanes2, print_result):
-
+    '''
+    Propagates a mapping between two Super Lanes among the corresponding interacting lanes and evaluates the propagative cost.
+    :param summarization1: The Super Variant corresponding to the first set of lanes
+    :type summarization1: SuperVariant
+    :param summarization2: The Super Variant corresponding to the second set of lanes
+    :type summarization2: SuperVariant
+    :param all_remaining_lanes1: The set of Super Lanes of Super Variant 1 that have not yet been mapped
+    :type all_remaining_lanes1: list of type SuperLane
+    :param all_remaining_lanes2: The set of Super Lanes of Super Variant 2 that have not yet been mapped
+    :type all_remaining_lanes2: list of type SuperLane
+    :param current_candidates_lanes1: The set of Super Lanes of Super Variant 1 among which the decision is propagation
+    :type current_candidates_lanes1: list of type SuperLane
+    :param current_candidates_lanes2: The set of Super Lanes of Super Variant 2 among which the decision is propagation
+    :type current_candidates_lanes2: list of type SuperLane
+    :param print_result: Whether the results should be output in the console
+    :type print_result: bool
+    :return: A list containing the propagated mappings, the propagative cost, the list of remainining non-mapped lanes of Super Variant 1 and 2, respectively
+    :rtype: list, int, list, list
+    '''
     import copy
 
     if(print_result):
@@ -327,7 +405,19 @@ def propagate_decision(summarization1, summarization2, all_remaining_lanes1, all
 
 
 def propagate_optionality(summarization, remaining_lanes, current_candidate, print_result):
-
+    '''
+    Propagates the decision of making a Super Lane optional among the interacting lanes.
+    :param summarization: The Super Variant among which the optimality of a Super Lane should be propagated
+    :type summarization: SuperVariant
+    :param all_remaining_lanes: The set of Super Lanes of the Super Variant that have not yet been mapped
+    :type all_remaining_lanes: list of type SuperLane
+    :param current_candidate: The Super Lane that is made optional
+    :type current_candidate: SuperLane
+    :param print_result: Whether the results should be output in the console
+    :type print_result: bool
+    :return: A list containing the propagated mappings, the propagative cost, the list of remainining non-mapped lanes of the Super Variant 
+    :rtype: list, int, list
+    '''
     import copy 
 
     # Initialize propagation variables
@@ -366,6 +456,15 @@ def propagate_optionality(summarization, remaining_lanes, current_candidate, pri
 
 
 def levenshtein_distance(lane1, lane2):
+    '''
+    Computes the Levenshtein distance between two Super Lanes.
+    :param lane1: The first Super Lane
+    :type lane1: SuperLane
+    :param lane1: The second Super Lane
+    :type lane1: SuperLane
+    :return: The least number of edits needed to convert one realization of the first Super Variant into the a realization of the other Super Variant.
+    :rtype: int
+    '''
     import math
     realizations1 = lane1.get_realizations()
     realizations2 = lane2.get_realizations()
@@ -382,6 +481,15 @@ def levenshtein_distance(lane1, lane2):
     return minimum
 
 def __levenshtein_distance_realizations(lane1, lane2):
+    '''
+    Computes the Levenshtein distance between two realizations of Super Lanes.
+    :param lane1: The elements of the first realization, contains only CommonConstructs
+    :type lane1: list of type CommonConstruct
+    :param lane1: The elements of the second realization, contains only CommonConstructs
+    :type lane1: list of type CommonConstruct
+    :return: The number of edits needed to convert one realization into the other.
+    :rtype: int
+    '''
     if(len(lane2) == 0):
         return len(lane1)
     elif(len(lane1) == 0):
