@@ -85,7 +85,7 @@ class SummarizedVariant:
             # Encode each lane, enumerate the encodings provisionally
             for lane in object_lanes:
 
-                encoding = lane.encode_lexicographically()
+                encoding = lane.encode_lexicographically(1)
         
                 # Fill up the current id with 0's such that every id has the same number of characters
                 full_id = str(id)
@@ -108,8 +108,7 @@ class SummarizedVariant:
                 lane_id = mapping[encoded_lanes[i]][0]
                 mapping[encoded_lanes[i]]= (lane_id, object + " " + full_id)
                 self.rename_lane(lane_id, object + " " + full_id)
-                encoded_lanes[i] = object + " " + full_id + ": " + encoded_lanes[i][power_of_ten:]
-
+                encoded_lanes[i] = object + " " + full_id + ": " + encoded_lanes[i][power_of_ten:] + " "
 
             encoded_result.extend(encoded_lanes)
 
@@ -218,40 +217,50 @@ class SuperLane:
         return result_string + "]"
 
 
-    def encode_lexicographically(self):
+    def encode_lexicographically(self, depth, just_elements = False):
         '''
         Converts the Super Lane into an encoding string.
         :param self: The summarizing Super Lane
         :type self: SuperLane
+        param depth: The current level in the position
+        :type depth: int
+        param just_elements: Whether just the lanes elements should be encoded
+        :type just_elements: bool
         :return: The corresponding lexicographic encoding
         :rtype: str
         '''
-        encoding = f"CAR {self.cardinality}: "
+
+        encoding = ""
+        if(not just_elements):
+            encoding += f"CAR {self.cardinality}: "
 
         for element in self.elements:
 
             if(type(element) == CommonConstruct):
-                encoding += f"CO[{element.position}:{element.position}, {element.activity}] "
+                encoding += f"CO[{element.index}:{element.index}, {element.activity}] "
 
             elif(type(element) == InteractionConstruct):
-                encoding += f"IP[{element.position}:{element.position}, {element.activity}] "
+                encoding += f"IP[{element.index}:{element.index}, {element.activity}] "
                         
             else:
                         
                 # Determine all choice sequences and sort alphabetically
-                choices = [choice.encode_lexicographically() for choice in element.choices]
+                choices = [choice.encode_lexicographically(depth + 1, just_elements = True) for choice in element.choices]
                 choices.sort()
 
-                element.choices.sort(key = lambda x: x.encode_lexicographically())
+                element.choices.sort(key = lambda x: x.encode_lexicographically(depth + 1, just_elements = True))
                 index = 0
                 for choice in element.choices:
                     choice.lane_id = index
                     index += 1
+                    choice.lane_name = "Option " + str(index)
+                    choice.update_lane_id(index, depth)
 
                 # Encode all choices
                 choices_encoding = ""
-                for choice in choices:
-                    choices_encoding += choice
+                for i in range(len(choices)):
+                    choices_encoding += "Option " + str(i) + " "
+                    choices_encoding += choices[i]
                     choices_encoding += ", "
                 choices_encoding = choices_encoding[:-2]
 
@@ -262,6 +271,64 @@ class SuperLane:
                     encoding += f"OP[{element.index_start}:{element.index_end}, [{choices_encoding}]] "
 
         return encoding[:-1]
+
+
+    def update_lane_id(self, new_lane_id, depth):
+        '''
+        Updates the positions of a lane after the order of a choice has been changed.
+        :param self: The summarizing Super Lane
+        :type self: SuperLane
+        :param new_lane_id: The new id of this lane.
+        :type new_lane_id: int
+        param depth: The current level in the position
+        :type depth: int
+        '''
+        import copy 
+
+        for elem in self.elements:
+            if (isinstance(elem, CommonConstruct)):
+
+                positions = [copy.deepcopy(elem.position)]
+
+                for i in range(depth-1):
+                    positions.append(positions[-1].position)
+
+                new_position = positions[-1]
+                new_position.lane_id = new_lane_id
+                
+                for i in range(2, depth+1):
+                    current_position = positions[-i]
+                    current_position.position = new_position
+                    new_position = copy.deepcopy(current_position)
+
+                elem.position = new_position
+
+            else:
+                positions_start = [copy.deepcopy(elem.position_start)]
+                positions_end = [copy.deepcopy(elem.position_end)]
+
+                for i in range(depth-1):
+                    positions_start.append(positions_start[-1].position)
+                    positions_end.append(positions_end[-1].position)
+
+                new_position_start = positions_start[-1]
+                new_position_end = positions_end[-1]
+                new_position_start.lane_id = new_lane_id
+                new_position_end.lane_id = new_lane_id
+                
+                for i in range(2, depth+1):
+                    current_position_start = positions_start[-i]
+                    current_position_end = positions_end[-i]
+                    current_position_start.position = new_position_start
+                    current_position_end.position = new_position_end
+                    new_position_start = copy.deepcopy(current_position_start)
+                    new_position_end = copy.deepcopy(current_position_end)
+
+                elem.position_start = new_position_start
+                elem.position_end = new_position_end
+
+                for choice in elem.choices:
+                    choice.update_lane_id(new_lane_id, depth)
 
 
     def same_summarization(self, other):
@@ -466,7 +533,7 @@ class SuperLane:
             if((type(element) == CommonConstruct or type(element) == InteractionConstruct) and is_base_position and element.index == unpacked_position):
                 return element
             elif((type(element) == ChoiceConstruct or type(element) == OptionalConstruct) and not is_base_position and unpacked_position.get_base_index() >= element.index_start and unpacked_position.get_base_index() <= element.index_end):
-                return element.choices[unpacked_position.lane_id](unpacked_position)
+                return element.choices[unpacked_position.lane_id].get_element(unpacked_position)
             elif((type(element) == ChoiceConstruct or type(element) == OptionalConstruct) and is_base_position and unpacked_position >= element.index_start and unpacked_position <= element.index_end):
                 return element
         return None
@@ -572,34 +639,35 @@ class SuperLane:
         
             # Case 2: Start shifting from a Generic Choice Structure
             elif((type(self.elements[i]) == ChoiceConstruct or type(self.elements[i]) == OptionalConstruct) and not is_base_position and self.elements[i].index_end >= unpacked_position.get_base_index() and self.elements[i].index_start <= unpacked_position.get_base_index()):
-
+                
                 start_index_before_shift = self.elements[i].index_start
                 end_index_before_shift = self.elements[i].index_end
-                
                 all_relevant_observed_positions = dict()
                 following_relevant_observed_position = dict()
                 remaining_observed_positions = dict()
-
                 for key in observed_positions.keys():
 
                     if (observed_positions[key].get_base_index() >= start_index_before_shift and observed_positions[key].get_base_index() <= end_index_before_shift):
-
+                        print("if")
+                        print(type(self.elements[i]))
                         in_same_lane = True
-                        unpacked_levels = original_position.get_depth() - unpacked_position.get.depth()
+                        unpacked_levels = original_position.get_depth() - unpacked_position.get_depth()
 
                         unpacked_value = copy.deepcopy(observed_positions[key])
                         unpacked_original = copy.deepcopy(original_position)
 
                         for i in range(unpacked_levels):
+                            print(type(self.elements[i]))
                             if (unpacked_value.lane_id != unpacked_original.lane_id):
                                 in_same_lane = False
                                 break
                             else:
                                 unpacked_value = unpacked_value.position
                                 unpacked_original = unpacked_original.position
-
+                                
                         in_same_lane = in_same_lane and unpacked_value == unpacked_position.lane_id
-
+                        print(type(self.elements[i]))
+                        print("end if")
 
                         if(in_same_lane):
                             all_relevant_observed_positions[key] = observed_positions[key]
@@ -612,7 +680,7 @@ class SuperLane:
                     else:
                         remaining_observed_positions[key] = observed_positions[key]
 
-
+                print(type(self.elements[i]))
                 updated_relevant_observed_shift = self.elements[i].choices[unpacked_position.lane_id].shift_lane_exact(unpacked_position, offset, all_relevant_observed_positions, original_position)
 
                 all_start_indices = []

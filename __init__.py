@@ -14,16 +14,16 @@ import Inter_Variant_Summarization as IEVS
 import Inter_Variant_Generation as IEVG
 
 
-#filename = "EventLogs/BPI2017-Top10.jsonocel"
-#parameters = {"execution_extraction": "leading_type",
-              #"leading_type": "offer"}
-#ocel = ocel_import_factory.apply(file_path = filename , parameters = parameters)
-filename = "EventLogs/order_process.jsonocel"
-ocel = ocel_import_factory.apply(file_path = filename)
+filename = "EventLogs/BPI2017-Top10.jsonocel"
+parameters = {"execution_extraction": "leading_type",
+              "leading_type": "offer"}
+ocel = ocel_import_factory.apply(file_path = filename , parameters = parameters)
+#filename = "EventLogs/order_process.jsonocel"
+#ocel = ocel_import_factory.apply(file_path = filename)
 #variant_layouting = variants_visualization_factory.apply(ocel)
 #extracted_variant = IED.extract_lanes(variant_layouting[ocel.variants[2]], ocel.variant_frequencies[1])
 #SVV.visualize_variant(extracted_variant)
-all_summarizations, per_variant_dict, per_encoding_dict = IAVG.complete_intra_variant_summarization(ocel, print_results=False)
+all_summarizations, per_variant_dict, per_encoding_dict = IAVG.complete_intra_variant_summarization(ocel, print_results = False)
 selection = SS.intra_variant_summarization_selection(all_summarizations, per_variant_dict, per_encoding_dict)
 summarizations = [selection[key][1][0].to_super_variant(tuple(selection[key][0])) for key in selection.keys()]
 #hierarchy = IEVG.generate_super_variant_hierarchy_uniform(summarizations[0:7], 3)

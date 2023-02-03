@@ -92,7 +92,7 @@ class RecursiveLanePosition(LanePosition):
         self.position = position
 
     def __eq__(self, other):
-        return (self.lane_id == other.lane_id) and (self.position == other.position)
+        return type(self) == type(other) and (self.lane_id == other.lane_id) and (self.position == other.position)
 
     def __str__(self):
         return "Position in lane " + str(self.lane_id) + " at " + str(self.position)
@@ -137,7 +137,7 @@ class BasePosition(LanePosition):
         self.position = position
 
     def __eq__(self, other):
-        return (self.lane_id == other.lane_id) and (self.position == other.position)
+        return type(self) == type(other) and (self.lane_id == other.lane_id) and (self.position == other.position)
 
     def __str__(self):
         return "Position in lane " + str(self.lane_id) + " at " + str(self.position)
