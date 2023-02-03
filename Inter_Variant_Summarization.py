@@ -1,5 +1,6 @@
 import Super_Variant_Definition as SVD
 import Inter_Lane_Summarization as ILS
+import Input_Extraction_Definition as IED
 
 
 def join_super_variants(super_variant1, super_variant2, print_result = True):
@@ -128,20 +129,16 @@ def new_super_lane(summarization, lane, first, start_index = 0):
             activity = elem.activity
             frequency = elem.frequency
             if(not isinstance(elem, SVD.InteractionConstruct)):
-                elements.append(SVD.CommonConstruct(activity, frequency, current_horizontal_index))
+                elements.append(SVD.CommonConstruct(activity, frequency, IED.BasePosition(0, current_horizontal_index), current_horizontal_index))
             else:
-                elements.append(SVD.InteractionConstruct(activity, frequency, current_horizontal_index))
+                elements.append(SVD.InteractionConstruct(activity, frequency, IED.BasePosition(0, current_horizontal_index), current_horizontal_index))
 
-                current_interaction_point = None
-                for interaction_point in summarization.interaction_points:
-                    if(interaction_point.index_in_lanes == elem.position and lane.lane_id in interaction_point.interaction_lanes):
-                            current_interaction_point = interaction_point
-                            break
+                is_interacting_activity, current_interaction_point = IED.is_interaction_point(summarization.interaction_points, lane.lane_id, elem.position)
 
                 if(first):
-                    new_interaction_points_mapping[(1, current_interaction_point.index_in_lanes, str(current_interaction_point.interaction_lanes))] = (0,current_horizontal_index)
+                    new_interaction_points_mapping[(1, str([str(position) for position in current_interaction_point.exact_positions]), str(current_interaction_point.interaction_lanes))] = IED.BasePosition(0, current_horizontal_index)
                 else:
-                    new_interaction_points_mapping[(2, current_interaction_point.index_in_lanes, str(current_interaction_point.interaction_lanes))] = (0,current_horizontal_index)
+                    new_interaction_points_mapping[(2, str([str(position) for position in current_interaction_point.exact_positions]), str(current_interaction_point.interaction_lanes))] = IED.BasePosition(0, current_horizontal_index)
 
             current_horizontal_index += 1
                 
@@ -154,13 +151,15 @@ def new_super_lane(summarization, lane, first, start_index = 0):
                 new_choice, new_choice_mapping = new_super_lane(summarization, elem.choices[i], first, index)
                 for mapping in new_choice_mapping.keys():
                     new_interaction_points_mapping[mapping] = new_choice_mapping[mapping]
+                for elem in new_choice:
+                    elem.position = IED.RecursiveLanePosition(0, IED.BasePosition(i, elem.position.position))
                 new_choices.append(new_choice)
                 length = max(length, len(new_choice))
 
             if(isinstance(elem, SVD.ChoiceConstruct)):
-                elements.append(SVD.ChoiceConstruct(new_choices, current_horizontal_index, current_horizontal_index + length-1))
+                elements.append(SVD.ChoiceConstruct(new_choices, IED.BasePosition(current_horizontal_index), IED.BasePosition(current_horizontal_index + length-1), current_horizontal_index, current_horizontal_index + length-1))
             else:
-                elements.append(SVD.OptionalConstruct(new_choices, current_horizontal_index, current_horizontal_index + length-1))
+                elements.append(SVD.OptionalConstruct(new_choices, IED.BasePosition(current_horizontal_index), IED.BasePosition(current_horizontal_index + length-1), current_horizontal_index, current_horizontal_index + length-1))
 
             current_horizontal_index += length
 

@@ -29,7 +29,7 @@ summarizations = [selection[key][1][0].to_super_variant(tuple(selection[key][0])
 #hierarchy = IEVG.generate_super_variant_hierarchy_uniform(summarizations[0:7], 3)
 #classification = SVG.classify_initial_super_variants_by_expression(summarizations[0:8], SVG.containes_3_payment_reminder)
 #classification = SVG.classify_initial_super_variants_by_activity(summarizations[0:8], "Payment Reminder")
-hierarchy = IEVG.generate_super_variant_hierarchy(summarizations[0:7], 3, print_results = True, frequency_distribution_type = IEVG.Distribution.UNIFORM)
+hierarchy = IEVG.generate_super_variant_hierarchy(summarizations[0:7], 3, print_results = False , frequency_distribution_type = IEVG.Distribution.UNIFORM)
 #for summarization in summarizations:
  #   SVV.visualize_super_variant(summarization)
 
