@@ -18,7 +18,7 @@ def __solve_hitting_set_problem(T, S):
     model.update()
 
     for key in S.keys():
-        model.addConstr(sum(x[elem[1][0]] for elem in S[key]) >= 1)
+        model.addConstr(sum(x[elem[1][0]] for elem in S[key]) == 1)
     
     model.setObjective(sum(x[elem[1][0]] for elem in T))
     model.modelSense = gurobipy.GRB.MINIMIZE
@@ -54,7 +54,19 @@ def intra_variant_summarization_selection(all_summarizations, summarizations_per
             result[key] = summarizations_per_encoding[key]
     
     print(str(len(result)) + "/" + str(len(summarizations_per_encoding)) + " unique summarizations have been selected for the Between-Lane Summarizatation.")
-    return result
+
+    initial_set_of_super_variants = []
+    
+    for key in result.keys():
+
+        frequency = 0
+        for summarization in  result[key][1]:
+            frequency += summarization.frequency
+
+        initial_set_of_super_variants.append(result[key][1][0].to_super_variant(tuple(result[key][0])))
+        initial_set_of_super_variants[-1].frequency = frequency
+
+    return initial_set_of_super_variants
 
 
 

@@ -152,15 +152,19 @@ def new_super_lane(summarization, lane, first, start_index = 0):
                 new_choice, new_choice_mapping = new_super_lane(summarization, elem.choices[i], first, index)
                 for mapping in new_choice_mapping.keys():
                     new_interaction_points_mapping[mapping] = new_choice_mapping[mapping]
-                for elem in new_choice:
-                    elem.position = IED.RecursiveLanePosition(0, IED.BasePosition(i, elem.position.position))
+                for elem in new_choice.elements:
+                    if(isinstance(elem, SVD.CommonConstruct)):
+                        elem.position = IED.RecursiveLanePosition(0, IED.BasePosition(i, elem.position.position))
+                    else:
+                        elem.position_start = IED.RecursiveLanePosition(0, IED.BasePosition(i, elem.position_start.position))
+                        elem.position_end = IED.RecursiveLanePosition(0, IED.BasePosition(i, elem.position_end.position))
                 new_choices.append(new_choice)
                 length = max(length, len(new_choice))
 
             if(isinstance(elem, SVD.ChoiceConstruct)):
                 elements.append(SVD.ChoiceConstruct(new_choices, IED.BasePosition(current_horizontal_index), IED.BasePosition(current_horizontal_index + length-1), current_horizontal_index, current_horizontal_index + length-1))
             else:
-                elements.append(SVD.OptionalConstruct(new_choices, IED.BasePosition(current_horizontal_index), IED.BasePosition(current_horizontal_index + length-1), current_horizontal_index, current_horizontal_index + length-1))
+                elements.append(SVD.OptionalConstruct(new_choices, IED.BasePosition(current_horizontal_index), IED.BasePosition(current_horizontal_index + length-1), current_horizontal_index, current_horizontal_index + length-1, elem.empty_frequency))
 
             current_horizontal_index += length
 

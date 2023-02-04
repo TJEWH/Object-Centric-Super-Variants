@@ -175,11 +175,11 @@ class SuperVariant(SummarizedVariant):
     id = 0
 
     def __init__(self, id, lanes, object_types, interaction_points, frequency):
+        self.id = id
         self.lanes = lanes
         self.object_types = object_types
         self.interaction_points = interaction_points
         self.frequency = frequency
-        self.id = id
 
     def __str__(self):
         result_string = "Super Variant " + str(self.id) + "\nLanes: \n"
@@ -191,7 +191,7 @@ class SuperVariant(SummarizedVariant):
             result_string += str(self.interaction_points[i]) + "\n"
         return result_string + "Frequency: " + str(self.frequency)
     
-    
+
 class SuperLane:
     '''The data structure of the summarization of lanes and Super Lanes'''
     lane_id = ()
@@ -431,7 +431,7 @@ class SuperLane:
                 element.position.apply_shift(end_index - index_end_before)
                 index += end_index - index + 1
             
-        return SuperLane(0, "normalization", self.object_type, elements, None, 0)
+        return SuperLane(0, "normalization", self.object_type, elements, self.cardinality, self.frequency)
 
 
     def get_realizations_normalized(self):
@@ -458,17 +458,29 @@ class SuperLane:
                     for sublist in element.choices[i].get_realizations_normalized(element.start):
                         intermediate_result.extend([realization + sublist.elements for realization in realizations])
                 if(type(element) == OptionalConstruct):
-                    intermediate_result.extend(realizations)
+                    intermediate_result.extend([realization + [EmptyConstruct(element.empty_frequency)] for realization in realizations])
                 realizations = intermediate_result
 
         result = []
         for i in range(len(realizations)):
+
+            frequency = 1
+            for elem in realizations[i]:
+                frequency = frequency * elem.frequency
+            
+            realization_frequency = frequency * self.frequency
+
             index = 0
-            for element in realizations[i]:
-                element.index = index
-                element.position = IED.BasePosition(0,index)
-                index += 1
-            result.append(SuperLane(i, "realization " + str(i), self.object_type, realizations[i], None, 0))
+            elements = []
+            for elem in realizations[i]:
+                if(not type(elem) == EmptyConstruct):
+                    elements.append(copy.deepcopy(elem))
+                    elements[-1].frequency = frequency
+                    elements[-1].index = index
+                    elements[-1].position = IED.BasePosition(0, index)
+                    index += 1
+                    
+            result.append(SuperLane(i, "realization " + str(i), self.object_type, elements, "1", realization_frequency))
 
         return result
 
@@ -498,23 +510,25 @@ class SuperLane:
                         intermediate_result.extend([realization + sublist.elements for realization in realizations])
 
                 if(type(element) == OptionalConstruct):
-                    intermediate_result.extend(realizations)
+                    intermediate_result.extend([realization + [EmptyConstruct(element.empty_frequency)] for realization in realizations])
                 realizations = intermediate_result
 
         result = []
-        #TODO frequency and count are not the
+
         for i in range(len(realizations)):
             frequency = 1
             for elem in realizations[i]:
                 frequency = frequency*elem.frequency
-            frequency = self.frequency
-            frequency = frequency/len(realizations)
+            
+            realization_frequency = frequency * self.frequency
+            
             elements = []
             for elem in realizations[i]:
-                elements.append(copy.deepcopy(elem))
-                elements[-1].frequency = frequency
+                if(not type(elem) == EmptyConstruct):
+                    elements.append(copy.deepcopy(elem))
+                    elements[-1].frequency = frequency
 
-            result.append(SuperLane(i, "realization " + str(i), self.object_type, elements, self.cardinality, frequency))
+            result.append(SuperLane(i, "realization " + str(i), self.object_type, elements, self.cardinality, realization_frequency))
 
         return result
 
@@ -950,6 +964,12 @@ class OptionalSuperLane(SuperLane):
 class SummarizationElement:
     '''The data structure the elements of a summarized variant'''
 
+class EmptyConstruct(SummarizationElement):
+    frequency = 0
+
+    def __init__(self, frequency):
+        self.frequency = frequency
+
 
 class CommonConstruct(SummarizationElement):
     '''The data structure of common activities in a summarized variant'''
@@ -985,8 +1005,8 @@ class CommonConstruct(SummarizationElement):
         :rtype: OptionalConstruct
         '''
         self.frequency -= empty_frequency
-        option = SuperLane(0, "option 0", lane.object_type, [self], 1, self.frequency)
-        return OptionalConstruct([option], self.position, self.position, self.index, self.index)
+        option = SuperLane(0, "option 0", lane.object_type, [self], 1, self.frequency*lane.frequency)
+        return OptionalConstruct([option], self.position, self.position, self.index, self.index, empty_frequency)
 
 
 class InteractionConstruct(CommonConstruct):
@@ -1053,6 +1073,16 @@ class GeneralChoiceStructure(SummarizationElement):
 
 class OptionalConstruct(GeneralChoiceStructure):
     '''The data structure of an optional choices of activity sequences in a summarized variant'''
+
+    empty_frequency = 1
+
+    def __init__(self, choices, start, end, index_start, index_end, empty_frequency):
+        self.choices = choices
+        self.position_start = start
+        self.position_end = end
+        self.index_start = index_start
+        self.index_end = index_end
+        self.empty_frequency = empty_frequency
     
     def __str__(self):
         result_string = f"(Pos: {self.index_start} - {self.index_end}: Optional Choices "
@@ -1097,16 +1127,16 @@ def summarized_variant_layouting(summarized_variant):
 
             interactions = [lane.lane_id]
 
-            if(isinstance(elem,InteractionConstruct)):
+            if(isinstance(elem, InteractionConstruct)):
                 for interactionPoint in summarized_variant.interaction_points:
                     for i in range(len(interactionPoint.interaction_lanes)):
                         if(lane.lane_id in interactionPoint.interaction_lanes and elem.index == interactionPoint.exact_positions[i]):
                             interactions.extend(interactionPoint.interaction_lanes)
 
-            if(isinstance(elem,CommonConstruct) or isinstance(elem,InteractionConstruct)):
-                activities.append([elem,[[elem.index, elem.index],list(set(interactions))]])
+            if(isinstance(elem, CommonConstruct) or isinstance(elem, InteractionConstruct)):
+                activities.append([elem,[[elem.index, elem.index], list(set(interactions))]])
             else:
-                activities.append([elem,[[elem.index_start, elem.index_end],list(set(interactions))]])
+                activities.append([elem,[[elem.index_start, elem.index_end], list(set(interactions))]])
     
     # Remove duplicate activities that are interaction points
     unique_activities = []

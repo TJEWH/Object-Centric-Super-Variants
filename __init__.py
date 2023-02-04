@@ -24,8 +24,8 @@ ocel = ocel_import_factory.apply(file_path = filename , parameters = parameters)
 #extracted_variant = IED.extract_lanes(variant_layouting[ocel.variants[2]], ocel.variant_frequencies[1])
 #SVV.visualize_variant(extracted_variant)
 all_summarizations, per_variant_dict, per_encoding_dict = IAVG.complete_intra_variant_summarization(ocel, print_results = False)
-selection = SS.intra_variant_summarization_selection(all_summarizations, per_variant_dict, per_encoding_dict)
-summarizations = [selection[key][1][0].to_super_variant(tuple(selection[key][0])) for key in selection.keys()]
+summarizations = SS.intra_variant_summarization_selection(all_summarizations, per_variant_dict, per_encoding_dict)
+
 #print(summarizations[0])
 #print(summarizations[0].interaction_points)
 #for interaction in summarizations[0].interaction_points:
@@ -34,30 +34,14 @@ summarizations = [selection[key][1][0].to_super_variant(tuple(selection[key][0])
     #print("------")
 #SVV.visualize_super_variant(summarizations[0])
 #SVV.visualize_super_variant(summarizations[3])
-super_variant_14, cost = IEVS.join_super_variants(summarizations[9], summarizations[10], True)
-#for lane in super_variant_14.lanes:
-    #print(lane)
-    #for elem in lane.elements:
-        #print(elem)
-        #if(isinstance(elem, SVD.CommonConstruct)):
-            #print(elem.position)
-        #else:
-            #print(elem.position_start)
-           # print(elem.position_end)
-            #print("--->")
-            #for choice in elem.choices:
-                #for elem in choice.elements:
-                    #print(elem.position)
-            #print("<---")
-    #print("------------------------------")
+super_variant_49, cost = IEVS.join_super_variants(summarizations[4], summarizations[9], True)
+#super_variant_59, cost = IEVS.join_super_variants(summarizations[5], summarizations[9], True)
 
-#for interaction_point in super_variant_14.interaction_points:
-    #print(interaction_point)
-    #for i in range(len(interaction_point.interaction_lanes)):
-        #print(interaction_point.interaction_lanes[i])
-        #print(interaction_point.exact_positions[i])
-    #print("-------")
-SVV.visualize_super_variant(super_variant_14)
+SVV.visualize_super_variant(super_variant_49)
+#SVV.visualize_super_variant(super_variant_59)
+SVV.visualize_super_variant(summarizations[5])
+#super_variant_459, cost = IEVS.join_super_variants(super_variant_49, summarizations[5], True)
+#SVV.visualize_super_variant(super_variant_459)
 #hierarchy = IEVG.generate_super_variant_hierarchy_uniform(summarizations[0:7], 3)
 #classification = SVG.classify_initial_super_variants_by_expression(summarizations[0:8], SVG.containes_3_payment_reminder)
 #classification = SVG.classify_initial_super_variants_by_activity(summarizations[0:8], "Payment Reminder")

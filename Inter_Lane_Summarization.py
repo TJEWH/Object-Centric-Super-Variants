@@ -72,6 +72,7 @@ def __inter_lane_summarization(lanes, interactions, print_results, offset = 0, a
         element_frequency = 0
         for i in range(len(base_lanes)):
             element_frequency += base_lanes[i].get_element(common_element[2][i][2]).frequency
+        element_frequency = element_frequency / len(base_lanes)
 
         
         # Checks if the common activity is an interaction point
@@ -146,6 +147,7 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
     :return: An element summarizing the extracted subprocesses for each initial Super Lane, the length of the element, the mapping from original interaction points to their positions in the element
     :rtype: SummarizationElement, int, dict
     '''
+    import copy
     if sum([len(elements[1]) for elements in interval_subprocesses]) == 0:
         return [], 0, dict()
     
@@ -163,11 +165,11 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
     choices = []
     frequencies = []
     is_optional = False
+    empty_frequency = 0
 
     for elements in interval_subprocesses:
         position = start_index
         choice = []
-        frequency = 0
         current_mappings = dict()
 
         for i in range(len(elements[1])):
@@ -181,10 +183,10 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
                 choice.append(SVD.CommonConstruct(elements[1][i].activity, elements[1][i].frequency, IED.BasePosition(0, position), position))
 
             position += 1
-            frequency = elements[1][i].frequency
 
         if(choice == []):
             is_optional = True
+            empty_frequency += 1
 
         else:
             duplicate = False
@@ -201,34 +203,35 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
 
                 if(equal):
                     duplicate = True
-                    frequencies[i] += frequency
                     cardinality = "n"
-                    for j in range(len(choices[i][0])):
-                        choices[i][0][j].frequency += choice[j].frequency
+                    frequencies[i] += 1
                     choices[i] = (choices[i][0], cardinality, frequencies[i])
+
                     for key in current_mappings.keys():
                         new_mapping[key] = IED.RecursiveLanePosition(0, IED.BasePosition(i, current_mappings[key]))
                     break
 
             if(not duplicate):
-                frequencies.append(frequency)
+                frequencies.append(1)
                 current_index = len(choices)
                 for elem in choice:
                     horizontal_position = elem.position.get_base_index()
                     elem.position = IED.RecursiveLanePosition(0, IED.BasePosition(current_index, horizontal_position))
                     end_index = max(end_index, horizontal_position)
-                choices.append(tuple((choice, "1", frequency)))
+                choices.append(tuple((choice, "1", 1)))
                 for key in current_mappings.keys():
                     new_mapping[key] = IED.RecursiveLanePosition(0, IED.BasePosition(current_index, current_mappings[key]))
 
 
-    # TODO Apply recursive summarizations with only 1 nested level and height 1 (number of choices)
-
 
     for i in range(len(choices)):
+        for elem in choices[i][0]:
+            elem.frequency = choices[i][2] / len(interval_subprocesses)
         choices[i] = SVD.SuperLane(i, "option " + str(i), base_lanes[0].object_type, choices[i][0], choices[i][1], choices[i][2])
 
-        
+
+    # TODO Apply recursive summarizations with only 1 nested level and height 1 (number of choices)
+   
     # Applying Optional Pattern
     if(is_optional):
         if(print_results):
@@ -240,8 +243,8 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
                 for elem in choice.elements:
                     print(elem)
                 print("----------")
-
-        returned_elements.append(SVD.OptionalConstruct(choices, IED.BasePosition(0, start_index), IED.BasePosition(0, end_index), start_index, end_index))
+        empty_frequency = empty_frequency / len(interval_subprocesses)
+        returned_elements.append(SVD.OptionalConstruct(choices, IED.BasePosition(0, start_index), IED.BasePosition(0, end_index), start_index, end_index, empty_frequency))
 
     #Applying Exclusive Choice Pattern Pattern
     else:
