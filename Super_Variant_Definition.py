@@ -248,14 +248,16 @@ class SuperLane:
                 choices = [choice.encode_lexicographically(depth + 1, just_elements = True) for choice in element.choices]
                 choices.sort()
 
-                element.choices.sort(key = lambda x: x.encode_lexicographically(depth + 1, just_elements = True))
-                index = 0
-                for choice in element.choices:
-                    choice.lane_id = index
-                    index += 1
-                    choice.lane_name = "Option " + str(index)
-                    choice.update_lane_id(index, depth)
+                #element.choices.sort(key = lambda x: x.encode_lexicographically(depth + 1, just_elements = True))
 
+                #index = 0
+                #position_mapping = dict()
+                #for choice in element.choices:
+                    #choice.lane_id = index
+                    #choice.lane_name = "Option " + str(index)
+                    #choice.update_lane_id(index, depth + 1)
+                    #index += 1
+                    
                 # Encode all choices
                 choices_encoding = ""
                 for i in range(len(choices)):
@@ -649,7 +651,6 @@ class SuperLane:
                 remaining_observed_positions = dict()
                 
                 for key in observed_positions.keys():
-
                     if (observed_positions[key].get_base_index() >= start_index_before_shift and observed_positions[key].get_base_index() <= end_index_before_shift):
 
                         in_same_lane = True
@@ -659,7 +660,6 @@ class SuperLane:
                         unpacked_original = copy.deepcopy(original_position)
 
                         for j in range(unpacked_levels):
-                            print(type(self.elements[i]))
                             if (unpacked_value.lane_id != unpacked_original.lane_id):
                                 in_same_lane = False
                                 break
@@ -667,7 +667,7 @@ class SuperLane:
                                 unpacked_value = unpacked_value.position
                                 unpacked_original = unpacked_original.position
                                 
-                        in_same_lane = in_same_lane and unpacked_value == unpacked_position.lane_id
+                        in_same_lane = in_same_lane and unpacked_value.lane_id == unpacked_position.lane_id
 
                         if(in_same_lane):
                             all_relevant_observed_positions[key] = observed_positions[key]
@@ -828,12 +828,11 @@ class SuperLane:
         :return: The modified Super Lane
         :rtype: SuperLane
         '''
-
         # Shift last element 
         if(isinstance(self.elements[-1], GeneralChoiceStructure)):
             start_index_before_shift = self.elements[-1].index_start
             end_index_before_shift = self.elements[-1].index_end
-
+        
             for j in range(len(self.elements[-1].choices)):
                 if(up_to):
                     self.elements[-1].choices[j] = self.elements[-1].choices[j].shift_activities_up(up_to)
@@ -854,13 +853,12 @@ class SuperLane:
                 elif(isinstance(choice.elements[-1], GeneralChoiceStructure)):
                     all_end_indices.append(choice.elements[-1].index_end)
                         
-
             self.elements[-1].index_start = min(all_start_indices)
             self.elements[-1].index_end = max(all_end_indices)
             self.elements[-1].position_start.apply_shift(self.elements[-1].index_start - start_index_before_shift)
             self.elements[-1].position_end.apply_shift(self.elements[-1].index_end - end_index_before_shift)
 
-        else:
+        elif(not isinstance(self.elements[-1], InteractionConstruct)):
             if(up_to):
                 self.elements[-1].position.apply_shift(up_to - self.elements[-1].position.get_base_index())
                 self.elements[-1].index = up_to
@@ -884,9 +882,9 @@ class SuperLane:
             elif(isinstance(self.elements[index-1], GeneralChoiceStructure)):
 
                 if (isinstance(self.elements[index], CommonConstruct)):
-                    offset = self.elements[index].index
+                    offset = self.elements[index].index - self.elements[index-1].index_end - 1
                 elif (isinstance(self.elements[index], GeneralChoiceStructure)):
-                    offset = self.elements[index].index_start
+                    offset = self.elements[index].index_start - self.elements[index-1].index_end - 1
                 else:
                     offset = 0
 
@@ -894,7 +892,7 @@ class SuperLane:
                 end_index_before_shift = self.elements[index-1].index_end
 
                 for j in range(len(self.elements[index-1].choices)):
-                    self.elements[index-1].choices[j] = self.elements[index-1].choices[j].shift_activities_up(max(offset-1,0))
+                    self.elements[index-1].choices[j] = self.elements[index-1].choices[j].shift_activities_up(max(self.elements[index-1].index_end + offset - 1, self.elements[index-1].index_end))
 
                 all_start_indices = []
                 all_end_indices = []
@@ -915,7 +913,6 @@ class SuperLane:
                 self.elements[index-1].index_end = max(all_end_indices)
                 self.elements[index-1].position_start.apply_shift(self.elements[index-1].index_start - start_index_before_shift)
                 self.elements[index-1].position_end.apply_shift(self.elements[index-1].index_end - end_index_before_shift)
-
 
         return self
 

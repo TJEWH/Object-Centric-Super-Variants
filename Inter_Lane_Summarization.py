@@ -173,9 +173,6 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
         for i in range(len(elements[1])):
 
             if(isinstance(elements[1][i], SVD.InteractionConstruct)):
-                print(elements[1][i])
-                print(elements[1][i].position)
-                print(interactions[i])
                 is_interacting_activity, interaction_point = IED.is_interaction_point(interactions[elements[0]], base_lanes[elements[0]].lane_id, elements[1][i].position)
                 current_mappings[(elements[0], str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))] = start_index + i
 
@@ -368,19 +365,6 @@ def __re_align_lanes(lanes, mappings, print_result):
     :rtype: list of type SuperLane, list of type InteractionPoint
     '''
     # Initialize variables and return values
-    for lane in lanes:
-        for elem in lane.elements:
-            print(elem)
-            if(isinstance(elem, SVD.CommonConstruct)):
-                print(elem.position)
-            else:
-                for choice in elem.choices:
-                    print("---")
-                    for elem2 in choice.elements:
-                        print(elem2)
-                        print(elem2.position)
-                    print("----------")
-        print("--------")
     import copy
     import math
     #updated_mappings, aligned_lanes = split_interactions(copy.deepcopy(mappings), copy.deepcopy(lanes))
@@ -393,7 +377,7 @@ def __re_align_lanes(lanes, mappings, print_result):
         lanes = [lane for lane in aligned_lanes if lane.lane_id in list(earliest_interaction_point[1].keys())]
 
         if(print_result):
-            #print("We have an interaction at the following points in the interacting lanes: " + str(earliest_interaction_point[1]))
+            print("We have an interaction at the following positions in the interacting lanes:")
             for key in earliest_interaction_point[1].keys():
                 print(str(key) + ": " + str(earliest_interaction_point[1][key]))
         
@@ -439,6 +423,7 @@ def __re_align_lanes(lanes, mappings, print_result):
 
                 updated_positions = lane.shift_lane_exact(current_position, offset, copy.deepcopy(updated_positions), current_position)
                 
+                print("Updated position: " + str(updated_positions[str(current_position)]))
                 exact_positions[-1] = updated_positions[str(current_position)]
 
                 
@@ -454,6 +439,7 @@ def __re_align_lanes(lanes, mappings, print_result):
         
         del updated_mappings[earliest_interaction_point[0]]
         updated_interaction_points.append(IED.InteractionPoint(activity_label, interacting_lanes, types, index, exact_positions))
+
         
     final_lanes = []
     for lane in aligned_lanes:
