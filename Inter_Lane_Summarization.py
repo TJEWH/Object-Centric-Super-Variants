@@ -146,7 +146,6 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
     :return: An element summarizing the extracted subprocesses for each initial Super Lane, the length of the element, the mapping from original interaction points to their positions in the element
     :rtype: SummarizationElement, int, dict
     '''
-
     if sum([len(elements[1]) for elements in interval_subprocesses]) == 0:
         return [], 0, dict()
     
@@ -158,7 +157,7 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
                 print(elements[1])
             
     returned_elements = []
-    length = 0
+    end_index = start_index
 
     # Determine choices and their frequencies
     choices = []
@@ -174,8 +173,10 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
         for i in range(len(elements[1])):
 
             if(isinstance(elements[1][i], SVD.InteractionConstruct)):
-                
-                is_interacting_activity, interaction_point = IED.is_interaction_point(interactions[i], base_lanes[elements[0]].lane_id, elements[1][i].position)
+                print(elements[1][i])
+                print(elements[1][i].position)
+                print(interactions[i])
+                is_interacting_activity, interaction_point = IED.is_interaction_point(interactions[elements[0]], base_lanes[elements[0]].lane_id, elements[1][i].position)
                 current_mappings[(elements[0], str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))] = start_index + i
 
                 choice.append(SVD.InteractionConstruct(elements[1][i].activity, elements[1][i].frequency, IED.BasePosition(0, position), position))
@@ -216,7 +217,9 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
                 frequencies.append(frequency)
                 current_index = len(choices)
                 for elem in choice:
-                    elem.position = IED.RecursiveLanePosition(0, IED.BasePosition(current_index, elem.position.position))
+                    horizontal_position = elem.position.get_base_index()
+                    elem.position = IED.RecursiveLanePosition(0, IED.BasePosition(current_index, horizontal_position))
+                    end_index = max(end_index, horizontal_position)
                 choices.append(tuple((choice, "1", frequency)))
                 for key in current_mappings.keys():
                     new_mapping[key] = IED.RecursiveLanePosition(0, IED.BasePosition(current_index, current_mappings[key]))
@@ -224,8 +227,6 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
 
     # TODO Apply recursive summarizations with only 1 nested level and height 1 (number of choices)
 
-    longest_option = max(choices, key= lambda x: len(x[0]))
-    length = len(longest_option)
 
     for i in range(len(choices)):
         choices[i] = SVD.SuperLane(i, "option " + str(i), base_lanes[0].object_type, choices[i][0], choices[i][1], choices[i][2])
@@ -239,11 +240,11 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
             print("\n")
             print("Adding a optional choice element between the following sequences.")
             for choice in choices:
-                for elem in choice:
+                for elem in choice.elements:
                     print(elem)
                 print("----------")
 
-        returned_elements.append(SVD.OptionalConstruct(choices, IED.BasePosition(0, start_index), IED.BasePosition(0, start_index + length - 1), start_index, start_index + length - 1))
+        returned_elements.append(SVD.OptionalConstruct(choices, IED.BasePosition(0, start_index), IED.BasePosition(0, end_index), start_index, end_index))
 
     #Applying Exclusive Choice Pattern Pattern
     else:
@@ -253,13 +254,13 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
             print("\n")
             print("Adding a choice element between the following sequences.")
             for choice in choices:
-                for elem in choice:
+                for elem in choice.elements:
                     print(elem)
                 print("----------")
 
-        returned_elements.append(SVD.ChoiceConstruct(choices, IED.BasePosition(0, start_index), IED.BasePosition(0, start_index + length - 1), start_index, start_index + length - 1))
+        returned_elements.append(SVD.ChoiceConstruct(choices, IED.BasePosition(0, start_index), IED.BasePosition(0, end_index), start_index, end_index))
             
-    return returned_elements, length, new_mapping
+    return returned_elements, end_index - start_index + 1, new_mapping
 
 
 
@@ -367,6 +368,19 @@ def __re_align_lanes(lanes, mappings, print_result):
     :rtype: list of type SuperLane, list of type InteractionPoint
     '''
     # Initialize variables and return values
+    for lane in lanes:
+        for elem in lane.elements:
+            print(elem)
+            if(isinstance(elem, SVD.CommonConstruct)):
+                print(elem.position)
+            else:
+                for choice in elem.choices:
+                    print("---")
+                    for elem2 in choice.elements:
+                        print(elem2)
+                        print(elem2.position)
+                    print("----------")
+        print("--------")
     import copy
     import math
     #updated_mappings, aligned_lanes = split_interactions(copy.deepcopy(mappings), copy.deepcopy(lanes))
@@ -379,7 +393,9 @@ def __re_align_lanes(lanes, mappings, print_result):
         lanes = [lane for lane in aligned_lanes if lane.lane_id in list(earliest_interaction_point[1].keys())]
 
         if(print_result):
-            print("We have an interaction at the following points in the interacting lanes: " + str(earliest_interaction_point[1]))
+            #print("We have an interaction at the following points in the interacting lanes: " + str(earliest_interaction_point[1]))
+            for key in earliest_interaction_point[1].keys():
+                print(str(key) + ": " + str(earliest_interaction_point[1][key]))
         
         types = set([lane.object_type for lane in lanes])
         element = lanes[0].get_element(updated_mappings[earliest_interaction_point[0]][lanes[0].lane_id])
@@ -427,7 +443,7 @@ def __re_align_lanes(lanes, mappings, print_result):
 
                 
                 if(print_result):
-                    print("We have shifted lane " + lane.lane_name + " by " + str(offset) + " starting from the element at the position" + str(current_position) + ".")
+                    print("We have shifted lane " + lane.lane_name + " by " + str(offset) + " starting from the element at the position " + str(current_position) + ".")
 
                 # Update all values in the dictionary accordingly
                 for key in updated_mappings.keys():

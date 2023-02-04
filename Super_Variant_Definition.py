@@ -628,10 +628,12 @@ class SuperLane:
         import copy
         unpacked_position = start_position.position
         is_base_position = isinstance(unpacked_position, int)
+
         for i in range(len(self.elements)):
 
             # Case 1: Start shifting from a Common Activity
             if((type(self.elements[i]) == InteractionConstruct) and is_base_position and self.elements[i].index == unpacked_position):
+
                 self.shift_lane(self.elements[i], offset, i)
                 for key in observed_positions.keys():
                     observed_positions[key].apply_shift(offset)
@@ -639,24 +641,24 @@ class SuperLane:
         
             # Case 2: Start shifting from a Generic Choice Structure
             elif((type(self.elements[i]) == ChoiceConstruct or type(self.elements[i]) == OptionalConstruct) and not is_base_position and self.elements[i].index_end >= unpacked_position.get_base_index() and self.elements[i].index_start <= unpacked_position.get_base_index()):
-                
                 start_index_before_shift = self.elements[i].index_start
                 end_index_before_shift = self.elements[i].index_end
+                
                 all_relevant_observed_positions = dict()
                 following_relevant_observed_position = dict()
                 remaining_observed_positions = dict()
+                
                 for key in observed_positions.keys():
 
                     if (observed_positions[key].get_base_index() >= start_index_before_shift and observed_positions[key].get_base_index() <= end_index_before_shift):
-                        print("if")
-                        print(type(self.elements[i]))
+
                         in_same_lane = True
                         unpacked_levels = original_position.get_depth() - unpacked_position.get_depth()
 
                         unpacked_value = copy.deepcopy(observed_positions[key])
                         unpacked_original = copy.deepcopy(original_position)
 
-                        for i in range(unpacked_levels):
+                        for j in range(unpacked_levels):
                             print(type(self.elements[i]))
                             if (unpacked_value.lane_id != unpacked_original.lane_id):
                                 in_same_lane = False
@@ -666,11 +668,10 @@ class SuperLane:
                                 unpacked_original = unpacked_original.position
                                 
                         in_same_lane = in_same_lane and unpacked_value == unpacked_position.lane_id
-                        print(type(self.elements[i]))
-                        print("end if")
 
                         if(in_same_lane):
                             all_relevant_observed_positions[key] = observed_positions[key]
+
                         else:
                             remaining_observed_positions[key] = observed_positions[key]
 
@@ -680,7 +681,6 @@ class SuperLane:
                     else:
                         remaining_observed_positions[key] = observed_positions[key]
 
-                print(type(self.elements[i]))
                 updated_relevant_observed_shift = self.elements[i].choices[unpacked_position.lane_id].shift_lane_exact(unpacked_position, offset, all_relevant_observed_positions, original_position)
 
                 all_start_indices = []

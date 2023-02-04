@@ -17,6 +17,7 @@ def join_super_variants(super_variant1, super_variant2, print_result = True):
     '''
     import copy
     mapping, cost = decide_matching(super_variant1, super_variant2, copy.deepcopy(super_variant1.lanes), copy.deepcopy(super_variant2.lanes), True, print_result)
+
     if(print_result):
         print("The estimated cost of joining these Super Variants is " + str(cost) + ".")
 

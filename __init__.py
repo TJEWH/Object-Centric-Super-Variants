@@ -26,10 +26,33 @@ ocel = ocel_import_factory.apply(file_path = filename , parameters = parameters)
 all_summarizations, per_variant_dict, per_encoding_dict = IAVG.complete_intra_variant_summarization(ocel, print_results = False)
 selection = SS.intra_variant_summarization_selection(all_summarizations, per_variant_dict, per_encoding_dict)
 summarizations = [selection[key][1][0].to_super_variant(tuple(selection[key][0])) for key in selection.keys()]
+#print(summarizations[0])
+#print(summarizations[0].interaction_points)
+#for interaction in summarizations[0].interaction_points:
+    #for position in interaction.exact_positions:
+        #print(position)
+    #print("------")
+#SVV.visualize_super_variant(summarizations[0])
+#SVV.visualize_super_variant(summarizations[3])
+super_variant_14, cost = IEVS.join_super_variants(summarizations[0], summarizations[3], True)
+for lane in super_variant_14.lanes:
+    for elem in lane.elements:
+        print(elem)
+        if(isinstance(elem, SVD.CommonConstruct)):
+            print(elem.position)
+        else:
+            for choice in elem.choices:
+                print("---")
+                for elem2 in choice.elements:
+                    print(elem2)
+                    print(elem2.position)
+                print("----------")
+    print("--------")
+#SVV.visualize_super_variant(super_variant_14)
 #hierarchy = IEVG.generate_super_variant_hierarchy_uniform(summarizations[0:7], 3)
 #classification = SVG.classify_initial_super_variants_by_expression(summarizations[0:8], SVG.containes_3_payment_reminder)
 #classification = SVG.classify_initial_super_variants_by_activity(summarizations[0:8], "Payment Reminder")
-hierarchy = IEVG.generate_super_variant_hierarchy(summarizations[0:7], 3, print_results = False , frequency_distribution_type = IEVG.Distribution.UNIFORM)
+#hierarchy = IEVG.generate_super_variant_hierarchy(summarizations[0:7], 3, print_results = False , frequency_distribution_type = IEVG.Distribution.UNIFORM)
 #for summarization in summarizations:
  #   SVV.visualize_super_variant(summarization)
 

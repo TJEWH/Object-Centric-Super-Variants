@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import Super_Variant_Definition as SVD
+import Input_Extraction_Definition as IED
 
 DEFAULT_CHEVRON_LENGTH = 15.
 DEFAULT_CHEVRON_HEIGHT = 6.
@@ -58,6 +59,7 @@ def arrange_super_variant(super_variant, ax, vertical_start_position, horizontal
     :return: The visualization region with the added Super Variant visualization elements
     :rtype: axes
     '''
+    import copy
     all_colors = [(1,0.71,0.44), (0.56,0.81,0.56), (0.38,0.57,0.8), (1,0.87,143), (0.56,0.89,0.97)]
     objects = list(super_variant.object_types)
     objects.sort()
@@ -107,7 +109,8 @@ def arrange_super_variant(super_variant, ax, vertical_start_position, horizontal
         else:
             ax.add_patch(patches.Rectangle((-13 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length+2) * DEFAULT_CHEVRON_LENGTH, lane_properties[lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0))
         
-        ax = __visualize_lane_elements(ax, lane_id, super_variant.lanes[i].elements, lane_properties, super_variant.interaction_points, current_vertical_position, horizontal_start_position)
+        properties = copy.deepcopy(lane_properties)
+        ax = __visualize_lane_elements(ax, lane_id, super_variant.lanes[i].elements, properties, super_variant.interaction_points, current_vertical_position, horizontal_start_position)
         current_vertical_position += lane_properties[lane_id]["Height"]
     
 
@@ -117,7 +120,7 @@ def arrange_super_variant(super_variant, ax, vertical_start_position, horizontal
     ax.set_ylim(-2 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 2)
     return ax
 
-def __visualize_lane_elements(ax, lane, elements, lane_properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length = DEFAULT_CHEVRON_LENGTH, chevron_height = DEFAULT_CHEVRON_HEIGHT, offset = 0, frequency = "", fontsize = 9):
+def __visualize_lane_elements(ax, lane, elements, lane_properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length = DEFAULT_CHEVRON_LENGTH, chevron_height = DEFAULT_CHEVRON_HEIGHT, offset = 0, frequency = "", fontsize = 9, original_lane = None, original_lane_properties = None):
     '''
     Generates the chevrons for a single SuperLane at a given position.
     :param ax: The visualization region in which the Super Variant should be visualized
@@ -147,17 +150,25 @@ def __visualize_lane_elements(ax, lane, elements, lane_properties, interaction_p
     :return: The visualization region with the added sequential activity chevrons
     :rtype: axes
     '''
+    import copy
+
+    if(original_lane == None):
+        original_lane = lane
+    if(original_lane_properties == None):
+        original_lane_properties = lane_properties
+
     for element in elements:
+        properties = copy.deepcopy(lane_properties)
         if(isinstance(element, SVD.InteractionConstruct)):
-            ax = __interaction_activity_chevron(ax, lane, element, element.index - offset, lane_properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, frequency, fontsize)
+            ax = __interaction_activity_chevron(ax, lane, element, element.index - offset, properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, frequency, fontsize, original_lane, original_lane_properties)
         elif(isinstance(element, SVD.CommonConstruct)):
-            ax = __common_activity_chevron(ax, lane, element, element.index - offset, lane_properties, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, frequency, fontsize)
+            ax = __common_activity_chevron(ax, lane, element, element.index - offset, properties, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, frequency, fontsize)
         else:
-            ax = __choice_structure_chevron(ax, lane, element, element.index_start - offset, lane_properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, fontsize)
+            ax = __choice_structure_chevron(ax, lane, element, element.index_start - offset, properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, fontsize, original_lane, original_lane_properties)
     return ax
 
 
-def __interaction_activity_chevron(ax, lane, element, index, lane_properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, frequency, fontsize, overall_line_style = '-'):
+def __interaction_activity_chevron(ax, lane, element, index, lane_properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, frequency, fontsize, original_lane, original_lane_properties, overall_line_style = '-'):
     '''
     Generates the chevrons for a single InteractionConstruct element of a lane.
     :param ax: The visualization region in which the chevron should be visualized
@@ -190,18 +201,27 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
     :rtype: axes
     '''
     import matplotlib.patches as patches
-
     if(lane_properties[lane]["IsOptional"]):
         overall_line_style = '--'
 
-    interacting_lanes = [lane]
-    for interaction in interaction_points:
-        for i in range(len(interacting_lanes)):
-            if ((interaction.interaction_lanes[i] == lane) and (interaction.exact_positions[i] == element.position)):
-                interacting_lanes = interaction.interaction_lanes
+
+    print(interaction_points)
+    print(original_lane)
+    print(element.position)
+    for interaction_point in interaction_points:
+        for position in interaction_point.exact_positions:
+            print(position)
+        for id in interaction_point.interaction_lanes:
+            print(id)
+        print("-----------")
+    is_interacting, interaction_point = IED.is_interaction_point(interaction_points, original_lane, element.position)
+    
+    interacting_lanes = interaction_point.interaction_lanes
+
     number_sub_chevrons = len(interacting_lanes)
     length_sub_chevron = (1 / number_sub_chevrons)
-    interacting_lanes.sort(key = lambda x: lane_properties[x]["Color"])
+   
+    interacting_lanes.sort(key = lambda x: original_lane_properties[x]["Color"])
 
     label = element.activity
     if(frequency != ""):
@@ -209,7 +229,8 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
     ax.text(index * DEFAULT_CHEVRON_LENGTH + 2.0 + current_horizontal_position, current_vertical_position * chevron_height + 0.5 * chevron_height * lane_properties[lane]["Height"] - 0.3, label, zorder = 15, fontsize = fontsize)
 
     for i in range(len(interacting_lanes)):
-        ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length + i * length_sub_chevron * chevron_length, current_vertical_position * chevron_height, length_sub_chevron, lane_properties[lane]["Height"]  * chevron_height), facecolor = lane_properties[interacting_lanes[i]]["Color"], lw = 0, ls = overall_line_style, zorder = 10))
+        color = original_lane_properties[interacting_lanes[i]]["Color"]
+        ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length + i * length_sub_chevron * chevron_length, current_vertical_position * chevron_height, length_sub_chevron, lane_properties[lane]["Height"]  * chevron_height), facecolor = color, lw = 0, ls = overall_line_style, zorder = 10))
     ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length, current_vertical_position * chevron_height, chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height), facecolor = "None", lw = 1.3, ls = overall_line_style, zorder = 12))
     
     return ax
@@ -256,7 +277,7 @@ def __common_activity_chevron(ax, lane, element, index, lane_properties, current
     ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length, current_vertical_position * chevron_height, chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height), facecolor = lane_properties[lane]["Color"], lw = 1.3, ls = overall_line_style, zorder = 10))
     return ax
 
-def __choice_structure_chevron(ax, lane, element, index, lane_properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, fontsize, overall_line_style = '-'):
+def __choice_structure_chevron(ax, lane, element, index, lane_properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, fontsize, original_lane, original_lane_properties, overall_line_style = '-'):
     '''
     Generates the chevrons for a single GenericChoiceStructure element of a lane.
     :param ax: The visualization region in which the chevron should be visualized
@@ -338,7 +359,7 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
             ax.add_patch(patches.PathPatch(__line_at_position(index * chevron_length + line_offset, vertical_position, (element.index_end - element.index_start) + 1), lw = 1.1, ls = overall_line_style, zorder = 15))
 
         horizontal_start_position = (index * chevron_length) + 1.25 + margin_length 
-        ax = __visualize_lane_elements(ax, choice, element.choices[i].elements, choice_properties, interaction_points, ((vertical_position + margin_height)/sub_default_chevron_heigth), horizontal_start_position, chevron_length = sub_default_chevron_length, chevron_height = sub_default_chevron_heigth, offset = index, frequency = str((element.choices[i].frequency/lane_properties[lane]["Frequency"]) * 100) + "%", fontsize = fontsize - 2)
+        ax = __visualize_lane_elements(ax, choice, element.choices[i].elements, choice_properties, interaction_points, ((vertical_position + margin_height) / sub_default_chevron_heigth), horizontal_start_position, chevron_length = sub_default_chevron_length, chevron_height = sub_default_chevron_heigth, offset = index, frequency = str((element.choices[i].frequency / lane_properties[lane]["Frequency"]) * 100) + "%", fontsize = fontsize - 2, original_lane = original_lane, original_lane_properties = original_lane_properties)
         vertical_position += choice_properties[choice]["Height"] * chevron_height
 
     return ax  
