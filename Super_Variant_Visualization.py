@@ -214,13 +214,16 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
     interacting_lanes.sort(key = lambda x: original_lane_properties[x]["Color"])
 
     label = element.activity
+    sizing_factor = min(12 / len(label), 1)
+    offset = 0.3
     if(frequency):
-        label += "\n " + str(round(element.frequency*100, 2)) + "%"
-    ax.text(index * DEFAULT_CHEVRON_LENGTH + 2.0 + current_horizontal_position, current_vertical_position * chevron_height + 0.5 * chevron_height * lane_properties[lane]["Height"] - 0.3, label, zorder = 15, fontsize = fontsize)
+        label += "\n " + str(round(element.frequency * 100, 2)) + "%"
+        offset = 1
+    ax.text(index * chevron_length+ 2.0 + current_horizontal_position, current_vertical_position * chevron_height + 0.5 * chevron_height * lane_properties[lane]["Height"] - offset, label, zorder = 15, fontsize = fontsize * sizing_factor)
 
     for i in range(len(interacting_lanes)):
         color = original_lane_properties[interacting_lanes[i]]["Color"]
-        ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length + i * length_sub_chevron * chevron_length, current_vertical_position * chevron_height, length_sub_chevron, lane_properties[lane]["Height"]  * chevron_height), facecolor = color, lw = 0, ls = overall_line_style, zorder = 10))
+        ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length + i * length_sub_chevron * chevron_length, current_vertical_position * chevron_height, length_sub_chevron * chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height), facecolor = color, lw = 0, ls = overall_line_style, zorder = 10))
     ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length, current_vertical_position * chevron_height, chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height), facecolor = "None", lw = 1.3, ls = overall_line_style, zorder = 12))
     
     return ax
@@ -261,9 +264,30 @@ def __common_activity_chevron(ax, lane, element, index, lane_properties, current
         overall_line_style = '--'
         
     label = element.activity
+    offset = 0.3
+
+    possible_splitting_indices = []
+    if(len(label) > 14):
+        for i in range(len(label)):
+            if (label[i] == " "):
+                possible_splitting_indices.append(i)
+    possible_splitting_indices.append(len(label))
+    splitting_index = min(possible_splitting_indices, key = lambda x: abs(x - (len(label)/2)))
+    label = label[:splitting_index] + "\n" + label[splitting_index + 1:]
+
+    longest_section = 0
+    for i in range(len(label.split("\n"))):
+        longest_section = max(longest_section, len(label.split("\n")[i]))
+    sizing_factor = min(14 / longest_section , 1)
+    if (label[-1] == "\n"):
+        label = label[:-1]
+    else:
+        offset += 0.7
+
     if(frequency):
-        label += "\n " + str(round(element.frequency*100, 2)) + "%"
-    ax.text(current_horizontal_position + index * chevron_length + 2.0, current_vertical_position * chevron_height + 0.5 * chevron_height * lane_properties[lane]["Height"] - 0.3, label, zorder = 15, fontsize = fontsize)
+        label += "\n " + str(round(element.frequency * 100, 2)) + "%"
+        offset += 0.7
+    ax.text(current_horizontal_position + index * chevron_length + 2.0, current_vertical_position * chevron_height + 0.5 * chevron_height * lane_properties[lane]["Height"] - offset, label, zorder = 15, fontsize = fontsize*sizing_factor)
     ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length, current_vertical_position * chevron_height, chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height), facecolor = lane_properties[lane]["Color"], lw = 1.3, ls = overall_line_style, zorder = 10))
     return ax
 

@@ -370,8 +370,8 @@ def __re_align_lanes(lanes, mappings, print_result):
     # Initialize variables and return values
     import copy
     import math
-    #updated_mappings, aligned_lanes = split_interactions(copy.deepcopy(mappings), copy.deepcopy(lanes))
-    updated_mappings, aligned_lanes = copy.deepcopy(mappings), copy.deepcopy(lanes)
+    updated_mappings, aligned_lanes = split_interactions(copy.deepcopy(mappings), copy.deepcopy(lanes))
+    #updated_mappings, aligned_lanes = copy.deepcopy(mappings), copy.deepcopy(lanes)
     updated_interaction_points = []
 
     # Align the lanes such that the interaction points have the same horizontal index
@@ -426,7 +426,6 @@ def __re_align_lanes(lanes, mappings, print_result):
 
                 updated_positions = lane.shift_lane_exact(current_position, offset, copy.deepcopy(updated_positions), current_position)
                 
-                print("Updated position: " + str(updated_positions[str(current_position)]))
                 exact_positions[-1] = updated_positions[str(current_position)]
 
                 
@@ -455,6 +454,7 @@ def __re_align_lanes(lanes, mappings, print_result):
 
 # TODO refine
 def split_interactions(mappings, lanes):
+
     import copy
     new_mappings = copy.deepcopy(mappings)
     duplicates = []
@@ -464,6 +464,7 @@ def split_interactions(mappings, lanes):
         duplicate_mappings = dict()
         lane_id = 0
 
+        # Find the sets of interaction points that map to the same positions in one lane
         for key1 in mappings[mapping1].keys():
             position1 = mappings[mapping1][key1]
 
@@ -485,22 +486,26 @@ def split_interactions(mappings, lanes):
     
     new_lanes = []
 
+    # For each set of interaction points sharing the same positions in one lane, but not in another lane, split the element at the shared position such that every interaction point can be aligned with one copy
     for duplicate in duplicates:
-        empty_frequency = len(duplicate[0]) - 1
-        earliest_interaction_point = min(duplicate[0].items(), key=lambda x: min([position[1] for position in x[1].values()]))
-        del duplicate[0][earliest_interaction_point[0]]
+        print(duplicate)
+
+    return mappings, lanes
+        #empty_frequency = len(duplicate[0]) - 1
+        #earliest_interaction_point = min(duplicate[0].items(), key=lambda x: min([position[1] for position in x[1].values()]))
+        #del duplicate[0][earliest_interaction_point[0]]
   
-        for lane in lanes:
-            if (lane.lane_id == duplicate[1]):
-                positions = earliest_interaction_point[1][duplicate[1]]
-                new_lane, new_element = copy.deepcopy(lane).make_optional(positions[1], empty_frequency, positions[0])
-                new_mappings[earliest_interaction_point[0]] = earliest_interaction_point[1]
-                break
+        #for lane in lanes:
+            #if (lane.lane_id == duplicate[1]):
+                #positions = earliest_interaction_point[1][duplicate[1]]
+                #new_lane, new_element = copy.deepcopy(lane).make_optional(positions[1], empty_frequency, positions[0])
+                #new_mappings[earliest_interaction_point[0]] = earliest_interaction_point[1]
+                #break
         
-        for i in range(len(list(duplicate[0].keys()))):
-            current_interaction_point = min(duplicate[0].items(), key=lambda x: list(list(x[1].values())[1]))
-            del duplicate[0][current_interaction_point[0]]
-            lower_bound = new_element.position_start
+        #for i in range(len(list(duplicate[0].keys()))):
+            #current_interaction_point = min(duplicate[0].items(), key=lambda x: list(list(x[1].values())[1]))
+            #del duplicate[0][current_interaction_point[0]]
+            #lower_bound = new_element.position_start
 
             # Problem: Must also consider if it is an entirely different lane 
             #for key in mappings.keys():
@@ -514,19 +519,20 @@ def split_interactions(mappings, lanes):
                                     #lower_bound = max(mappings[key][duplicate[1]][1] + 1, lower_bound)
 
             # Update all mappings due to the shift of element positions
-            new_position_mapping = (positions[0], lower_bound + 1)
-            new_mappings[current_interaction_point[0]] = current_interaction_point[1]
-            new_mappings[current_interaction_point[0]][duplicate[1]] = new_position_mapping
-            new_lane = new_lane.add_optional_activity(lower_bound + 1, copy.deepcopy(new_element), current_interaction_point[1][duplicate[1]][0])
-            for key in new_mappings.keys():
-                if(key != earliest_interaction_point[0] and key != current_interaction_point[0]):
-                    if(duplicate[1] in mappings[key].keys() and mappings[key][duplicate[1]][1] > lower_bound):
-                        old_position = new_mappings[key][duplicate[1]]
-                        new_mappings[key][duplicate[1]] = (old_position[0], old_position[1]+1)
+            #new_position_mapping = (positions[0], lower_bound + 1)
+            #new_mappings[current_interaction_point[0]] = current_interaction_point[1]
+            #new_mappings[current_interaction_point[0]][duplicate[1]] = new_position_mapping
+            #new_lane = new_lane.add_optional_activity(lower_bound + 1, copy.deepcopy(new_element), current_interaction_point[1][duplicate[1]][0])
+            #for key in new_mappings.keys():
+                #if(key != earliest_interaction_point[0] and key != current_interaction_point[0]):
+                    #if(duplicate[1] in mappings[key].keys() and mappings[key][duplicate[1]][1] > lower_bound):
+                        #old_position = new_mappings[key][duplicate[1]]
+                        #new_mappings[key][duplicate[1]] = (old_position[0], old_position[1]+1)
                         
-        new_lanes.append(new_lane)
+        #new_lanes.append(new_lane)
         
 
+    # Append the remaining lanes that required no modification
     for lane in lanes:
         if (lane.lane_id not in [new_lane.lane_id for new_lane in new_lanes]):
             new_lanes.append(lane)
