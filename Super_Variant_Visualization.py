@@ -214,11 +214,29 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
     interacting_lanes.sort(key = lambda x: original_lane_properties[x]["Color"])
 
     label = element.activity
-    sizing_factor = min(12 / len(label), 1)
     offset = 0.3
+
+    possible_splitting_indices = []
+    if(len(label) > 14):
+        for i in range(len(label)):
+            if (label[i] == " "):
+                possible_splitting_indices.append(i)
+    possible_splitting_indices.append(len(label))
+    splitting_index = min(possible_splitting_indices, key = lambda x: abs(x - (len(label)/2)))
+    label = label[:splitting_index] + "\n" + label[splitting_index + 1:]
+
+    longest_section = 0
+    for i in range(len(label.split("\n"))):
+        longest_section = max(longest_section, len(label.split("\n")[i]))
+    sizing_factor = min(14 / longest_section , 1)
+    if (label[-1] == "\n"):
+        label = label[:-1]
+    else:
+        offset += 0.7
+
     if(frequency):
         label += "\n " + str(round(element.frequency * 100, 2)) + "%"
-        offset = 1
+        offset += 0.7
     ax.text(index * chevron_length+ 2.0 + current_horizontal_position, current_vertical_position * chevron_height + 0.5 * chevron_height * lane_properties[lane]["Height"] - offset, label, zorder = 15, fontsize = fontsize * sizing_factor)
 
     for i in range(len(interacting_lanes)):
@@ -339,6 +357,7 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
     overall_line_style = "-"
 
     choice_properties = dict()
+    accumulated_height = 0
     for choice in element.choices:
 
         choice_properties[choice.lane_id] = dict()
@@ -352,11 +371,15 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
                 vertical_height = max(vertical_height, elem.get_vertical_height())
 
         choice_properties[choice.lane_id]["Height"] = vertical_height
+        accumulated_height += vertical_height
     
+    height_factor = (lane_properties[lane]["Height"] / accumulated_height)
+
     sub_default_chevron_length = ((((element.index_end - element.index_start) + 1) * chevron_length) - 2.5) / ((element.index_end - element.index_start) + 1)
     sub_default_chevron_length -= margin_length / ((element.index_end - element.index_start) + 1)
 
-    sub_default_chevron_heigth = chevron_height * (lane_properties[lane]["Height"] - len(element.choices) + 1) - 1/6 * chevron_height
+    sub_default_chevron_height = chevron_height * height_factor
+    sub_default_chevron_height -=  1/6 * chevron_height
 
     vertical_half = 1/2 * lane_properties[lane]["Height"]  * chevron_height
     chevron_vertical_half = current_vertical_position * chevron_height + vertical_half
@@ -373,8 +396,8 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
             ax.add_patch(patches.PathPatch(__line_at_position(index * chevron_length + line_offset, vertical_position, (element.index_end - element.index_start) + 1), lw = 1.1, ls = overall_line_style, zorder = 15))
 
         horizontal_start_position = (index * chevron_length) + 1.25 + margin_length 
-        ax = __visualize_lane_elements(ax, choice, element.choices[i].elements, choice_properties, interaction_points, ((vertical_position + margin_height) / sub_default_chevron_heigth), horizontal_start_position, chevron_length = sub_default_chevron_length, chevron_height = sub_default_chevron_heigth, offset = index, frequency = True, fontsize = fontsize - 2, original_lane = original_lane, original_lane_properties = original_lane_properties)
-        vertical_position += choice_properties[choice]["Height"] * chevron_height
+        ax = __visualize_lane_elements(ax, choice, element.choices[i].elements, choice_properties, interaction_points, ((vertical_position + margin_height) / sub_default_chevron_height), horizontal_start_position, chevron_length = sub_default_chevron_length, chevron_height = sub_default_chevron_height, offset = index, frequency = True, fontsize = fontsize * ((sub_default_chevron_length - 2) / DEFAULT_CHEVRON_LENGTH), original_lane = original_lane, original_lane_properties = original_lane_properties)
+        vertical_position += choice_properties[choice]["Height"] * chevron_height *height_factor
 
     return ax  
 

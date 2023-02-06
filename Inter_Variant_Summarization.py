@@ -74,6 +74,7 @@ def inter_variant_summarization(summarization1, summarization2, mapping, print_r
             intermediate_lanes.append(super_lane)
             intermediate_mappings.append((super_lane.lane_id, mapping))
 
+    
     result_lanes, result_interaction_points = ILS.__re_align_lanes(intermediate_lanes, ILS.__merge_interactions(ILS.__merge_interaction_mappings(intermediate_mappings)), print_result)
     super_variant = SVD.SuperVariant(summarization1.id + summarization2.id, result_lanes, summarization1.object_types.union(summarization2.object_types), result_interaction_points, summarization1.frequency + summarization2.frequency)
     super_variant.encode_lexicographically()

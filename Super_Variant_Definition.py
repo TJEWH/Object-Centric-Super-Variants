@@ -522,13 +522,13 @@ class SuperLane:
             
             realization_frequency = frequency * self.frequency
             
-            elements = []
+            new_elements = []
             for elem in realizations[i]:
                 if(not type(elem) == EmptyConstruct):
-                    elements.append(copy.deepcopy(elem))
-                    elements[-1].frequency = frequency
+                    new_elements.append(copy.deepcopy(elem))
+                    new_elements[-1].frequency = frequency
 
-            result.append(SuperLane(i, "realization " + str(i), self.object_type, elements, self.cardinality, realization_frequency))
+            result.append(SuperLane(i, "realization " + str(i), self.object_type, new_elements, self.cardinality, realization_frequency))
 
         return result
 

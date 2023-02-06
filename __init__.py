@@ -34,14 +34,40 @@ summarizations = SS.intra_variant_summarization_selection(all_summarizations, pe
     #print("------")
 #SVV.visualize_super_variant(summarizations[0])
 #SVV.visualize_super_variant(summarizations[3])
-super_variant_49, cost = IEVS.join_super_variants(summarizations[0], summarizations[2], False)
-#super_variant_59, cost = IEVS.join_super_variants(summarizations[5], summarizations[9], True)
+#super_variant_49, cost = IEVS.join_super_variants(summarizations[4], summarizations[5], False)
+super_variant_59, cost = IEVS.join_super_variants(summarizations[0], summarizations[1], False)
+super_variant, cost = IEVS.join_super_variants(super_variant_59, summarizations[3], False)
 
-#SVV.visualize_super_variant(super_variant_49)
-#SVV.visualize_super_variant(super_variant_59)
+'''
+for interaction in super_variant.interaction_points:
+    for i in range(len(interaction.exact_positions)):
+        print(interaction.interaction_lanes[i])
+        print(interaction.exact_positions[i])
+        print("----")
+
+for lane in super_variant.lanes:
+    for elem1 in lane.elements:
+        print(elem1)
+        if (isinstance(elem1, SVD.CommonConstruct)):
+            print(elem1.position)
+        else:
+            print(elem1.position_start)
+            print("-->")
+            for choice in elem1.choices:
+                for elem2 in choice.elements:
+                    print(elem2)
+                    print(elem2.position)
+            print("<--")
+        print("----")
+    print("--------------------------")
+'''
+#SVV.visualize_super_variant(summarizations[5])
+#SVV.visualize_super_variant(summarizations[7])
 #SVV.visualize_super_variant(summarizations[5])
 #super_variant_459, cost = IEVS.join_super_variants(super_variant_49, summarizations[4], False)
-SVV.visualize_super_variant(super_variant_49)
+SVV.visualize_super_variant(super_variant_59)
+SVV.visualize_super_variant(summarizations[9])
+SVV.visualize_super_variant(super_variant)
 #hierarchy = IEVG.generate_super_variant_hierarchy_uniform(summarizations[0:7], 3)
 #classification = SVG.classify_initial_super_variants_by_expression(summarizations[0:8], SVG.containes_3_payment_reminder)
 #classification = SVG.classify_initial_super_variants_by_activity(summarizations[0:8], "Payment Reminder")

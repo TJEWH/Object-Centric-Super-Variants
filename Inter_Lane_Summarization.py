@@ -1,13 +1,16 @@
 import Super_Variant_Definition as SVD
 import Input_Extraction_Definition as IED
+import Inter_Variant_Summarization as IEVS
 
-def __inter_lane_summarization(lanes, interactions, print_results, offset = 0, allow_nested_structures = False):
+def __inter_lane_summarization(lanes, interactions, print_results, current_lane = 0, offset = 0, allow_nested_structures = True):
     '''
     Performs the summarization of the given Super Lanes using the set of defined patterns.
     :param lanes: The Super Lanes that should be summarized
     :type lanes: list of type SuperLane
     :param interactions: The sets of interaction points corresponding to the involved Super Lanes
     :type interactions: list
+    :param current_lane: The lane number that is currently summarized (default 0, otherwise the number of choice this lane represents)
+    :type current_lane: int
     :param print_results: Whether the results should be output in the console
     :type print_results: bool
     :param offset: The starting index of the horizontal positions
@@ -58,7 +61,7 @@ def __inter_lane_summarization(lanes, interactions, print_results, offset = 0, a
     
         
         # Add summarized subprocess to elements
-        interval_elements, interval_length, interval_mapping = __apply_patterns(interval_subprocesses, current_horizontal_index, interactions, base_lanes, print_results, allow_nested_structures)
+        interval_elements, interval_length, interval_mapping = __apply_patterns(interval_subprocesses, current_horizontal_index, interactions, base_lanes, current_lane, print_results, allow_nested_structures)
         elements.extend(interval_elements)
         new_interaction_points_mapping.update(interval_mapping)
         current_horizontal_index += interval_length
@@ -93,12 +96,12 @@ def __inter_lane_summarization(lanes, interactions, print_results, offset = 0, a
                 interaction_points.append(interaction_point)
 
             for i in range(len(interaction_points)):
-                new_interaction_points_mapping[(i, str([str(position) for position in interaction_points[i].exact_positions]), str(interaction_points[i].interaction_lanes))] = IED.BasePosition(0, current_horizontal_index)
+                new_interaction_points_mapping[(i, str([str(position) for position in interaction_points[i].exact_positions]), str(interaction_points[i].interaction_lanes))] = [IED.BasePosition(current_lane, current_horizontal_index)]
 
-            elements.append(SVD.InteractionConstruct(common_element[0], element_frequency, IED.BasePosition(0, current_horizontal_index), current_horizontal_index))
+            elements.append(SVD.InteractionConstruct(common_element[0], element_frequency, IED.BasePosition(current_lane, current_horizontal_index), current_horizontal_index))
 
         else:
-            elements.append(SVD.CommonConstruct(common_element[0], element_frequency, IED.BasePosition(0, current_horizontal_index), current_horizontal_index))
+            elements.append(SVD.CommonConstruct(common_element[0], element_frequency, IED.BasePosition(current_lane, current_horizontal_index), current_horizontal_index))
 
         current_horizontal_index += 1
         
@@ -122,7 +125,7 @@ def __inter_lane_summarization(lanes, interactions, print_results, offset = 0, a
             interval_subprocesses.append((all_lanes[j][0],[]))
 
     # Add summarized subprocess to elements
-    interval_elements, interval_length, interval_mapping = __apply_patterns(interval_subprocesses, current_horizontal_index, interactions, base_lanes, print_results, allow_nested_structures)
+    interval_elements, interval_length, interval_mapping = __apply_patterns(interval_subprocesses, current_horizontal_index, interactions, base_lanes, current_lane, print_results, allow_nested_structures)
     elements.extend(interval_elements)
     new_interaction_points_mapping.update(interval_mapping)
     current_horizontal_index += interval_length
@@ -131,7 +134,7 @@ def __inter_lane_summarization(lanes, interactions, print_results, offset = 0, a
 
 
 #TODO
-def __apply_patterns(interval_subprocesses, start_index, interactions, base_lanes, print_results, allow_nested_structures):
+def __apply_patterns(interval_subprocesses, start_index, interactions, base_lanes, current_lane, print_results, allow_nested_structures):
     '''
     Applies the defined patterns "Exclusive Choice Pattern" and "Optional Pattern" to the extracted subsequences of the initial Super Lanes between their common activities.
     :param interval_subprocesses: The extracted subprocess for each Super Lane between a pair of common activities
@@ -140,6 +143,8 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
     :type interactions: list
     :param base_lanes: The set of Super Lanes with only the corresponding common and interaction elements
     :type base_lanes: list of type SuperLanes
+    :param current_lane: The lane to which the patterns are applied
+    :type current_lane: int
     :param print_results: Whether or not the print commands should be executed
     :type print_results: bool
     :param allow_nested_structures: Whether the choice structures are allowed to be nested
@@ -166,21 +171,21 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
     frequencies = []
     is_optional = False
     empty_frequency = 0
-
+    
     for elements in interval_subprocesses:
         position = start_index
         choice = []
         current_mappings = dict()
-
+        contains_interaction = False
         for i in range(len(elements[1])):
-
+            
             if(isinstance(elements[1][i], SVD.InteractionConstruct)):
                 is_interacting_activity, interaction_point = IED.is_interaction_point(interactions[elements[0]], base_lanes[elements[0]].lane_id, elements[1][i].position)
                 current_mappings[(elements[0], str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))] = start_index + i
-
-                choice.append(SVD.InteractionConstruct(elements[1][i].activity, elements[1][i].frequency, IED.BasePosition(0, position), position))
+                contains_interaction = True
+                choice.append(SVD.InteractionConstruct(elements[1][i].activity, elements[1][i].frequency, IED.BasePosition(current_lane, position), position))
             else:
-                choice.append(SVD.CommonConstruct(elements[1][i].activity, elements[1][i].frequency, IED.BasePosition(0, position), position))
+                choice.append(SVD.CommonConstruct(elements[1][i].activity, elements[1][i].frequency, IED.BasePosition(current_lane, position), position))
 
             position += 1
 
@@ -191,7 +196,8 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
         else:
             duplicate = False
             for i in range(len(choices)):
-                equal = True
+
+                equal = (not contains_interaction) or (elements[0] in choices[i][3])
                 if(len(choices[i][0]) == len(choice)):
                     for j in range(len(choices[i][0])):
                         equal = equal and ((type(choices[i][0][j]) == type(choice[j])) and (choices[i][0][j].activity == choice[j].activity))
@@ -205,10 +211,16 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
                     duplicate = True
                     cardinality = "n"
                     frequencies[i] += 1
-                    choices[i] = (choices[i][0], cardinality, frequencies[i])
+                    corresponding_lanes = choices[i][3]
+                    corresponding_lanes.add(elements[0])
 
-                    for key in current_mappings.keys():
-                        new_mapping[key] = IED.RecursiveLanePosition(0, IED.BasePosition(i, current_mappings[key]))
+                    choices[i] = (choices[i][0], cardinality, frequencies[i], corresponding_lanes)
+
+                    #for key in current_mappings.keys():
+                        #if not key in new_mapping:
+                        #    new_mapping[key] = [IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_index, current_mappings[key]))]
+                        #else:
+                        #    new_mapping[key].append(IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_index, current_mappings[key])))
                     break
 
             if(not duplicate):
@@ -216,21 +228,57 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
                 current_index = len(choices)
                 for elem in choice:
                     horizontal_position = elem.position.get_base_index()
-                    elem.position = IED.RecursiveLanePosition(0, IED.BasePosition(current_index, horizontal_position))
+                    elem.position = IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_index, horizontal_position))
                     end_index = max(end_index, horizontal_position)
-                choices.append(tuple((choice, "1", 1)))
+                choices.append(tuple((choice, "1", 1, set([elements[0]]))))
                 for key in current_mappings.keys():
-                    new_mapping[key] = IED.RecursiveLanePosition(0, IED.BasePosition(current_index, current_mappings[key]))
-
+                    if not key in new_mapping:
+                        new_mapping[key] = [IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_index, current_mappings[key]))]
+                    else:
+                        new_mapping[key].append(IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_index, current_mappings[key])))
 
 
     for i in range(len(choices)):
         for elem in choices[i][0]:
             elem.frequency = choices[i][2] / len(interval_subprocesses)
-        choices[i] = SVD.SuperLane(i, "option " + str(i), base_lanes[0].object_type, choices[i][0], choices[i][1], choices[i][2])
+        choices[i] = SVD.SuperLane(i, "Option " + str(i), base_lanes[0].object_type, choices[i][0], choices[i][1], choices[i][2])
 
 
-    # TODO Apply recursive summarizations with only 1 nested level and height 1 (number of choices)
+    # Find optimal matching between the options if their distance is a maximum of 2
+    #allow_nested_structures = False
+    #if(allow_nested_structures):
+
+        #distances = dict()
+
+        #for i in range(len(choices)-1):
+            #for j in range(i+1, len(choices)):
+
+                #base_lane_i = copy.deepcopy(choices[i]).remove_non_common_elements()
+                #lane_i = (i, base_lane_i, len(base_lane_i.elements))
+                #base_lane_j = copy.deepcopy(choices[j]).remove_non_common_elements()
+                #lane_j = (j, base_lane_j, len(base_lane_j.elements))
+                #longest_common_sequence, length, number_of_interactions =  __get_longest_common_subsequence([lane_i, lane_j])
+
+                #if(length > (len(base_lane_i.elements) + len(base_lane_j.elements))/2 * 0.3):
+                    #distances[(i,j)] = length
+
+        
+        #if(len(distances) > 0):
+            #matching = find_best_matching(choices, distances)
+            
+            #nested_choices = []
+            #already_added = []
+            #for i in range(len(choices)):
+                #if (not any([(i in pair) for pair in matching])):
+                    #nested_choices.append(choices[i])
+                    #already_added.append(i)
+                #elif(i not in already_added):
+                    #for match in matching:
+                        #if(i in match):
+                            #nested_choice = __inter_lane_summarization([choices[match[0]], choices[match[1]]], interactions, print_results, offset = 0, allow_nested_structures = True):
+                            #already_added.append(match[0])
+                            #already_added.append(match[1])
+
    
     # Applying Optional Pattern
     if(is_optional):
@@ -262,6 +310,48 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
             
     return returned_elements, end_index - start_index + 1, new_mapping
 
+
+def find_best_matching(nodes, arc):
+    '''
+    Computes an optimal matching in a graph with the given limited arcs and nodes.
+    that interaction points between multiple lanes have the same horizontal index
+    :param nodes: The set of nodes
+    :type nodes: list
+    :param distances: The arcs of the matching
+    :type distances: dict
+    :return: The list of node pairs that have been matched
+    :rtype: list
+    '''
+    import gurobipy
+    model = gurobipy.Model("limitedMatching")
+    
+    x = {}
+    for key in arc.keys():
+        x[key] = model.addVar(name="x_%s, %s" % (key[0],key[1]), vtype = gurobipy.GRB.BINARY)
+
+    model.update()
+
+    for i in range(len(nodes)):
+        i_keys = []
+        for key in x.keys():
+            if(i in key):
+                i_keys.append(key)
+
+        model.addConstr(sum(x[key] for key in i_keys) <= 1)
+    
+    model.setObjective(sum(x[key] for key in x.keys()))
+    model.modelSense = gurobipy.GRB.MAXIMIZE
+    model.optimize()
+    
+    print('\n Objective value: %g\n' % model.ObjVal)
+    print('\n Variable values: \n')
+    solution = []
+    for key in arc.keys():
+        print(str(key) + ": " + str(x[key].X))
+        if(x[key].X == 1.0):
+            solution.append(key)
+    print("-----------------------------")
+    return solution
 
 
 def __get_longest_common_subsequence(lanes):
@@ -334,11 +424,18 @@ def __merge_interactions(merged_interactions):
 def __merge_interaction_mappings(mappings):
     '''
     Pre-processes the mappings from the summarization for later alignment by merging the mappings for each Super Lane.
-    :param mappings: The mappings of original interaction points to new indices in the summarized lanes
-    :type mappings: dict
+    :param mappings: The mappings of original interaction points to new indices in the summarized lanes for each lane in the Super Variant
+    :type mappings: list 
     :return: Each interaction point of the final Super Lanes and their current positions in the involved lanes
     :rtype: dict
     '''
+    #print("IN MERGE INTERACTION MAPPINGS")
+    #for mapping in mappings:
+        #for map in mapping[1].items():
+            #print(map[0])
+            #for position in map[1]:
+                #print(position)
+            #print("----")
     merged_mappings = {}
     # merge the individual dictionaries for all lanes
     for i in range(len(mappings)):
@@ -352,7 +449,44 @@ def __merge_interaction_mappings(mappings):
             if(len(positions.keys()) > 1 and key not in merged_mappings.keys()):
                 merged_mappings[key] = positions
     
+    #for mapping in merged_mappings.items():
+        #print(mapping[0])
+        #for id in mapping[1].keys():
+            #print(id)
+            #for position in mapping[1][id]:
+                #print(position)
+            #print("----")
+        #print("--------")
     return merged_mappings
+
+def split_interaction_mappings(mappings):
+    import itertools
+    new_mappings = dict()
+    #print("IN SPLIT INTERACTION MAPPINGS")
+    #for mapping in mappings.items():
+        #print(mapping[0])
+        #for id in mapping[1].keys():
+            #print(id)
+            #for position in mapping[1][id]:
+                #print(position)
+           # print("----")
+        #print("-----")
+    for interaction in mappings.keys():
+        positions = []
+        for id in mappings[interaction].keys():
+            id_positions = []
+            for position in mappings[interaction][id]:
+                id_positions.append((id, position))
+            positions.append(id_positions)
+        
+        combinations = list(itertools.product(*positions))
+        for i in range(len(combinations)):
+            new_positions = dict()
+            for item in combinations[i]:
+                new_positions[item[0]] = item[1]
+            new_mappings[(interaction[0], str(interaction[1]) + " " + str(i))] = new_positions
+
+    return new_mappings
 
 
 def __re_align_lanes(lanes, mappings, print_result):
@@ -370,12 +504,14 @@ def __re_align_lanes(lanes, mappings, print_result):
     # Initialize variables and return values
     import copy
     import math
-    updated_mappings, aligned_lanes = split_interactions(copy.deepcopy(mappings), copy.deepcopy(lanes))
-    #updated_mappings, aligned_lanes = copy.deepcopy(mappings), copy.deepcopy(lanes)
+    #updated_mappings, aligned_lanes = create_duplicate_interactions(copy.deepcopy(mappings), copy.deepcopy(lanes))
+    
+    split_mappings = split_interaction_mappings(copy.deepcopy(mappings))
+    updated_mappings, aligned_lanes = copy.deepcopy(split_mappings), copy.deepcopy(lanes)
     updated_interaction_points = []
-
     # Align the lanes such that the interaction points have the same horizontal index
-    for i in range(len(mappings.keys())):
+    for i in range(len(split_mappings.keys())):
+        #print(mappings[list(mappings.keys())[i]])
         earliest_interaction_point = min(updated_mappings.items(), key=lambda x: min([position.get_base_index() for position in x[1].values()]))
         lanes = [lane for lane in aligned_lanes if lane.lane_id in list(earliest_interaction_point[1].keys())]
 
@@ -453,7 +589,7 @@ def __re_align_lanes(lanes, mappings, print_result):
 
 
 # TODO refine
-def split_interactions(mappings, lanes):
+def create_duplicate_interaction(mappings, lanes):
 
     import copy
     new_mappings = copy.deepcopy(mappings)
@@ -488,48 +624,70 @@ def split_interactions(mappings, lanes):
 
     # For each set of interaction points sharing the same positions in one lane, but not in another lane, split the element at the shared position such that every interaction point can be aligned with one copy
     for duplicate in duplicates:
-        print(duplicate)
 
-    return mappings, lanes
-        #empty_frequency = len(duplicate[0]) - 1
-        #earliest_interaction_point = min(duplicate[0].items(), key=lambda x: min([position[1] for position in x[1].values()]))
-        #del duplicate[0][earliest_interaction_point[0]]
-  
-        #for lane in lanes:
-            #if (lane.lane_id == duplicate[1]):
-                #positions = earliest_interaction_point[1][duplicate[1]]
-                #new_lane, new_element = copy.deepcopy(lane).make_optional(positions[1], empty_frequency, positions[0])
-                #new_mappings[earliest_interaction_point[0]] = earliest_interaction_point[1]
-                #break
-        
-        #for i in range(len(list(duplicate[0].keys()))):
-            #current_interaction_point = min(duplicate[0].items(), key=lambda x: list(list(x[1].values())[1]))
-            #del duplicate[0][current_interaction_point[0]]
-            #lower_bound = new_element.position_start
+        # Determine the element that requires duplication and create a modified copy of the lane with that element being optional
+        earliest_interaction_point = min(duplicate[0].items(), key=lambda x: min([position.get_base_index() for position in x[1].values()]))
+        del duplicate[0][earliest_interaction_point[0]]
+        for lane in lanes:
+            if (lane.lane_id == duplicate[1]):
+                position = earliest_interaction_point[1][duplicate[1]]
+                original_element = lane.get_element(position)
+                empty_frequency = original_element.frequency - (original_element.frequency / (len(duplicate[0]) + 1))
+                new_lane, new_element = copy.deepcopy(lane).make_optional(position, empty_frequency)
+                new_mappings[earliest_interaction_point[0]] = earliest_interaction_point[1]
+                break
+ 
+        # Create a duplicate of the element for each other interaction and find a suitable position
+        for i in range(len(duplicate[0])):
 
-            # Problem: Must also consider if it is an entirely different lane 
-            #for key in mappings.keys():
-                #if(key != earliest_interaction_point[0] and key != current_interaction_point[0]):
-                    #if(duplicate[1] in mappings[key].keys() and mappings[key][duplicate[1]][1] > lower_bound):
-                        #print(mappings[key])
+            current_interaction_point = min(duplicate[0].items(), key=lambda x: min([position.get_base_index() for position in x[1].values()]))
+            del duplicate[0][current_interaction_point[0]]
 
-                        #for key2 in mappings[key].keys():
-                            #if(key2 != duplicate[1] and key2 in current_interaction_point[1].keys()):
-                                #if(mappings[key][key2][1] < current_interaction_point[1][key2][1]):
+            # Default position is directly with the original element
+            suitable_position = copy.deepcopy(new_element).position_end.apply_shift(1)
+            watchlist = list(current_interaction_point[1].keys())
+            observed_interactions = dict()
+
+            # For every other interaction in that lane, check whether its position is after the lower_bound 
+            for key in mappings.keys():
+                if(key != earliest_interaction_point[0] and key != current_interaction_point[0]):
+                    if(duplicate[1] in mappings[key].keys() and new_lane.greater_than(suitable_position, mappings[key][duplicate[1]])):
+
+                        #observed_interactions[key] = 
+
+                        # For the counterparts of such an interaction position in the relevant lanes, check whether they are happening before or after the current investigated interaction
+                        for lane_id in mappings[key].keys():
+                            if(lane_id != duplicate[1] and lane_id in watchlist):
+                                
+                                if(lane_id in [lane.lane_id for lane in new_lanes]):
+                                    current_lane = [lane.lane_id for lane in new_lanes if lane.lane_id == lane_id][0]
+                                else:
+                                    current_lane = [lane.lane_id for lane in lanes if lane.lane_id == lane_id][0]
+
+                                changes_position = current_lane.greater_than(earliest_interaction_point[1][lane_id], mappings[key][lane_id])
+
+                                if(not changes_position):
+                                    watchlist = [id for id in watchlist if id != lane_id]
+
+                                else:
+                                    print("Update suitable position")
+                                    #TODO
+                                    #if(mappings[key][key2][1] < current_interaction_point[1][key2][1]):
                                     #lower_bound = max(mappings[key][duplicate[1]][1] + 1, lower_bound)
 
             # Update all mappings due to the shift of element positions
-            #new_position_mapping = (positions[0], lower_bound + 1)
-            #new_mappings[current_interaction_point[0]] = current_interaction_point[1]
-            #new_mappings[current_interaction_point[0]][duplicate[1]] = new_position_mapping
-            #new_lane = new_lane.add_optional_activity(lower_bound + 1, copy.deepcopy(new_element), current_interaction_point[1][duplicate[1]][0])
+            new_mappings[current_interaction_point[0]] = current_interaction_point[1]
+            new_mappings[current_interaction_point[0]][duplicate[1]] = suitable_position
+            new_lane = new_lane.add_optional_activity(suitable_position, copy.deepcopy(new_element))
+            
+            #TODO update mappings
             #for key in new_mappings.keys():
                 #if(key != earliest_interaction_point[0] and key != current_interaction_point[0]):
                     #if(duplicate[1] in mappings[key].keys() and mappings[key][duplicate[1]][1] > lower_bound):
                         #old_position = new_mappings[key][duplicate[1]]
                         #new_mappings[key][duplicate[1]] = (old_position[0], old_position[1]+1)
                         
-        #new_lanes.append(new_lane)
+        new_lanes.append(new_lane)
         
 
     # Append the remaining lanes that required no modification
@@ -538,4 +696,5 @@ def split_interactions(mappings, lanes):
             new_lanes.append(lane)
 
     return new_mappings, new_lanes
+
 

@@ -174,6 +174,7 @@ class BasePosition(LanePosition):
         return 1
 
 
+
 class ExtractedVariant:
     '''The data structure of a variant with extracted lanes'''
     object_types  = {}
