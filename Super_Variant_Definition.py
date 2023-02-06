@@ -216,6 +216,45 @@ class SuperLane:
         result_string = result_string[:-1]
         return result_string + "]"
 
+    def get_length(self):
+        '''
+        Cmputes the length of the Super Lane.
+        :param self: The summarizing Super Lane
+        :type self: SuperLane
+        :return: The horizontal length of the Super Lane
+        :rtype: int
+        '''
+        length = 0
+        for element in self.elements:
+            if (isinstance(element, CommonConstruct)):
+                length += 1
+            else:
+                length += (element.index_end - element.index_start) + 1
+        return length
+
+    def get_interaction_points(self, interactions):
+        '''
+        Returns all interaction points in the lane in order of traversal.
+        :param self: The summarizing Super Lane
+        :type self: SuperLane
+        param interactions: The list of interactions of the corresponding Super Variant
+        :type interactions: list of type InteractionPoint
+        :return: The list of found interaction points
+        :rtype: list of type InteractionPoint
+        '''
+        result = []
+
+        for elem in self.elements:
+            if(type(elem) == InteractionConstruct):
+                is_interacting_point, interaction_point = IED.is_interaction_point(interactions, self, elem.position)
+                result.append(interaction_point)
+
+            elif(type(elem) == ChoiceConstruct or type(elem) == OptionalConstruct):
+                for choice in elem.choices:
+                    result.extend(choice.get_interaction_points(interactions))
+        return result
+
+
 
     def encode_lexicographically(self, depth, just_elements = False):
         '''
@@ -432,6 +471,58 @@ class SuperLane:
                 index += end_index - index + 1
             
         return SuperLane(0, "normalization", self.object_type, elements, self.cardinality, self.frequency)
+
+
+    def normalize_option(self, offset = 0):
+        '''
+        Creates an abstraction of a Super Lane that is an option in a choice with normalized positions as well as a mapping from interaction points to their new positions.
+        :param self: The summarizing Super Lane
+        :type self: SuperLane
+        :param offset: The starting index of the normalized Super Lane, defaulted at 0
+        :type offset: int
+        :return: The corresponding normalized Super Lane and the mapping
+        :rtype: SuperLane, dict
+        '''
+        import copy 
+        elements = copy.deepcopy(self.elements)
+        positions_mappings = dict()
+        index = offset
+        for element in elements:
+            if(type(element) == CommonConstruct or type(element) == InteractionConstruct):
+                position_before = element.position
+                index_before = element.index
+                element.index = index
+                element.position.apply_shift(index - index_before)
+                index += 1
+
+                if(type(element) == InteractionConstruct):
+                    positions_mappings[str(position_before)] = element.position
+
+            elif(type(element) == ChoiceConstruct or type(element) == OptionalConstruct):
+                normalized_options = []
+                end_index = index
+
+                for option in element.choices:
+                    normalization, mapping = option.normalize_option(index)
+                    normalized_options.append(normalization)
+
+                    for key in mapping.keys():
+                        positions_mappings[key] = mapping[key]
+
+                    if(isinstance(normalized_options[-1].elements[-1], CommonConstruct)):
+                        end_index = max(end_index, normalized_options[-1].elements[-1].index)
+                    elif(isinstance(normalized_options[-1].elements[-1], GeneralChoiceStructure)):
+                        end_index = max(end_index, normalized_options[-1].elements[-1].index_end)
+
+                index_start_before = element.index_start
+                index_end_before = element.index_start
+                element.index_start = index
+                element.index_end = end_index
+                element.position.apply_shift(index - index_start_before)
+                element.position.apply_shift(end_index - index_end_before)
+                index += end_index - index + 1
+            
+        return SuperLane(self.lane_id, self.lane_name, self.object_type, elements, self.cardinality, self.frequency), positions_mappings
 
 
     def get_realizations_normalized(self):

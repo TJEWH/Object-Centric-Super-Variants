@@ -198,7 +198,7 @@ def join_super_lanes(summarization1, summarization2, lane1, lane2, print_result 
     else:
         cardinality = "1..n"
 
-    elements, mappings =  ILS.__inter_lane_summarization([lane1, lane2], [summarization1.interaction_points, summarization2.interaction_points], print_result)
+    elements, mappings =  ILS.__nested_inter_lane_summarization([lane1, lane2], [summarization1.interaction_points, summarization2.interaction_points], print_result)
     return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality, frequency), mappings
 
 
