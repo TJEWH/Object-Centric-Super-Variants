@@ -2,6 +2,8 @@ import Super_Variant_Definition as SVD
 import Input_Extraction_Definition as IED
 import Inter_Variant_Summarization as IEVS
 
+MAXIMAL_DEPTH = 2
+
 def __nested_inter_lane_summarization(lanes, interactions, print_results, current_lane = 0, offset = 0):
     '''
     Performs the summarization of the given Super Lanes using the set of defined patterns that allows nested_structures.
@@ -18,6 +20,14 @@ def __nested_inter_lane_summarization(lanes, interactions, print_results, curren
     :return: The summarizing elements, a mapping from original interaction positions to the new positions
     :rtype: list of type SummarizationElement, dict
     '''
+
+    depth = 0
+    for lane in lanes:
+        depth = max(depth, lane.get_depth())
+
+    #if (depth >= 2):
+        #return __inter_lane_summarization(lanes, interactions, print_results, current_lane, offset)
+
     elements = []
     new_interaction_points_mapping = {}
     current_horizontal_index = offset
@@ -96,7 +106,10 @@ def __nested_inter_lane_summarization(lanes, interactions, print_results, curren
                 interaction_points.append(interaction_point)
 
             for i in range(len(interaction_points)):
-                new_interaction_points_mapping[(i, str([str(position) for position in interaction_points[i].exact_positions]), str(interaction_points[i].interaction_lanes))] = [IED.BasePosition(current_lane, current_horizontal_index)]
+                if((i, str([str(position) for position in interaction_points[i].exact_positions]), str(interaction_points[i].interaction_lanes)) in new_interaction_points_mapping.keys()):
+                    new_interaction_points_mapping[(i, str([str(position) for position in interaction_points[i].exact_positions]), str(interaction_points[i].interaction_lanes))].append(IED.BasePosition(current_lane, current_horizontal_index))
+                else:
+                    new_interaction_points_mapping[(i, str([str(position) for position in interaction_points[i].exact_positions]), str(interaction_points[i].interaction_lanes))] = [IED.BasePosition(current_lane, current_horizontal_index)]
 
             elements.append(SVD.InteractionConstruct(common_element[0], element_frequency, IED.BasePosition(current_lane, current_horizontal_index), current_horizontal_index))
 
@@ -114,7 +127,7 @@ def __nested_inter_lane_summarization(lanes, interactions, print_results, curren
     interval_subprocesses = []
     for j in range(len(all_lanes)):
         index = all_lanes[j][0]
-        
+
         if(isinstance(all_lanes[j][1].elements[-1], SVD.CommonConstruct)):
             current_position = all_lanes[j][1].elements[-1].index + 1
         else:
@@ -139,6 +152,7 @@ def __nested_inter_lane_summarization(lanes, interactions, print_results, curren
     new_interaction_points_mapping.update(interval_mapping)
     current_horizontal_index += interval_length
 
+    print(len(new_interaction_points_mapping.keys()))
     return elements, new_interaction_points_mapping
 
 
@@ -181,28 +195,38 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
     for elements in interval_subprocesses:
         position = start_index
         choice = []
+
+        #if(len(elements[1]) == 1 and isinstance(elements[1][0], SVD.GeneralChoiceStructure)):
+
         for i in range(len(elements[1])):
             
             if(isinstance(elements[1][i], SVD.InteractionConstruct) or isinstance(elements[1][i], SVD.GeneralChoiceStructure)):
                 if(isinstance(elements[1][i], SVD.InteractionConstruct)):
                     is_interacting_activity, interaction_point = IED.is_interaction_point(interactions[elements[0]], base_lanes[elements[0]].lane_id, elements[1][i].position)
-                    new_mapping[(elements[0], str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))] = [IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position))]
+                    if((elements[0], str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes)) in new_mapping.keys()):
+                        new_mapping[(elements[0], str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))].append(IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)))
+                    else:
+                        new_mapping[(elements[0], str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))] = [IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position))]
                     choice.append(SVD.InteractionConstruct(elements[1][i].activity, 1 / len(interval_subprocesses), IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)), position))
                     length = 1
                 else:
                     new_choices = []
                     length = 1
                     option_id = 0
-
+                    
                     for option in elements[1][i].choices:
-                        interaction_points = option.get_interaction_points(interactions[elements[0]])
-                        normalized_lane, positions_mapping = copy.deepcopy(option).normalize_option(position)
 
+                        interaction_points = option.get_interaction_points(interactions[elements[0]], base_lanes[elements[0]].lane_id)
+                        normalized_lane, positions_mapping = copy.deepcopy(option).normalize_option(current_lane, option_id, position)
+                        
                         for interaction_point in interaction_points:
                             for j in range(len(interaction_point.interaction_lanes)):
-                                if(interaction_point.interaction_lanes[j] == elements[0]):
-                                    new_position = positions_mapping[str(interaction_point.exact_positions[j])].position
-                                    new_mapping[(elements[0], str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))] = IED.RecursiveLanePosition(current_lane, IED.RecursiveLanePosition(option_id, new_position))
+                                if(interaction_point.interaction_lanes[j] == base_lanes[elements[0]].lane_id):
+                                    new_position = positions_mapping[str(interaction_point.exact_positions[j])]
+                                    if((elements[0], str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes)) in new_mapping.keys()):
+                                        new_mapping[(elements[0], str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))].append(new_position)
+                                    else:
+                                        new_mapping[(elements[0], str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))] = [new_position]
                                     break
 
                         length = max(length, normalized_lane.get_length())
@@ -210,11 +234,9 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
                         option_id += 1
 
                     if(isinstance(elements[1][i], SVD.OptionalConstruct)):
-                        # is_optional = True 
-                        # If only one option, then don't
-                        choice.append(SVD.OptionalConstruct(new_choices, IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)), IED.BasePosition(current_choice, position + length - 1), position, position + length - 1, elements[1][i].empty_frequency))
+                        choice.append(SVD.OptionalConstruct(new_choices, IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)), IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position + length - 1)), position, position + length - 1, elements[1][i].empty_frequency))
                     else:
-                        choice.append(SVD.ChoiceConstruct(new_choices, IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)), IED.BasePosition(current_choice, position + length - 1), position, position + length - 1))
+                        choice.append(SVD.ChoiceConstruct(new_choices, IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)), IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position + length - 1)), position, position + length - 1))
                     
             else:
                 choice.append(SVD.CommonConstruct(elements[1][i].activity, 1 / len(interval_subprocesses), IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)), position))
@@ -228,10 +250,10 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
 
         else:
             choices.append(SVD.SuperLane(i, "Option " + str(i), base_lanes[0].object_type, choice, "1", 1))
+            current_choice += 1
         
         end_index = max(end_index, position - 1)
 
-        current_choice += 1
    
     # Applying Optional Pattern
     if(is_optional):
@@ -500,42 +522,6 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
             elem.frequency = choices[i][2] / len(interval_subprocesses)
         choices[i] = SVD.SuperLane(i, "Option " + str(i), base_lanes[0].object_type, choices[i][0], choices[i][1], choices[i][2])
 
-
-    # Find optimal matching between the options if their distance is a maximum of 2
-    #allow_nested_structures = False
-    #if(allow_nested_structures):
-
-        #distances = dict()
-
-        #for i in range(len(choices)-1):
-            #for j in range(i+1, len(choices)):
-
-                #base_lane_i = copy.deepcopy(choices[i]).remove_non_common_elements()
-                #lane_i = (i, base_lane_i, len(base_lane_i.elements))
-                #base_lane_j = copy.deepcopy(choices[j]).remove_non_common_elements()
-                #lane_j = (j, base_lane_j, len(base_lane_j.elements))
-                #longest_common_sequence, length, number_of_interactions =  __get_longest_common_subsequence([lane_i, lane_j])
-
-                #if(length > (len(base_lane_i.elements) + len(base_lane_j.elements))/2 * 0.3):
-                    #distances[(i,j)] = length
-
-        
-        #if(len(distances) > 0):
-            #matching = find_best_matching(choices, distances)
-            
-            #nested_choices = []
-            #already_added = []
-            #for i in range(len(choices)):
-                #if (not any([(i in pair) for pair in matching])):
-                    #nested_choices.append(choices[i])
-                    #already_added.append(i)
-                #elif(i not in already_added):
-                    #for match in matching:
-                        #if(i in match):
-                            #nested_choice = __inter_lane_summarization([choices[match[0]], choices[match[1]]], interactions, print_results, offset = 0, allow_nested_structures = True):
-                            #already_added.append(match[0])
-                            #already_added.append(match[1])
-
    
     # Applying Optional Pattern
     if(is_optional):
@@ -743,6 +729,8 @@ def __re_align_lanes(lanes, mappings, print_result):
     split_mappings = split_interaction_mappings(copy.deepcopy(mappings))
     updated_mappings, aligned_lanes = copy.deepcopy(split_mappings), copy.deepcopy(lanes)
     updated_interaction_points = []
+
+    print(len(mappings.keys()))
 
     # Align the lanes such that the interaction points have the same horizontal index
     for i in range(len(split_mappings.keys())):

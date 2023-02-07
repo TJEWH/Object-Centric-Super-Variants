@@ -20,7 +20,10 @@ def visualize_super_variant(super_variant, suppression_char = "*"):
      
     else:
         fig, ax = plt.subplots()
-        ax = arrange_super_variant(super_variant, ax, 0, 0, suppression_char)
+        ax, width, height = arrange_super_variant(super_variant, ax, 0, 0, suppression_char)
+        ax.set_aspect('equal')
+        ax.set_xlim(-15, width + 2)
+        ax.set_ylim(-2, height + 2)
         plt.axis('off')
         plt.show()
 
@@ -38,7 +41,10 @@ def visualize_variant(variant):
     else:
         super_variant = variant.to_super_variant()
         fig, ax = plt.subplots()
-        ax = arrange_super_variant(super_variant, ax, 0, 0, "")
+        ax, width, height =  arrange_super_variant(super_variant, ax, 0, 0, "")
+        ax.set_aspect('equal')
+        ax.set_xlim(-15, width + 2)
+        ax.set_ylim(-2, height + 2)
         plt.axis('off')
         plt.show()
 
@@ -56,8 +62,8 @@ def arrange_super_variant(super_variant, ax, vertical_start_position, horizontal
     :type horizontal_start_position: float
     :param suppression_char: The character used to suppress cardinalities greater 1
     :type suppression_char: str
-    :return: The visualization region with the added Super Variant visualization elements
-    :rtype: axes
+    :return: The visualization region with the added Super Variant visualization elements as well as its width and height
+    :rtype: axes, float, float
     '''
     import copy
     all_colors = [(1,0.71,0.44), (0.56,0.81,0.56), (0.38,0.57,0.8), (1,0.87,143), (0.56,0.89,0.97)]
@@ -114,10 +120,10 @@ def arrange_super_variant(super_variant, ax, vertical_start_position, horizontal
     
 
     ax.text(-13 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.7, "Frequency: " + str(round(super_variant.frequency, 3)), zorder = 10)
-    ax.set_aspect('equal')
-    ax.set_xlim(-15 + horizontal_start_position, (maximal_lane_length + 1) * DEFAULT_CHEVRON_LENGTH + 2)
-    ax.set_ylim(-2 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 2)
-    return ax
+
+    width = (maximal_lane_length + 1) * DEFAULT_CHEVRON_LENGTH - horizontal_start_position
+    height = current_vertical_position * DEFAULT_CHEVRON_HEIGHT - vertical_start_position
+    return ax, width, height
 
 def __visualize_lane_elements(ax, lane, elements, lane_properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length = DEFAULT_CHEVRON_LENGTH, chevron_height = DEFAULT_CHEVRON_HEIGHT, offset = 0, frequency = False, fontsize = 9, original_lane = None, original_lane_properties = None):
     '''
@@ -378,7 +384,7 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
     
     height_factor = (lane_properties[lane]["Height"] / accumulated_height)
 
-    sub_default_chevron_length = ((((element.index_end - element.index_start) + 1) * chevron_length) - 2.5) / ((element.index_end - element.index_start) + 1)
+    sub_default_chevron_length = ((((element.index_end - element.index_start) + 1) * chevron_length) - 2) / ((element.index_end - element.index_start) + 1)
     sub_default_chevron_length -= margin_length / ((element.index_end - element.index_start) + 1)
 
     sub_default_chevron_height = chevron_height * height_factor
@@ -397,9 +403,9 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
                 line_offset = (vertical_position - current_vertical_position * chevron_height)/vertical_half * 1.25
             else:
                 line_offset = 1.25 - (vertical_position - chevron_vertical_half)/vertical_half * 1.25
-            ax.add_patch(patches.PathPatch(__line_at_position(index * chevron_length + line_offset, vertical_position, (element.index_end - element.index_start) + 1), lw = 1.1, ls = overall_line_style, zorder = 15))
+            ax.add_patch(patches.PathPatch(__line_at_position(current_horizontal_position  + index * chevron_length + line_offset, vertical_position, ((element.index_end - element.index_start) + 1) * chevron_length / DEFAULT_CHEVRON_LENGTH), lw = 1.1, ls = overall_line_style, zorder = 15))
 
-        horizontal_start_position = current_horizontal_position + (index * chevron_length) + 1.25 + margin_length 
+        horizontal_start_position = current_horizontal_position + (index * chevron_length) + 1 + margin_length 
 
         ax = __visualize_lane_elements(ax, choice, element.choices[i].elements, choice_properties, interaction_points, ((vertical_position + margin_height) / sub_default_chevron_height), horizontal_start_position, chevron_length = sub_default_chevron_length, chevron_height = sub_default_chevron_height, offset = offset + index, frequency = True, fontsize = fontsize * ((sub_default_chevron_length - 2) / DEFAULT_CHEVRON_LENGTH) + 1, original_lane = original_lane, original_lane_properties = original_lane_properties)
         vertical_position += choice_properties[choice]["Height"] * chevron_height *height_factor

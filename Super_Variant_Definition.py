@@ -24,6 +24,18 @@ class SummarizedVariant:
             result_string += str(self.interaction_points[i]) + "\n"
         return result_string + "Frequency: " + str(self.frequency)
 
+    def get_depth(self):
+        '''
+        Determines the nested depth of the Super Variant.
+        :param self: The summarized variant
+        :type self: SummarizedVariant
+        :return: The number of nested structures in the Super Variant
+        :rtype: int
+        '''
+        depth = 0
+        for lane in self.lanes:
+            depth = max(depth, lane.get_depth())
+        return depth
 
     def rename_lane(self, lane_id, new_name):
         '''
@@ -232,13 +244,15 @@ class SuperLane:
                 length += (element.index_end - element.index_start) + 1
         return length
 
-    def get_interaction_points(self, interactions):
+    def get_interaction_points(self, interactions, lane_id):
         '''
         Returns all interaction points in the lane in order of traversal.
         :param self: The summarizing Super Lane
         :type self: SuperLane
         param interactions: The list of interactions of the corresponding Super Variant
         :type interactions: list of type InteractionPoint
+        param lane_id: The original lane_id of the high-level lane
+        :type lane_id: tuple
         :return: The list of found interaction points
         :rtype: list of type InteractionPoint
         '''
@@ -246,12 +260,12 @@ class SuperLane:
 
         for elem in self.elements:
             if(type(elem) == InteractionConstruct):
-                is_interacting_point, interaction_point = IED.is_interaction_point(interactions, self, elem.position)
+                is_interacting_point, interaction_point = IED.is_interaction_point(interactions, lane_id, elem.position)
                 result.append(interaction_point)
 
             elif(type(elem) == ChoiceConstruct or type(elem) == OptionalConstruct):
                 for choice in elem.choices:
-                    result.extend(choice.get_interaction_points(interactions))
+                    result.extend(choice.get_interaction_points(interactions, lane_id))
         return result
 
 
@@ -473,7 +487,7 @@ class SuperLane:
         return SuperLane(0, "normalization", self.object_type, elements, self.cardinality, self.frequency)
 
 
-    def normalize_option(self, offset = 0):
+    def normalize_option(self, lane_id, option_id, offset = 0):
         '''
         Creates an abstraction of a Super Lane that is an option in a choice with normalized positions as well as a mapping from interaction points to their new positions.
         :param self: The summarizing Super Lane
@@ -489,10 +503,16 @@ class SuperLane:
         index = offset
         for element in elements:
             if(type(element) == CommonConstruct or type(element) == InteractionConstruct):
-                position_before = element.position
+
+                position_before = copy.deepcopy(element.position)
                 index_before = element.index
                 element.index = index
+
                 element.position.apply_shift(index - index_before)
+                position_after_shift = element.position
+                #position_after_shift.lane_id = option_id
+                element.position = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.BasePosition(option_id, position_after_shift.position.position)))
+
                 index += 1
 
                 if(type(element) == InteractionConstruct):
@@ -503,7 +523,7 @@ class SuperLane:
                 end_index = index
 
                 for option in element.choices:
-                    normalization, mapping = option.normalize_option(index)
+                    normalization, mapping = option.normalize_option(lane_id, option_id, index)
                     normalized_options.append(normalization)
 
                     for key in mapping.keys():
@@ -518,8 +538,17 @@ class SuperLane:
                 index_end_before = element.index_start
                 element.index_start = index
                 element.index_end = end_index
-                element.position.apply_shift(index - index_start_before)
-                element.position.apply_shift(end_index - index_end_before)
+
+                element.position_start.apply_shift(index - index_start_before)
+                element.position_end.apply_shift(end_index - index_end_before)
+                position_start_after_shift = element.position_start
+                position_end_after_shift = element.position_end
+                #position_start_after_shift.lane_id = option_id
+                #position_end_after_shift.lane_id = option_id
+
+                element.position_start = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.BasePosition(option_id, position_start_after_shift.position.position)))
+                element.position_end = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.BasePosition(option_id, position_end_after_shift.position.position)))
+                
                 index += end_index - index + 1
             
         return SuperLane(self.lane_id, self.lane_name, self.object_type, elements, self.cardinality, self.frequency), positions_mappings
@@ -1038,6 +1067,21 @@ class SuperLane:
                         return True
         return False
 
+    def get_depth(self):
+        '''
+        Determines the nested depth of the Super Lane.
+        :param self: The summarizing Super Lane
+        :type self: SuperLane
+        :return: The number of nested structures in the Super Lane
+        :rtype: int
+        '''
+        depth = 0
+        for element in self.elements:
+            if(isinstance(element, GeneralChoiceStructure)):
+                for choice in element.choices:
+                    depth = max(depth, 1 + choice.get_depth())
+        return depth
+
 
 
 class OptionalSuperLane(SuperLane):
@@ -1076,7 +1120,7 @@ class CommonConstruct(SummarizationElement):
         self.index = index
         
     def __str__(self):
-        return f"(Pos {self.index}: {self.activity})"
+        return "(Pos " + str(self.position) + ": " + str(self.activity) + ")"
     
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -1103,7 +1147,7 @@ class CommonConstruct(SummarizationElement):
 class InteractionConstruct(CommonConstruct):
     
     def __str__(self):
-        return f"(Pos {self.index}: Interaction {self.activity})"
+        return "(Pos " + str(self.position) + ": Interaction " + str(self.activity) + ")"
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -1176,7 +1220,7 @@ class OptionalConstruct(GeneralChoiceStructure):
         self.empty_frequency = empty_frequency
     
     def __str__(self):
-        result_string = f"(Pos: {self.index_start} - {self.index_end}: Optional Choices "
+        result_string = f"(Pos: {self.position_start} - {self.position_end}: Optional Choices "
         result_string += "("
         for choice in self.choices:
             result_string += str(choice) + ", "
@@ -1187,7 +1231,7 @@ class ChoiceConstruct(GeneralChoiceStructure):
     '''The data structure of a choice of activities in a summarized variant'''
     
     def __str__(self):
-        result_string = f"(Pos: {self.index_start} - {self.index_end}: Choices "
+        result_string = f"(Pos: {self.position_start} - {self.position_end}: Choices "
         result_string += "("
         for choice in self.choices:
             result_string += str(choice) + ", "

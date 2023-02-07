@@ -3,13 +3,15 @@ import Inter_Lane_Summarization as ILS
 import Input_Extraction_Definition as IED
 
 
-def join_super_variants(super_variant1, super_variant2, print_result = True):
+def join_super_variants(super_variant1, super_variant2, allow_nested_structures = True, print_result = True):
     '''
     Determines the lanes of the two Super Variants are are to be merged and performs the summarization of the Super Variants.
     :param super_variant1: A Super Variant that is to be joined with another Super Variant
     :type super_variant1: SuperVariant
     :param super_variant2: The second Super Variant that is joined
     :type super_variant2: SuperVariant
+    :param allow_nested_structures: Whether the resulting Super Variant can contain nested structures
+    :type allow_nested_structures: bool
     :param print_result: Whether the results should be output in the console
     :type print_result: bool
     :return: The generalizing Super Variant
@@ -21,10 +23,10 @@ def join_super_variants(super_variant1, super_variant2, print_result = True):
     if(print_result):
         print("The estimated cost of joining these Super Variants is " + str(cost) + ".")
 
-    return inter_variant_summarization(super_variant1, super_variant2, mapping, print_result), cost
+    return inter_variant_summarization(super_variant1, super_variant2, mapping, allow_nested_structures, print_result), cost
     
 
-def inter_variant_summarization(summarization1, summarization2, mapping, print_result):
+def inter_variant_summarization(summarization1, summarization2, mapping, allow_nested_structures, print_result):
     '''
     Summarizes two Super Variants based on a given mapping of the corresponding Super Lanes and aligns the final Super Variant correctly.
     :param summarization1: The first Super Variant of the summarization
@@ -33,6 +35,8 @@ def inter_variant_summarization(summarization1, summarization2, mapping, print_r
     :type summarization2: SuperVariant
     :param mapping: The mapping from Super Lanes in Super Variant 1 to Super Lanes in Super Variant 2
     :type mapping: list
+    :param allow_nested_structures: Whether the resulting Super Variant can contain nested structures
+    :type allow_nested_structures: bool
     :param print_result: Whether the results should be output in the console
     :type print_result: bool
     :return: The summarization of the two Super Variants
@@ -68,7 +72,7 @@ def inter_variant_summarization(summarization1, summarization2, mapping, print_r
             lane1 = [lane for lane in summarization1.lanes if lane.lane_id == pair[0]][0]
             lane2 = [lane for lane in summarization2.lanes if lane.lane_id == pair[1]][0]
 
-            super_lane, mapping = join_super_lanes(summarization1, summarization2, lane1, lane2, print_result)
+            super_lane, mapping = join_super_lanes(summarization1, summarization2, lane1, lane2, allow_nested_structures, print_result)
             if(print_result):
                 print("The resulting Super Lane is the following: " + str(super_lane))
             intermediate_lanes.append(super_lane)
@@ -173,7 +177,7 @@ def new_super_lane(summarization, lane, first, start_index = 0):
 
 
 
-def join_super_lanes(summarization1, summarization2, lane1, lane2, print_result = True):
+def join_super_lanes(summarization1, summarization2, lane1, lane2, allow_nested_structures, print_result = True):
     '''
     Summarizes two lanes of two Super Variants.
     :param summarization1: The Super Variant corresponding to the first lane
@@ -184,6 +188,8 @@ def join_super_lanes(summarization1, summarization2, lane1, lane2, print_result 
     :type lane1: SuperLane
     :param lane2: The second Super Lane that should be summarized
     :type lane2: SuperLane
+    :param allow_nested_structures: Whether the resulting Super Variant can contain nested structures
+    :type allow_nested_structures: bool
     :param print_result: Whether the results should be output in the console
     :type print_result: bool
     :return: The summarization of the two Super Lanes
@@ -198,7 +204,10 @@ def join_super_lanes(summarization1, summarization2, lane1, lane2, print_result 
     else:
         cardinality = "1..n"
 
-    elements, mappings =  ILS.__nested_inter_lane_summarization([lane1, lane2], [summarization1.interaction_points, summarization2.interaction_points], print_result)
+    if(allow_nested_structures):
+        elements, mappings =  ILS.__nested_inter_lane_summarization([lane1, lane2], [summarization1.interaction_points, summarization2.interaction_points], print_result)
+    else:
+        elements, mappings =  ILS.__inter_lane_summarization([lane1, lane2], [summarization1.interaction_points, summarization2.interaction_points], print_result)
     return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality, frequency), mappings
 
 

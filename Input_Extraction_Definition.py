@@ -95,7 +95,7 @@ class RecursiveLanePosition(LanePosition):
         return type(self) == type(other) and (self.lane_id == other.lane_id) and (self.position == other.position)
 
     def __str__(self):
-        return "Position in lane " + str(self.lane_id) + " at " + str(self.position)
+        return "R(" + str(self.lane_id) + ", " + str(self.position) + ")"
 
     def get_base_index(self):
         ''' 
@@ -105,7 +105,7 @@ class RecursiveLanePosition(LanePosition):
         :return: The recursive result
         :rtype: int
         '''
-        return self.position.position
+        return self.position.get_base_index()
 
     def apply_shift(self, offset):
         ''' 
@@ -140,7 +140,7 @@ class BasePosition(LanePosition):
         return type(self) == type(other) and (self.lane_id == other.lane_id) and (self.position == other.position)
 
     def __str__(self):
-        return "Position in lane " + str(self.lane_id) + " at " + str(self.position)
+        return "B(" + str(self.lane_id) + ", " + str(self.position) + ")"
 
     def get_base_index(self):
         ''' 
@@ -274,7 +274,7 @@ def is_interaction_point(interactions, lane, position):
     :param interactions: The interaction points of the corresponding variant
     :type interaction: list of type InteractionPoint
     :param lane: The lane id
-    :type lane: int
+    :type lane: tuple
     :param position: The position index
     :type position: int
     :return: Whether the activity at the position is an interaction point, The corresponding interaction point

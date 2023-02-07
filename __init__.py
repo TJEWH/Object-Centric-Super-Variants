@@ -12,6 +12,7 @@ import Summarization_Selection as SS
 import Intra_Variant_Generation as IAVG
 import Inter_Variant_Summarization as IEVS
 import Inter_Variant_Generation as IEVG
+import Super_Variant_Hierarchy as SVH
 
 
 filename = "EventLogs/BPI2017-Top10.jsonocel"
@@ -34,41 +35,31 @@ summarizations = SS.intra_variant_summarization_selection(all_summarizations, pe
     #print("------")
 
 #super_variant_49, cost = IEVS.join_super_variants(summarizations[4], summarizations[5], False)
-super_variant_59, cost = IEVS.join_super_variants(summarizations[4], summarizations[5], False)
-super_variant_67, cost = IEVS.join_super_variants(summarizations[6], summarizations[7], False)
-super_variant, cost = IEVS.join_super_variants(super_variant_59, super_variant_67, False)
-print(super_variant)
+super_variant_59, cost = IEVS.join_super_variants(summarizations[4], summarizations[5], False, False)
+#super_variant_67, cost = IEVS.join_super_variants(summarizations[6], summarizations[7], False)
+super_variant_8, cost = IEVS.join_super_variants(super_variant_59, summarizations[7], False, False)
+super_variant, cost = IEVS.join_super_variants(super_variant_8, summarizations[6], True, False)
+#print(super_variant)
 
-'''
-for interaction in super_variant_59.interaction_points:
-    print("HALLLLLLLLLOOOOO")
+#SVV.visualize_super_variant(super_variant)
+# SVH.visualize_Super_Variant_layer([super_variant_59, super_variant])
+
+#'''
+for interaction in super_variant.interaction_points:
+
     for i in range(len(interaction.exact_positions)):
         print(interaction.interaction_lanes[i])
         print(interaction.exact_positions[i])
         print("----")
-    print("EEEEEEEEEEEEEND")
 
-for lane in super_variant_59.lanes:
-    for elem1 in lane.elements:
-        print(elem1)
-        if (isinstance(elem1, SVD.CommonConstruct)):
-            print(elem1.position)
-        else:
-            print(elem1.position_start)
-            print("-->")
-            for choice in elem1.choices:
-                for elem2 in choice.elements:
-                    print(elem2)
-                    print(elem2.position)
-            print("<--")
-        print("----")
-    print("--------------------------")
-'''
+for lane in super_variant.lanes:
+    print(lane)
+#'''
 #SVV.visualize_super_variant(summarizations[5])
 #SVV.visualize_super_variant(summarizations[7])
 #SVV.visualize_super_variant(summarizations[5])
 #super_variant_459, cost = IEVS.join_super_variants(super_variant_49, summarizations[4], False)
-SVV.visualize_super_variant(super_variant)
+#SVV.visualize_super_variant(super_variant)
 #SVV.visualize_super_variant(summarizations[9])
 #SVV.visualize_super_variant(super_variant)
 #hierarchy = IEVG.generate_super_variant_hierarchy_uniform(summarizations[0:7], 3)
