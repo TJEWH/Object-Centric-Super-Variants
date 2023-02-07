@@ -114,7 +114,12 @@ def __nested_inter_lane_summarization(lanes, interactions, print_results, curren
     interval_subprocesses = []
     for j in range(len(all_lanes)):
         index = all_lanes[j][0]
-        current_position = all_lanes[j][1].elements[-1].index + 1
+        
+        if(isinstance(all_lanes[j][1].elements[-1], SVD.CommonConstruct)):
+            current_position = all_lanes[j][1].elements[-1].index + 1
+        else:
+            current_position = all_lanes[j][1].elements[-1].index_end + 1
+
         if(current_position - last_positions[index] >= 0):
             subprocess = []
             for elem in all_lanes[j][1].elements:
@@ -190,15 +195,13 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
                     option_id = 0
 
                     for option in elements[1][i].choices:
-                        print(option)
                         interaction_points = option.get_interaction_points(interactions[elements[0]])
                         normalized_lane, positions_mapping = copy.deepcopy(option).normalize_option(position)
-                        print(normalized_lane)
 
                         for interaction_point in interaction_points:
                             for j in range(len(interaction_point.interaction_lanes)):
                                 if(interaction_point.interaction_lanes[j] == elements[0]):
-                                    new_position = positions_mapping[str(interaction_point.exact_positions[j])]#.position
+                                    new_position = positions_mapping[str(interaction_point.exact_positions[j])].position
                                     new_mapping[(elements[0], str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))] = IED.RecursiveLanePosition(current_lane, IED.RecursiveLanePosition(option_id, new_position))
                                     break
 
@@ -207,7 +210,8 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
                         option_id += 1
 
                     if(isinstance(elements[1][i], SVD.OptionalConstruct)):
-                        #is_optional = True 
+                        # is_optional = True 
+                        # If only one option, then don't
                         choice.append(SVD.OptionalConstruct(new_choices, IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)), IED.BasePosition(current_choice, position + length - 1), position, position + length - 1, elements[1][i].empty_frequency))
                     else:
                         choice.append(SVD.ChoiceConstruct(new_choices, IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)), IED.BasePosition(current_choice, position + length - 1), position, position + length - 1))

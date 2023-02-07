@@ -32,11 +32,12 @@ summarizations = SS.intra_variant_summarization_selection(all_summarizations, pe
     #for position in interaction.exact_positions:
         #print(position)
     #print("------")
-SVV.visualize_super_variant(summarizations[0])
-SVV.visualize_super_variant(summarizations[1])
+
 #super_variant_49, cost = IEVS.join_super_variants(summarizations[4], summarizations[5], False)
 super_variant_59, cost = IEVS.join_super_variants(summarizations[4], summarizations[5], False)
-super_variant, cost = IEVS.join_super_variants(super_variant_59, summarizations[9], True)
+super_variant_67, cost = IEVS.join_super_variants(summarizations[6], summarizations[7], False)
+super_variant, cost = IEVS.join_super_variants(super_variant_59, super_variant_67, False)
+print(super_variant)
 
 '''
 for interaction in super_variant_59.interaction_points:

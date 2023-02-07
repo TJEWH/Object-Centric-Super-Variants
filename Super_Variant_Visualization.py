@@ -351,8 +351,11 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
         margin_length = 0.3
 
     margin_height = chevron_height * 1/12
+    
+    offset = element.index_start - index
 
-    ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length, current_vertical_position * chevron_height, (element.index_end - element.index_start) + 1, lane_properties[lane]["Height"]  * DEFAULT_CHEVRON_HEIGHT), facecolor = "None", lw = 1.3, ls = overall_line_style, zorder = 5))
+    #print()
+    ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length, current_vertical_position * chevron_height, ((element.index_end - element.index_start) + 1) * chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height), facecolor = "None", lw = 1.3, ls = overall_line_style, zorder = 5))
     
     overall_line_style = "-"
 
@@ -386,6 +389,7 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
 
     vertical_position = (current_vertical_position * chevron_height)
     for i in range(len(element.choices)):
+
         choice = element.choices[i].lane_id
 
         if (vertical_position != current_vertical_position * chevron_height):
@@ -395,8 +399,9 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
                 line_offset = 1.25 - (vertical_position - chevron_vertical_half)/vertical_half * 1.25
             ax.add_patch(patches.PathPatch(__line_at_position(index * chevron_length + line_offset, vertical_position, (element.index_end - element.index_start) + 1), lw = 1.1, ls = overall_line_style, zorder = 15))
 
-        horizontal_start_position = (index * chevron_length) + 1.25 + margin_length 
-        ax = __visualize_lane_elements(ax, choice, element.choices[i].elements, choice_properties, interaction_points, ((vertical_position + margin_height) / sub_default_chevron_height), horizontal_start_position, chevron_length = sub_default_chevron_length, chevron_height = sub_default_chevron_height, offset = index, frequency = True, fontsize = fontsize * ((sub_default_chevron_length - 2) / DEFAULT_CHEVRON_LENGTH), original_lane = original_lane, original_lane_properties = original_lane_properties)
+        horizontal_start_position = current_horizontal_position + (index * chevron_length) + 1.25 + margin_length 
+
+        ax = __visualize_lane_elements(ax, choice, element.choices[i].elements, choice_properties, interaction_points, ((vertical_position + margin_height) / sub_default_chevron_height), horizontal_start_position, chevron_length = sub_default_chevron_length, chevron_height = sub_default_chevron_height, offset = offset + index, frequency = True, fontsize = fontsize * ((sub_default_chevron_length - 2) / DEFAULT_CHEVRON_LENGTH) + 1, original_lane = original_lane, original_lane_properties = original_lane_properties)
         vertical_position += choice_properties[choice]["Height"] * chevron_height *height_factor
 
     return ax  
