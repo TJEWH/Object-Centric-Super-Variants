@@ -356,11 +356,12 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
     else:
         margin_length = 0.3
 
+    print(element)
+    print(lane_properties[lane]["Height"])
     margin_height = chevron_height * 1/12
     
     offset = element.index_start - index
 
-    #print()
     ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length, current_vertical_position * chevron_height, ((element.index_end - element.index_start) + 1) * chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height), facecolor = "None", lw = 1.3, ls = overall_line_style, zorder = 5))
     
     overall_line_style = "-"

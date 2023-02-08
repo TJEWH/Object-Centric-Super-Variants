@@ -139,12 +139,12 @@ def new_super_lane(summarization, lane, first, start_index = 0):
             else:
                 elements.append(SVD.InteractionConstruct(activity, frequency, IED.BasePosition(0, current_horizontal_index), current_horizontal_index))
 
-                is_interacting_activity, current_interaction_point = IED.is_interaction_point(summarization.interaction_points, lane.lane_id, elem.position)
-
-                if(first):
-                    new_interaction_points_mapping[(1, str([str(position) for position in current_interaction_point.exact_positions]), str(current_interaction_point.interaction_lanes))] = IED.BasePosition(0, current_horizontal_index)
-                else:
-                    new_interaction_points_mapping[(2, str([str(position) for position in current_interaction_point.exact_positions]), str(current_interaction_point.interaction_lanes))] = IED.BasePosition(0, current_horizontal_index)
+                current_interaction_points = IED.get_interaction_point(summarization.interaction_points, lane.lane_id, elem.position)
+                for current_interaction_point in current_interaction_points:
+                    if(first):
+                        new_interaction_points_mapping[(1, str([str(position) for position in current_interaction_point.exact_positions]), str(current_interaction_point.interaction_lanes))] = IED.BasePosition(0, current_horizontal_index)
+                    else:
+                        new_interaction_points_mapping[(2, str([str(position) for position in current_interaction_point.exact_positions]), str(current_interaction_point.interaction_lanes))] = IED.BasePosition(0, current_horizontal_index)
 
             current_horizontal_index += 1
                 

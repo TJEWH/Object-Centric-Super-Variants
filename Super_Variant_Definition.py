@@ -260,8 +260,8 @@ class SuperLane:
 
         for elem in self.elements:
             if(type(elem) == InteractionConstruct):
-                is_interacting_point, interaction_point = IED.is_interaction_point(interactions, lane_id, elem.position)
-                result.append(interaction_point)
+                interaction_points = IED.get_interaction_points(interactions, lane_id, elem.position)
+                result.extend(interaction_points)
 
             elif(type(elem) == ChoiceConstruct or type(elem) == OptionalConstruct):
                 for choice in elem.choices:

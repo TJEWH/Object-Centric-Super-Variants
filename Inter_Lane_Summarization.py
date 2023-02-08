@@ -102,8 +102,8 @@ def __nested_inter_lane_summarization(lanes, interactions, print_results, curren
   
             for i in range(len(base_lanes)):
                 element = base_lanes[i].get_element(common_element[2][i][2])
-                is_interacting_activity, interaction_point = IED.is_interaction_point(interactions[i], base_lanes[i].lane_id, element.position)
-                interaction_points.append(interaction_point)
+                interaction_point_list = IED.get_interaction_points(interactions[i], base_lanes[i].lane_id, element.position)
+                interaction_points.extend(interaction_point_list)
 
             for i in range(len(interaction_points)):
                 if((i, str([str(position) for position in interaction_points[i].exact_positions]), str(interaction_points[i].interaction_lanes)) in new_interaction_points_mapping.keys()):
@@ -152,7 +152,6 @@ def __nested_inter_lane_summarization(lanes, interactions, print_results, curren
     new_interaction_points_mapping.update(interval_mapping)
     current_horizontal_index += interval_length
 
-    print(len(new_interaction_points_mapping.keys()))
     return elements, new_interaction_points_mapping
 
 
@@ -202,11 +201,12 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
             
             if(isinstance(elements[1][i], SVD.InteractionConstruct) or isinstance(elements[1][i], SVD.GeneralChoiceStructure)):
                 if(isinstance(elements[1][i], SVD.InteractionConstruct)):
-                    is_interacting_activity, interaction_point = IED.is_interaction_point(interactions[elements[0]], base_lanes[elements[0]].lane_id, elements[1][i].position)
-                    if((elements[0], str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes)) in new_mapping.keys()):
-                        new_mapping[(elements[0], str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))].append(IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)))
-                    else:
-                        new_mapping[(elements[0], str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))] = [IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position))]
+                    interaction_points = IED.get_interaction_points(interactions[elements[0]], base_lanes[elements[0]].lane_id, elements[1][i].position)
+                    for interaction_point in interaction_points:
+                        if((elements[0], str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes)) in new_mapping.keys()):
+                            new_mapping[(elements[0], str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))].append(IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)))
+                        else:
+                            new_mapping[(elements[0], str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))] = [IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position))]
                     choice.append(SVD.InteractionConstruct(elements[1][i].activity, 1 / len(interval_subprocesses), IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)), position))
                     length = 1
                 else:
@@ -374,8 +374,8 @@ def __inter_lane_summarization(lanes, interactions, print_results, current_lane 
   
             for i in range(len(base_lanes)):
                 element = base_lanes[i].get_element(common_element[2][i][2])
-                is_interacting_activity, interaction_point = IED.is_interaction_point(interactions[i], base_lanes[i].lane_id, element.position)
-                interaction_points.append(interaction_point)
+                interaction_point_list = IED.get_interaction_points(interactions[i], base_lanes[i].lane_id, element.position)
+                interaction_points.extend(interaction_point_list)
 
             for i in range(len(interaction_points)):
                 new_interaction_points_mapping[(i, str([str(position) for position in interaction_points[i].exact_positions]), str(interaction_points[i].interaction_lanes))] = [IED.BasePosition(current_lane, current_horizontal_index)]
@@ -459,9 +459,10 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
         for i in range(len(elements[1])):
             
             if(isinstance(elements[1][i], SVD.InteractionConstruct)):
-                is_interacting_activity, interaction_point = IED.is_interaction_point(interactions[elements[0]], base_lanes[elements[0]].lane_id, elements[1][i].position)
-                current_mappings[(elements[0], str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))] = start_index + i
-                contains_interaction = True
+                interaction_points = IED.get_interaction_points(interactions[elements[0]], base_lanes[elements[0]].lane_id, elements[1][i].position)
+                for interaction_point in interaction_points:
+                    current_mappings[(elements[0], str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))] = start_index + i
+                    contains_interaction = True
                 choice.append(SVD.InteractionConstruct(elements[1][i].activity, elements[1][i].frequency, IED.BasePosition(current_lane, position), position))
             else:
                 choice.append(SVD.CommonConstruct(elements[1][i].activity, elements[1][i].frequency, IED.BasePosition(current_lane, position), position))
@@ -729,8 +730,6 @@ def __re_align_lanes(lanes, mappings, print_result):
     split_mappings = split_interaction_mappings(copy.deepcopy(mappings))
     updated_mappings, aligned_lanes = copy.deepcopy(split_mappings), copy.deepcopy(lanes)
     updated_interaction_points = []
-
-    print(len(mappings.keys()))
 
     # Align the lanes such that the interaction points have the same horizontal index
     for i in range(len(split_mappings.keys())):

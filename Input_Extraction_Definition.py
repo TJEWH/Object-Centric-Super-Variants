@@ -285,3 +285,25 @@ def is_interaction_point(interactions, lane, position):
             if ((interaction.interaction_lanes[i] == lane) and (interaction.exact_positions[i] == position)):
                 return True, interaction
     return False, None
+
+
+
+def get_interaction_points(interactions, lane, position):
+    '''
+    Determines all interaction points given at a position in a certain lane.
+    :param interactions: The interaction points of the corresponding variant
+    :type interaction: list of type InteractionPoint
+    :param lane: The lane id
+    :type lane: tuple
+    :param position: The position index
+    :type position: int
+    :return: The list of all found interaction points
+    :rtype: list
+    '''
+
+    result = []
+    for interaction in interactions:
+        for i in range(len(interaction.interaction_lanes)):
+            if ((interaction.interaction_lanes[i] == lane) and (interaction.exact_positions[i] == position)):
+                result.append(interaction)
+    return result
