@@ -68,7 +68,7 @@ def __branch_on_candidates(variant, remaining_candidates, init_summarization, le
         cardinality = "1"
         if len(partition) > 1:
             cardinality = "n"
-        elements, new_intermediate_mappings = ILS.__inter_lane_summarization([lane.to_super_lane(variant.interaction_points) for lane in partition], [variant.interaction_points for lane in partition], print_results)
+        elements, new_intermediate_mappings = ILS.__inter_lane_summarization([lane.to_super_lane(variant.interaction_points) for lane in partition], [variant.interaction_points for lane in partition], True, intra = True)
         
         super_lane = SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality, len(partition))
         new_lanes.append(super_lane)
@@ -138,6 +138,13 @@ def within_variant_summarization(variant, print_results = False):
     # Re-align summarizations
     result = []
     for summarization in all_summarizations:
+
+        print("Before merge")
+        for array in summarization["Mappings"]:
+            for key in array[1].keys():
+                print(str(key) + ": " + str([str(position) for position in array[1][key]]))
+            print("----")
+
         result_lanes, result_interaction_points = ILS.__re_align_lanes(summarization["Lanes"], ILS.__merge_interactions(ILS.__merge_interaction_mappings(summarization["Mappings"])), print_results)
         result.append(SVD.SummarizedVariant(result_lanes, variant.object_types, result_interaction_points, variant.frequency))
         result[-1].encode_lexicographically()

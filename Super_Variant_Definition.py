@@ -74,7 +74,7 @@ class SummarizedVariant:
         :return: The corresponding lexicographic encoding
         :rtype: str
         '''
-        
+        import copy
         # Stores the mapping from original lane_id to the new lane_id based on the enumeration of the encoded lanes
         mapping = {}
         
@@ -131,7 +131,7 @@ class SummarizedVariant:
         for interaction in self.interaction_points:
 
             # Encode references with the new lane_id and sort alphabetically
-            interacting_lanes = [mapping[lane_id] for lane_id in interaction.interaction_lanes]
+            interacting_lanes = [mapping[lane_id] for lane_id in copy.deepcopy(interaction.interaction_lanes)]
             interacting_lanes.sort()
             lanes_encoding = "".join(str(x) + ", " for x in interacting_lanes)
             lanes_encoding = lanes_encoding[:-2]
@@ -510,8 +510,11 @@ class SuperLane:
 
                 element.position.apply_shift(index - index_before)
                 position_after_shift = element.position
-                #position_after_shift.lane_id = option_id
-                element.position = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.BasePosition(option_id, position_after_shift.position.position)))
+                
+                if(isinstance(position_after_shift.position, IED.BasePosition)):
+                    element.position = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.BasePosition(option_id, position_after_shift.position.position)))
+                else:
+                    element.position = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.RecursiveLanePosition(option_id, position_after_shift.position.position)))
 
                 index += 1
 
@@ -543,11 +546,13 @@ class SuperLane:
                 element.position_end.apply_shift(end_index - index_end_before)
                 position_start_after_shift = element.position_start
                 position_end_after_shift = element.position_end
-                #position_start_after_shift.lane_id = option_id
-                #position_end_after_shift.lane_id = option_id
 
-                element.position_start = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.BasePosition(option_id, position_start_after_shift.position.position)))
-                element.position_end = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.BasePosition(option_id, position_end_after_shift.position.position)))
+                if(isinstance(position_start_after_shift.position, IED.BasePosition)):
+                    element.position_start = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.BasePosition(option_id, position_start_after_shift.position.position)))
+                    element.position_end = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.BasePosition(option_id, position_end_after_shift.position.position)))
+                else:
+                    element.position_start = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.RecursiveLanePosition(option_id, position_start_after_shift.position.position)))
+                    element.position_end = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.RecursiveLanePosition(option_id, position_end_after_shift.position.position)))
                 
                 index += end_index - index + 1
             

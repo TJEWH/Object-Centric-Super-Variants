@@ -80,8 +80,8 @@ def inter_variant_summarization(summarization1, summarization2, mapping, allow_n
 
     
     result_lanes, result_interaction_points = ILS.__re_align_lanes(intermediate_lanes, ILS.__merge_interactions(ILS.__merge_interaction_mappings(intermediate_mappings)), print_result)
+
     super_variant = SVD.SuperVariant(summarization1.id + summarization2.id, result_lanes, summarization1.object_types.union(summarization2.object_types), result_interaction_points, summarization1.frequency + summarization2.frequency)
-    super_variant.encode_lexicographically()
     if(print_result):
         print(super_variant)
     return super_variant
@@ -101,6 +101,7 @@ def optional_super_lane(summarization, lane, first):
     '''
 
     new_lane, new_interaction_points_mapping = new_super_lane(summarization, lane, first)
+
     return SVD.OptionalSuperLane(tuple(lane.lane_id), lane.object_type + " i", new_lane.object_type, new_lane.elements, new_lane.cardinality, new_lane.frequency), new_interaction_points_mapping
 
 
@@ -139,12 +140,12 @@ def new_super_lane(summarization, lane, first, start_index = 0):
             else:
                 elements.append(SVD.InteractionConstruct(activity, frequency, IED.BasePosition(0, current_horizontal_index), current_horizontal_index))
 
-                current_interaction_points = IED.get_interaction_point(summarization.interaction_points, lane.lane_id, elem.position)
+                current_interaction_points = IED.get_interaction_points(summarization.interaction_points, lane.lane_id, elem.position)
                 for current_interaction_point in current_interaction_points:
                     if(first):
-                        new_interaction_points_mapping[(1, str([str(position) for position in current_interaction_point.exact_positions]), str(current_interaction_point.interaction_lanes))] = IED.BasePosition(0, current_horizontal_index)
+                        new_interaction_points_mapping[(0, str([str(position) for position in current_interaction_point.exact_positions]), str(current_interaction_point.interaction_lanes))] = [IED.BasePosition(0, current_horizontal_index)]
                     else:
-                        new_interaction_points_mapping[(2, str([str(position) for position in current_interaction_point.exact_positions]), str(current_interaction_point.interaction_lanes))] = IED.BasePosition(0, current_horizontal_index)
+                        new_interaction_points_mapping[(1, str([str(position) for position in current_interaction_point.exact_positions]), str(current_interaction_point.interaction_lanes))] = [IED.BasePosition(0, current_horizontal_index)]
 
             current_horizontal_index += 1
                 

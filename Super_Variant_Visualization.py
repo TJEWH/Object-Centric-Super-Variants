@@ -115,7 +115,7 @@ def arrange_super_variant(super_variant, ax, vertical_start_position, horizontal
             ax.add_patch(patches.Rectangle((-13 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length+2) * DEFAULT_CHEVRON_LENGTH, lane_properties[lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0))
         
         properties = copy.deepcopy(lane_properties)
-        ax = __visualize_lane_elements(ax, lane_id, super_variant.lanes[i].elements, properties, super_variant.interaction_points, current_vertical_position, horizontal_start_position)
+        ax = __visualize_lane_elements(ax, lane_id, super_variant.lanes[i].elements, properties, copy.deepcopy(super_variant.interaction_points), current_vertical_position, horizontal_start_position)
         current_vertical_position += lane_properties[lane_id]["Height"]
     
 
@@ -210,9 +210,21 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
         overall_line_style = '--'
 
 
+    print("MAKING INTERACTION")
+    print(original_lane)
+    print(element.position)
+    for interaction in interaction_points:
+        for i in range(len(interaction.interaction_lanes)):
+            print(str(interaction.interaction_lanes[i]) + ": " + str(interaction.exact_positions[i]))
+
     is_interacting, interaction_point = IED.is_interaction_point(interaction_points, original_lane, element.position)
     
-    interacting_lanes = interaction_point.interaction_lanes
+    if(not is_interacting):
+        interacting_lanes = [original_lane]
+        print("INTERACTION NOT FOUND")
+
+    else:
+        interacting_lanes = interaction_point.interaction_lanes
 
     number_sub_chevrons = len(interacting_lanes)
     length_sub_chevron = (1 / number_sub_chevrons)
@@ -356,8 +368,6 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
     else:
         margin_length = 0.3
 
-    print(element)
-    print(lane_properties[lane]["Height"])
     margin_height = chevron_height * 1/12
     
     offset = element.index_start - index
