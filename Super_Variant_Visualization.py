@@ -210,13 +210,6 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
         overall_line_style = '--'
 
 
-    print("MAKING INTERACTION")
-    print(original_lane)
-    print(element.position)
-    for interaction in interaction_points:
-        for i in range(len(interaction.interaction_lanes)):
-            print(str(interaction.interaction_lanes[i]) + ": " + str(interaction.exact_positions[i]))
-
     is_interacting, interaction_point = IED.is_interaction_point(interaction_points, original_lane, element.position)
     
     if(not is_interacting):
@@ -234,23 +227,27 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
     label = element.activity
     offset = 0.3
 
-    possible_splitting_indices = []
     if(len(label) > 14):
-        for i in range(len(label)):
-            if (label[i] == " "):
-                possible_splitting_indices.append(i)
-    possible_splitting_indices.append(len(label))
-    splitting_index = min(possible_splitting_indices, key = lambda x: abs(x - (len(label)/2)))
-    label = label[:splitting_index] + "\n" + label[splitting_index + 1:]
+        label = label[:12] + "..."
+    sizing_factor = 1
 
-    longest_section = 0
-    for i in range(len(label.split("\n"))):
-        longest_section = max(longest_section, len(label.split("\n")[i]))
-    sizing_factor = min(14 / longest_section , 1)
-    if (label[-1] == "\n"):
-        label = label[:-1]
-    else:
-        offset += 0.7
+    #possible_splitting_indices = []
+    #if(len(label) > 14):
+        #for i in range(len(label)):
+            #if (label[i] == " "):
+                #possible_splitting_indices.append(i)
+    #possible_splitting_indices.append(len(label))
+    #splitting_index = min(possible_splitting_indices, key = lambda x: abs(x - (len(label)/2)))
+    #label = label[:splitting_index] + "\n" + label[splitting_index + 1:]
+
+    #longest_section = 0
+    #for i in range(len(label.split("\n"))):
+        #longest_section = max(longest_section, len(label.split("\n")[i]))
+    #sizing_factor = min(14 / longest_section , 1)
+    #if (label[-1] == "\n"):
+        #label = label[:-1]
+    #else:
+        #offset += 0.7
 
     if(frequency):
         label += "\n " + str(round(element.frequency * 100, 2)) + "%"
@@ -301,28 +298,32 @@ def __common_activity_chevron(ax, lane, element, index, lane_properties, current
         
     label = element.activity
     offset = 0.3
-
-    possible_splitting_indices = []
+    
     if(len(label) > 14):
-        for i in range(len(label)):
-            if (label[i] == " "):
-                possible_splitting_indices.append(i)
-    possible_splitting_indices.append(len(label))
-    splitting_index = min(possible_splitting_indices, key = lambda x: abs(x - (len(label)/2)))
-    label = label[:splitting_index] + "\n" + label[splitting_index + 1:]
+        label = label[:12] + "..."
+    sizing_factor = 1
 
-    longest_section = 0
-    for i in range(len(label.split("\n"))):
-        longest_section = max(longest_section, len(label.split("\n")[i]))
-    sizing_factor = min(14 / longest_section , 1)
-    if (label[-1] == "\n"):
-        label = label[:-1]
-    else:
-        offset += 0.7
+    #possible_splitting_indices = []
+    #if(len(label) > 14):
+        #for i in range(len(label)):
+            #if (label[i] == " "):
+                #possible_splitting_indices.append(i)
+    #possible_splitting_indices.append(len(label))
+    #splitting_index = min(possible_splitting_indices, key = lambda x: abs(x - (len(label)/2)))
+    #label = label[:splitting_index] + "\n" + label[splitting_index + 1:]
+
+    #longest_section = 0
+    #for i in range(len(label.split("\n"))):
+        #longest_section = max(longest_section, len(label.split("\n")[i]))
+    #sizing_factor = min(14 / longest_section , 1)
+    #if (label[-1] == "\n"):
+        #label = label[:-1]
+    #else:
+        #offset += 0.7
 
     if(frequency):
         label += "\n " + str(round(element.frequency * 100, 2)) + "%"
-        offset += 0.7
+        offset += 1
     ax.text(current_horizontal_position + index * chevron_length + 2.0, current_vertical_position * chevron_height + 0.5 * chevron_height * lane_properties[lane]["Height"] - offset, label, zorder = 15, fontsize = fontsize*sizing_factor)
     ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length, current_vertical_position * chevron_height, chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height), facecolor = lane_properties[lane]["Color"], lw = 1.3, ls = overall_line_style, zorder = 10))
     return ax
@@ -358,6 +359,7 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
     :rtype: axes
     '''
     import matplotlib.patches as patches
+    import copy
 
     if(lane_properties[lane]["IsOptional"]):
         overall_line_style = '--'
@@ -379,6 +381,7 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
     choice_properties = dict()
     accumulated_height = 0
     for choice in element.choices:
+        print(choice)
 
         choice_properties[choice.lane_id] = dict()
         choice_properties[choice.lane_id]["Color"] = lane_properties[lane]["Color"]
@@ -390,8 +393,11 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
             if (isinstance(elem, SVD.GeneralChoiceStructure)):
                 vertical_height = max(vertical_height, elem.get_vertical_height())
 
-        choice_properties[choice.lane_id]["Height"] = vertical_height
+        choice_properties[choice.lane_id]["Height"] = copy.deepcopy(vertical_height)
         accumulated_height += vertical_height
+
+    
+    print(choice_properties)
     
     height_factor = (lane_properties[lane]["Height"] / accumulated_height)
 
@@ -406,7 +412,6 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
 
     vertical_position = (current_vertical_position * chevron_height)
     for i in range(len(element.choices)):
-
         choice = element.choices[i].lane_id
 
         if (vertical_position != current_vertical_position * chevron_height):
@@ -418,8 +423,10 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
 
         horizontal_start_position = current_horizontal_position + (index * chevron_length) + 1 + margin_length 
 
-        ax = __visualize_lane_elements(ax, choice, element.choices[i].elements, choice_properties, interaction_points, ((vertical_position + margin_height) / sub_default_chevron_height), horizontal_start_position, chevron_length = sub_default_chevron_length, chevron_height = sub_default_chevron_height, offset = offset + index, frequency = True, fontsize = fontsize * ((sub_default_chevron_length - 2) / DEFAULT_CHEVRON_LENGTH) + 1, original_lane = original_lane, original_lane_properties = original_lane_properties)
-        vertical_position += choice_properties[choice]["Height"] * chevron_height *height_factor
+        ax = __visualize_lane_elements(ax, choice, element.choices[i].elements, copy.deepcopy(choice_properties), interaction_points, ((vertical_position + margin_height * choice_properties[choice]["Height"]) / sub_default_chevron_height), horizontal_start_position, chevron_length = sub_default_chevron_length, chevron_height = sub_default_chevron_height, offset = offset + index, frequency = True, fontsize = fontsize * ((sub_default_chevron_length - 2) / DEFAULT_CHEVRON_LENGTH) + 1, original_lane = original_lane, original_lane_properties = original_lane_properties)
+
+
+        vertical_position += choice_properties[choice]["Height"] * chevron_height * height_factor
 
     return ax  
 

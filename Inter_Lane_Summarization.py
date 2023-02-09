@@ -44,7 +44,11 @@ def __nested_inter_lane_summarization(lanes, interactions, print_results, curren
     for i in range(len(lanes)):
         all_lanes.append((i, lanes[i], len(lanes[i].elements)))
 
-    longest_common_sequence, length, number_of_interactions = __get_longest_common_subsequence(base_lanes_indexed)
+    if(intra):
+        longest_common_sequence, length, number_of_interactions = __get_longest_common_subsequence(base_lanes_indexed,intra, interactions[0])
+    else:
+        longest_common_sequence, length, number_of_interactions = __get_longest_common_subsequence(base_lanes_indexed)
+
     last_positions = [0 for lane in base_lanes]
 
     for common_element in longest_common_sequence:
@@ -265,7 +269,7 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
             empty_frequency += 1
 
         else:
-            choices.append(SVD.SuperLane(i, "Option " + str(i), base_lanes[0].object_type, choice, "1", 1))
+            choices.append(SVD.SuperLane(current_choice, "Option " + str(current_choice), base_lanes[0].object_type, choice, "1", 1))
             current_choice += 1
         
         end_index = max(end_index, position - 1)
@@ -336,7 +340,11 @@ def __inter_lane_summarization(lanes, interactions, print_results, current_lane 
     for i in range(len(base_lanes)):
             base_lanes_indexed.append((i, base_lanes[i], len(base_lanes[i].elements)))
 
-    longest_common_sequence, length, number_of_interactions = __get_longest_common_subsequence(base_lanes_indexed)
+    if (intra):
+        longest_common_sequence, length, number_of_interactions = __get_longest_common_subsequence(base_lanes_indexed, intra, interactions[0])
+    else:
+        longest_common_sequence, length, number_of_interactions = __get_longest_common_subsequence(base_lanes_indexed)
+
     last_positions = [0 for lane in base_lanes]
 
     for common_element in longest_common_sequence:
@@ -620,7 +628,7 @@ def find_best_matching(nodes, arc):
     return solution
 
 
-def __get_longest_common_subsequence(lanes):
+def __get_longest_common_subsequence(lanes, intra = False, interactions = None):
     '''
     Computes the Longest Common Subsequence among the activity sequences of a set of Super Lanes.
     that interaction points between multiple lanes have the same horizontal index
@@ -634,38 +642,54 @@ def __get_longest_common_subsequence(lanes):
     if any([lane[2] == 0 for lane in lanes]):
         return [], 0, 0
 
-    elif(all((type(lane[1].elements[lane[2]-1]) == type(base_element) and lane[1].elements[lane[2]-1].activity == base_element.activity) for lane in lanes)):
-        
-        recursive_result, recursive_value, recursive_interactions = __get_longest_common_subsequence([(lane[0], lane[1], lane[2]-1) for lane in lanes])
-        indices = [(lane[0], lane[1], lane[1].elements[lane[2]-1].index) for lane in lanes]
-        positions = [(lane[0], lane[1], lane[1].elements[lane[2]-1].position) for lane in lanes]
-        if(type(base_element) == SVD.InteractionConstruct):
-            recursive_interactions = recursive_interactions + 1
-        return recursive_result + [(base_element.activity, indices, positions)], recursive_value + 1, recursive_interactions
-
     else:
-        maximum_value = -1
-        maximum_result = []
-        maximum_interaction = -1
-
-        for i in range(1, pow(2,len(lanes))-1):
-            binary = list(bin(i)[2:].zfill(len(lanes)))
-            recursive_call_lanes = []
-            for i in range(len(lanes)):
-                if (binary[i] == '1'):
-                    recursive_call_lanes.append((lanes[i][0], lanes[i][1], lanes[i][2]-1))
-                else:
-                    recursive_call_lanes.append(lanes[i])
-
-            recursive_result, recursive_value, recursive_interactions = __get_longest_common_subsequence(recursive_call_lanes)
-
-            if ((recursive_value > maximum_value) or (recursive_value == maximum_value and recursive_interactions > recursive_interactions)):
-                maximum_value = recursive_value
-                maximum_result = recursive_result
-                maximum_interaction = recursive_interactions
+        intra_valid = False
+        if (all((type(lane[1].elements[lane[2]-1]) == type(base_element) and lane[1].elements[lane[2]-1].activity == base_element.activity) for lane in lanes)):
+            intra_valid = True
+            
+            if(intra and type(base_element) == SVD.InteractionConstruct):
+                is_interacting, interaction_point = IED.is_interaction_point(interactions, lanes[0][1].lane_id, base_element.position)
+                all_lanes_contained = True
+                for lane in lanes:
+                    if (not lane[1].lane_id in interaction_point.interaction_lanes):
+                        all_lanes_contained = False
+                        break
+                intra_valid = all_lanes_contained
 
 
-        return maximum_result, maximum_value, maximum_interaction
+        if (intra_valid):
+            
+            recursive_result, recursive_value, recursive_interactions = __get_longest_common_subsequence([(lane[0], lane[1], lane[2]-1) for lane in lanes], intra, interactions)
+            indices = [(lane[0], lane[1], lane[1].elements[lane[2]-1].index) for lane in lanes]
+            positions = [(lane[0], lane[1], lane[1].elements[lane[2]-1].position) for lane in lanes]
+            
+            if(type(base_element) == SVD.InteractionConstruct):
+                recursive_interactions = recursive_interactions + 1
+            return recursive_result + [(base_element.activity, indices, positions)], recursive_value + 1, recursive_interactions
+
+        else:
+            maximum_value = -1
+            maximum_result = []
+            maximum_interaction = -1
+
+            for i in range(1, pow(2,len(lanes))-1):
+                binary = list(bin(i)[2:].zfill(len(lanes)))
+                recursive_call_lanes = []
+                for i in range(len(lanes)):
+                    if (binary[i] == '1'):
+                        recursive_call_lanes.append((lanes[i][0], lanes[i][1], lanes[i][2]-1))
+                    else:
+                        recursive_call_lanes.append(lanes[i])
+
+                recursive_result, recursive_value, recursive_interactions = __get_longest_common_subsequence(recursive_call_lanes, intra, interactions)
+
+                if ((recursive_value > maximum_value) or (recursive_value == maximum_value and recursive_interactions > recursive_interactions)):
+                    maximum_value = recursive_value
+                    maximum_result = recursive_result
+                    maximum_interaction = recursive_interactions
+
+
+            return maximum_result, maximum_value, maximum_interaction
 
 
 def __merge_interactions(merged_interactions):
@@ -752,12 +776,6 @@ def __re_align_lanes(lanes, mappings, print_result):
     split_mappings = split_interaction_mappings(copy.deepcopy(mappings))
     updated_mappings, aligned_lanes = copy.deepcopy(split_mappings), copy.deepcopy(lanes)
     updated_interaction_points = []
-
-    print("BEFORE ALIGNMENT")
-    for mapping in split_mappings.items():
-        print(mapping[0])
-        for id in mapping[1].keys():
-            print(str(id) + ": " + str(mapping[1][id]))
 
     # Align the lanes such that the interaction points have the same horizontal index
     for i in range(len(split_mappings.keys())):
