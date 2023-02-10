@@ -207,8 +207,6 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
         position = start_index
         choice = []
 
-        #if(len(elements[1]) == 1 and isinstance(elements[1][0], SVD.GeneralChoiceStructure)):
-
         for i in range(len(elements[1])):
             
             if(isinstance(elements[1][i], SVD.InteractionConstruct) or isinstance(elements[1][i], SVD.GeneralChoiceStructure)):
@@ -274,11 +272,40 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
         
         end_index = max(end_index, position - 1)
 
+ 
+    if(len(choices) == 1 and len(choices[0].elements) == 1 and isinstance(choices[0].elements[0], SVD.GeneralChoiceStructure)):
+        extracted_choices = []
+        i = 0
+        for extracted_choice in choices[0].elements[0].choices:
+            extracted_elements, extracted_positions_mapping = copy.deepcopy(extracted_choice).extract_option()
+            extracted_choices.append(SVD.SuperLane(i, "Option " + str(i), base_lanes[0].object_type, extracted_elements.elements, "1", 1))
+            i += 1
+
+        for mapping in new_mapping.keys():
+            for i in range(len(new_mapping[mapping])):
+                new_mapping[mapping][i] = extracted_positions_mapping[str(new_mapping[mapping][i])]
+
+        if(print_results):
+        # Output printing
+            print("\n")
+            print("Adding a optional choice element between the following sequences.")
+            for choice in extracted_choices:
+                for elem in choice.elements:
+                    print(elem)
+                print("----------")
+
+        if(isinstance(choices[0].elements[0], SVD.OptionalConstruct)):
+            empty_frequency = 1 - ((empty_frequency / len(interval_subprocesses)) * choices[0].elements[0].empty_frequency)
+        else:
+            empty_frequency = empty_frequency / len(interval_subprocesses)
+
+        returned_elements.append(SVD.OptionalConstruct(extracted_choices, IED.BasePosition(current_lane, start_index), IED.BasePosition(current_lane, end_index), start_index, end_index, empty_frequency))
+        return returned_elements, end_index - start_index + 1, new_mapping
    
     # Applying Optional Pattern
     if(is_optional):
-        if(print_results):
 
+        if(print_results):
         # Output printing
             print("\n")
             print("Adding a optional choice element between the following sequences.")
@@ -634,6 +661,10 @@ def __get_longest_common_subsequence(lanes, intra = False, interactions = None):
     that interaction points between multiple lanes have the same horizontal index
     :param lanes: The lanes among which the longest common subsequence should be computed
     :type lanes: List of type SuperLane
+    :param intra: Whether or not the input lanes are from the same variant. Used to check for shared interacion points.
+    :type intra: bool
+    :param interactions: The interaction points of the variant for a Intra-Variant Summarization setting
+    :type interactions: List of type InteractionPoint
     :return: The Longest Common Subsequence and the corresponding positions in the lanes, the length of the longest_common_subsequence, the number of common interactions in the subsequence
     :rtype: list, int, int
     '''

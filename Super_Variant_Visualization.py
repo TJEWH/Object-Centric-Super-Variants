@@ -381,7 +381,6 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
     choice_properties = dict()
     accumulated_height = 0
     for choice in element.choices:
-        print(choice)
 
         choice_properties[choice.lane_id] = dict()
         choice_properties[choice.lane_id]["Color"] = lane_properties[lane]["Color"]
@@ -396,9 +395,6 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
         choice_properties[choice.lane_id]["Height"] = copy.deepcopy(vertical_height)
         accumulated_height += vertical_height
 
-    
-    print(choice_properties)
-    
     height_factor = (lane_properties[lane]["Height"] / accumulated_height)
 
     sub_default_chevron_length = ((((element.index_end - element.index_start) + 1) * chevron_length) - 2) / ((element.index_end - element.index_start) + 1)
@@ -424,7 +420,6 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
         horizontal_start_position = current_horizontal_position + (index * chevron_length) + 1 + margin_length 
 
         ax = __visualize_lane_elements(ax, choice, element.choices[i].elements, copy.deepcopy(choice_properties), interaction_points, ((vertical_position + margin_height * choice_properties[choice]["Height"]) / sub_default_chevron_height), horizontal_start_position, chevron_length = sub_default_chevron_length, chevron_height = sub_default_chevron_height, offset = offset + index, frequency = True, fontsize = fontsize * ((sub_default_chevron_length - 2) / DEFAULT_CHEVRON_LENGTH) + 1, original_lane = original_lane, original_lane_properties = original_lane_properties)
-
 
         vertical_position += choice_properties[choice]["Height"] * chevron_height * height_factor
 

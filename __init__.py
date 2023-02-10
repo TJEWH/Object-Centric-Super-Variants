@@ -14,54 +14,56 @@ import Inter_Variant_Summarization as IEVS
 import Inter_Variant_Generation as IEVG
 import Super_Variant_Hierarchy as SVH
 
+MODE = 4
 
 filename = "EventLogs/BPI2017-Top10.jsonocel"
 parameters = {"execution_extraction": "leading_type",
               "leading_type": "application"}
 ocel = ocel_import_factory.apply(file_path = filename , parameters = parameters)
-#filename = "EventLogs/order_process.jsonocel"
-#ocel = ocel_import_factory.apply(file_path = filename)
-#variant_layouting = variants_visualization_factory.apply(ocel)
-#extracted_variant = IED.extract_lanes(variant_layouting[ocel.variants[5]], ocel.variant_frequencies[1])
-#SVV.visualize_variant(extracted_variant)
+
 all_summarizations, per_variant_dict, per_encoding_dict = IAVG.complete_intra_variant_summarization(ocel, print_results = False)
 summarizations = SS.intra_variant_summarization_selection(all_summarizations, per_variant_dict, per_encoding_dict)
 
-IEVG.generate_super_variant_hierarchy_by_frequency([summarizations[3], summarizations[4], summarizations[6], summarizations[7], summarizations[8], summarizations[9]], 2, 3, IEVG.Distribution.UNIFORM, False)
-#SVH.visualize_Super_Variant_layer([summarizations[0], summarizations[1]])
+#filename = "EventLogs/order_process.jsonocel"
+#ocel = ocel_import_factory.apply(file_path = filename)
 
-#print(summarizations[0])
-#print(summarizations[0].interaction_points)
-#for interaction in summarizations[0].interaction_points:
-    #for position in interaction.exact_positions:
-        #print(position)
-    #print("------")
+#variant_layouting = variants_visualization_factory.apply(ocel)
+#extracted_variant = IED.extract_lanes(variant_layouting[ocel.variants[5]], ocel.variant_frequencies[5])
+#SVV.visualize_variant(extracted_variant)
 
-#for i in range(len(summarizations)-1):
-    #for j in range(i+1, len(summarizations)):
-        #super_variant, cost = IEVS.join_super_variants(summarizations[i], summarizations[j], False, False)
-        #print(i)
-        #print(j)
-        #print(super_variant)
-        #SVV.visualize_super_variant(super_variant)
+if(MODE == 1):
 
-#SVV.visualize_super_variant(summarizations[5])
-#SVV.visualize_super_variant(summarizations[8])
+    initial_super_variants = IEVG.classify_initial_super_variants_by_activity([summarizations[3], summarizations[4], summarizations[6], summarizations[7], summarizations[8], summarizations[9]], "Refuse offer")
+    initial_super_variants = [initial_super_variants[0]] + IEVG.classify_initial_super_variants_by_activity(initial_super_variants[1], "Accept offer")
+    hierarchy, final_super_variants = IEVG.generate_super_variant_hierarchy_by_classification(initial_super_variants, 1, 3)
+    SVH.visualize_super_variant_layer(final_super_variants)
 
-#super_variant_49, cost = IEVS.join_super_variants(summarizations[1], summarizations[7], False)
-#super_variant_59, cost = IEVS.join_super_variants(summarizations[6], summarizations[7], True, False)
-#super_variant_59, cost = IEVS.join_super_variants(super_variant_59, summarizations[8], False, False)
-#super_variant_59, cost = IEVS.join_super_variants(super_variant_59, summarizations[9], True, False)
-#super_variant_67, cost = IEVS.join_super_variants(summarizations[6], summarizations[7], False)
-#super_variant_8, cost = IEVS.join_super_variants(super_variant_59, summarizations[3], False, False)
-#super_variant, cost = IEVS.join_super_variants(super_variant_8, summarizations[8], True, False)
-#print(super_variant)
+elif(MODE == 2):
+    super_variant, cost = IEVS.join_super_variants(summarizations[6], summarizations[7], False, False)
+    super_variant, cost = IEVS.join_super_variants(super_variant, summarizations[8], True, False)
+    SVV.visualize_super_variant(super_variant)
 
-#SVV.visualize_super_variant(super_variant)
-#SVH.visualize_Super_Variant_layer([super_variant_59, super_variant])
-#SVV.visualize_super_variant(super_variant_59)
+elif(MODE == 3):
+    super_variant, cost = IEVS.join_super_variants(summarizations[6], summarizations[7], False, False)
+    super_variant, cost = IEVS.join_super_variants(super_variant, summarizations[8], False, False)
+    super_variant, cost = IEVS.join_super_variants(super_variant, summarizations[9], True, False)
+    SVV.visualize_super_variant(super_variant)
 
+elif(MODE == 4):
+    super_variant, cost = IEVS.join_super_variants(summarizations[6], summarizations[7], False, False)
+    super_variant, cost = IEVS.join_super_variants(super_variant, summarizations[8], False, False)
+    super_variant, cost = IEVS.join_super_variants(super_variant, summarizations[9], False, False)
+    SVV.visualize_super_variant(super_variant)
 
+elif(MODE == 5):
+    super_variant, cost = IEVS.join_super_variants(summarizations[2], summarizations[3], False, False)
+    SVV.visualize_super_variant(super_variant)
 
+elif(MODE == 6):
+    super_variant, cost = IEVS.join_super_variants(summarizations[3], summarizations[6], False, False)
+    SVV.visualize_super_variant(super_variant)
 
-
+elif(MODE == 7):
+    SVH.visualize_super_variant_layer([summarizations[6], summarizations[7], summarizations[8]])
+    #super_variant, cost = IEVS.join_super_variants(summarizations[4], summarizations[6], False, False)
+    #SVH.visualize_single_super_variant_hierarchy(summarizations[4], summarizations[6], super_variant)

@@ -559,6 +559,45 @@ class SuperLane:
         return SuperLane(self.lane_id, self.lane_name, self.object_type, elements, self.cardinality, self.frequency), positions_mappings
 
 
+    def extract_option(self):
+        '''
+        Updates all positions in a lane by removing the first given option_id corresponding to the second lane_id.
+        :param self: The summarizing Super Lane
+        :type self: SuperLane
+        :return: The corresponding lane with adjusted positions and it's mapping
+        :rtype: SuperLane, dict
+        '''
+        import copy 
+
+        mapping = dict()
+
+        for element in self.elements:
+            if(type(element) == CommonConstruct or type(element) == InteractionConstruct):
+
+                position_before = copy.deepcopy(element.position)
+                element.position = IED.RecursiveLanePosition(0, position_before.position.position)
+
+                if(type(element) == InteractionConstruct):
+                    mapping[str(position_before)] = element.position
+
+            elif(type(element) == ChoiceConstruct or type(element) == OptionalConstruct):
+
+                for i in range(len(element.choices)):
+
+                    updated_choice, recursive_mapping = element.choices[i].extract_option()
+                    element.choices[i] = updated_choice
+
+                    for key in recursive_mapping.keys():
+                        mapping[key] = recursive_mapping[key]
+
+                    position_start_before = copy.deepcopy(element.position_start)
+                    position_end_before = copy.deepcopy(element.position_end)
+                    element.position_start = IED.RecursiveLanePosition(0, position_start_before.position.position)
+                    element.position_end = IED.RecursiveLanePosition(0, position_end_before.position.position)
+   
+        return self, mapping
+
+
     def get_realizations_normalized(self):
         '''
         Generates all realizations of a Super Lane with normalized positions starting from 0.
