@@ -1,14 +1,17 @@
 import Super_Variant_Definition as SVD
 import Inter_Lane_Summarization as ILS
+import Input_Extraction_Definition as IED
 
 
-def join_super_variants(super_variant1, super_variant2, print_result = True):
+def join_super_variants(super_variant1, super_variant2, allow_nested_structures = True, print_result = True):
     '''
     Determines the lanes of the two Super Variants are are to be merged and performs the summarization of the Super Variants.
     :param super_variant1: A Super Variant that is to be joined with another Super Variant
     :type super_variant1: SuperVariant
     :param super_variant2: The second Super Variant that is joined
     :type super_variant2: SuperVariant
+    :param allow_nested_structures: Whether the resulting Super Variant can contain nested structures
+    :type allow_nested_structures: bool
     :param print_result: Whether the results should be output in the console
     :type print_result: bool
     :return: The generalizing Super Variant
@@ -16,13 +19,14 @@ def join_super_variants(super_variant1, super_variant2, print_result = True):
     '''
     import copy
     mapping, cost = decide_matching(super_variant1, super_variant2, copy.deepcopy(super_variant1.lanes), copy.deepcopy(super_variant2.lanes), True, print_result)
+
     if(print_result):
         print("The estimated cost of joining these Super Variants is " + str(cost) + ".")
 
-    return inter_variant_summarization(super_variant1, super_variant2, mapping, print_result), cost
+    return inter_variant_summarization(super_variant1, super_variant2, mapping, allow_nested_structures, print_result), cost
     
 
-def inter_variant_summarization(summarization1, summarization2, mapping, print_result):
+def inter_variant_summarization(summarization1, summarization2, mapping, allow_nested_structures, print_result):
     '''
     Summarizes two Super Variants based on a given mapping of the corresponding Super Lanes and aligns the final Super Variant correctly.
     :param summarization1: The first Super Variant of the summarization
@@ -31,6 +35,8 @@ def inter_variant_summarization(summarization1, summarization2, mapping, print_r
     :type summarization2: SuperVariant
     :param mapping: The mapping from Super Lanes in Super Variant 1 to Super Lanes in Super Variant 2
     :type mapping: list
+    :param allow_nested_structures: Whether the resulting Super Variant can contain nested structures
+    :type allow_nested_structures: bool
     :param print_result: Whether the results should be output in the console
     :type print_result: bool
     :return: The summarization of the two Super Variants
@@ -66,15 +72,16 @@ def inter_variant_summarization(summarization1, summarization2, mapping, print_r
             lane1 = [lane for lane in summarization1.lanes if lane.lane_id == pair[0]][0]
             lane2 = [lane for lane in summarization2.lanes if lane.lane_id == pair[1]][0]
 
-            super_lane, mapping = join_super_lanes(summarization1, summarization2, lane1, lane2, print_result)
+            super_lane, mapping = join_super_lanes(summarization1, summarization2, lane1, lane2, allow_nested_structures, print_result)
             if(print_result):
                 print("The resulting Super Lane is the following: " + str(super_lane))
             intermediate_lanes.append(super_lane)
             intermediate_mappings.append((super_lane.lane_id, mapping))
 
+    
     result_lanes, result_interaction_points = ILS.__re_align_lanes(intermediate_lanes, ILS.__merge_interactions(ILS.__merge_interaction_mappings(intermediate_mappings)), print_result)
+
     super_variant = SVD.SuperVariant(summarization1.id + summarization2.id, result_lanes, summarization1.object_types.union(summarization2.object_types), result_interaction_points, summarization1.frequency + summarization2.frequency)
-    super_variant.encode_lexicographically()
     if(print_result):
         print(super_variant)
     return super_variant
@@ -94,6 +101,7 @@ def optional_super_lane(summarization, lane, first):
     '''
 
     new_lane, new_interaction_points_mapping = new_super_lane(summarization, lane, first)
+
     return SVD.OptionalSuperLane(tuple(lane.lane_id), lane.object_type + " i", new_lane.object_type, new_lane.elements, new_lane.cardinality, new_lane.frequency), new_interaction_points_mapping
 
 
@@ -128,20 +136,16 @@ def new_super_lane(summarization, lane, first, start_index = 0):
             activity = elem.activity
             frequency = elem.frequency
             if(not isinstance(elem, SVD.InteractionConstruct)):
-                elements.append(SVD.CommonConstruct(activity, frequency, current_horizontal_index))
+                elements.append(SVD.CommonConstruct(activity, frequency, IED.BasePosition(0, current_horizontal_index), current_horizontal_index))
             else:
-                elements.append(SVD.InteractionConstruct(activity, frequency, current_horizontal_index))
+                elements.append(SVD.InteractionConstruct(activity, frequency, IED.BasePosition(0, current_horizontal_index), current_horizontal_index))
 
-                current_interaction_point = None
-                for interaction_point in summarization.interaction_points:
-                    if(interaction_point.index_in_lanes == elem.position and lane.lane_id in interaction_point.interaction_lanes):
-                            current_interaction_point = interaction_point
-                            break
-
-                if(first):
-                    new_interaction_points_mapping[(1, current_interaction_point.index_in_lanes, str(current_interaction_point.interaction_lanes))] = (0,current_horizontal_index)
-                else:
-                    new_interaction_points_mapping[(2, current_interaction_point.index_in_lanes, str(current_interaction_point.interaction_lanes))] = (0,current_horizontal_index)
+                current_interaction_points = IED.get_interaction_points(summarization.interaction_points, lane.lane_id, elem.position)
+                for current_interaction_point in current_interaction_points:
+                    if(first):
+                        new_interaction_points_mapping[(0, str([str(position) for position in current_interaction_point.exact_positions]), str(current_interaction_point.interaction_lanes))] = [IED.BasePosition(0, current_horizontal_index)]
+                    else:
+                        new_interaction_points_mapping[(1, str([str(position) for position in current_interaction_point.exact_positions]), str(current_interaction_point.interaction_lanes))] = [IED.BasePosition(0, current_horizontal_index)]
 
             current_horizontal_index += 1
                 
@@ -154,13 +158,19 @@ def new_super_lane(summarization, lane, first, start_index = 0):
                 new_choice, new_choice_mapping = new_super_lane(summarization, elem.choices[i], first, index)
                 for mapping in new_choice_mapping.keys():
                     new_interaction_points_mapping[mapping] = new_choice_mapping[mapping]
+                for elem in new_choice.elements:
+                    if(isinstance(elem, SVD.CommonConstruct)):
+                        elem.position = IED.RecursiveLanePosition(0, IED.BasePosition(i, elem.position.position))
+                    else:
+                        elem.position_start = IED.RecursiveLanePosition(0, IED.BasePosition(i, elem.position_start.position))
+                        elem.position_end = IED.RecursiveLanePosition(0, IED.BasePosition(i, elem.position_end.position))
                 new_choices.append(new_choice)
                 length = max(length, len(new_choice))
 
             if(isinstance(elem, SVD.ChoiceConstruct)):
-                elements.append(SVD.ChoiceConstruct(new_choices, current_horizontal_index, current_horizontal_index + length-1))
+                elements.append(SVD.ChoiceConstruct(new_choices, IED.BasePosition(current_horizontal_index), IED.BasePosition(current_horizontal_index + length-1), current_horizontal_index, current_horizontal_index + length-1))
             else:
-                elements.append(SVD.OptionalConstruct(new_choices, current_horizontal_index, current_horizontal_index + length-1))
+                elements.append(SVD.OptionalConstruct(new_choices, IED.BasePosition(current_horizontal_index), IED.BasePosition(current_horizontal_index + length-1), current_horizontal_index, current_horizontal_index + length-1, elem.empty_frequency))
 
             current_horizontal_index += length
 
@@ -168,7 +178,7 @@ def new_super_lane(summarization, lane, first, start_index = 0):
 
 
 
-def join_super_lanes(summarization1, summarization2, lane1, lane2, print_result = True):
+def join_super_lanes(summarization1, summarization2, lane1, lane2, allow_nested_structures, print_result = True):
     '''
     Summarizes two lanes of two Super Variants.
     :param summarization1: The Super Variant corresponding to the first lane
@@ -179,6 +189,8 @@ def join_super_lanes(summarization1, summarization2, lane1, lane2, print_result 
     :type lane1: SuperLane
     :param lane2: The second Super Lane that should be summarized
     :type lane2: SuperLane
+    :param allow_nested_structures: Whether the resulting Super Variant can contain nested structures
+    :type allow_nested_structures: bool
     :param print_result: Whether the results should be output in the console
     :type print_result: bool
     :return: The summarization of the two Super Lanes
@@ -193,7 +205,10 @@ def join_super_lanes(summarization1, summarization2, lane1, lane2, print_result 
     else:
         cardinality = "1..n"
 
-    elements, mappings =  ILS.__inter_lane_summarization([lane1, lane2], [summarization1.interaction_points, summarization2.interaction_points], print_result)
+    if(allow_nested_structures):
+        elements, mappings =  ILS.__nested_inter_lane_summarization([lane1, lane2], [summarization1.interaction_points, summarization2.interaction_points], print_result)
+    else:
+        elements, mappings =  ILS.__inter_lane_summarization([lane1, lane2], [summarization1.interaction_points, summarization2.interaction_points], print_result)
     return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality, frequency), mappings
 
 

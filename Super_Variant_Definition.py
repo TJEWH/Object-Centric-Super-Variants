@@ -1,3 +1,5 @@
+import Input_Extraction_Definition as IED
+
 class SummarizedVariant:
     '''The data structure of the summarization of object-centric variants'''
     object_types = {}
@@ -22,6 +24,18 @@ class SummarizedVariant:
             result_string += str(self.interaction_points[i]) + "\n"
         return result_string + "Frequency: " + str(self.frequency)
 
+    def get_depth(self):
+        '''
+        Determines the nested depth of the Super Variant.
+        :param self: The summarized variant
+        :type self: SummarizedVariant
+        :return: The number of nested structures in the Super Variant
+        :rtype: int
+        '''
+        depth = 0
+        for lane in self.lanes:
+            depth = max(depth, lane.get_depth())
+        return depth
 
     def rename_lane(self, lane_id, new_name):
         '''
@@ -60,7 +74,7 @@ class SummarizedVariant:
         :return: The corresponding lexicographic encoding
         :rtype: str
         '''
-        
+        import copy
         # Stores the mapping from original lane_id to the new lane_id based on the enumeration of the encoded lanes
         mapping = {}
         
@@ -83,7 +97,7 @@ class SummarizedVariant:
             # Encode each lane, enumerate the encodings provisionally
             for lane in object_lanes:
 
-                encoding = lane.encode_lexicographically()
+                encoding = lane.encode_lexicographically(1)
         
                 # Fill up the current id with 0's such that every id has the same number of characters
                 full_id = str(id)
@@ -106,8 +120,7 @@ class SummarizedVariant:
                 lane_id = mapping[encoded_lanes[i]][0]
                 mapping[encoded_lanes[i]]= (lane_id, object + " " + full_id)
                 self.rename_lane(lane_id, object + " " + full_id)
-                encoded_lanes[i] = object + " " + full_id + ": " + encoded_lanes[i][power_of_ten:]
-
+                encoded_lanes[i] = object + " " + full_id + ": " + encoded_lanes[i][power_of_ten:] + " "
 
             encoded_result.extend(encoded_lanes)
 
@@ -118,7 +131,7 @@ class SummarizedVariant:
         for interaction in self.interaction_points:
 
             # Encode references with the new lane_id and sort alphabetically
-            interacting_lanes = [mapping[lane_id] for lane_id in interaction.interaction_lanes]
+            interacting_lanes = [mapping[lane_id] for lane_id in copy.deepcopy(interaction.interaction_lanes)]
             interacting_lanes.sort()
             lanes_encoding = "".join(str(x) + ", " for x in interacting_lanes)
             lanes_encoding = lanes_encoding[:-2]
@@ -174,11 +187,11 @@ class SuperVariant(SummarizedVariant):
     id = 0
 
     def __init__(self, id, lanes, object_types, interaction_points, frequency):
+        self.id = id
         self.lanes = lanes
         self.object_types = object_types
         self.interaction_points = interaction_points
         self.frequency = frequency
-        self.id = id
 
     def __str__(self):
         result_string = "Super Variant " + str(self.id) + "\nLanes: \n"
@@ -190,7 +203,7 @@ class SuperVariant(SummarizedVariant):
             result_string += str(self.interaction_points[i]) + "\n"
         return result_string + "Frequency: " + str(self.frequency)
     
-    
+
 class SuperLane:
     '''The data structure of the summarization of lanes and Super Lanes'''
     lane_id = ()
@@ -215,51 +228,162 @@ class SuperLane:
         result_string = result_string[:-1]
         return result_string + "]"
 
+    def get_length(self):
+        '''
+        Cmputes the length of the Super Lane.
+        :param self: The summarizing Super Lane
+        :type self: SuperLane
+        :return: The horizontal length of the Super Lane
+        :rtype: int
+        '''
+        length = 0
+        for element in self.elements:
+            if (isinstance(element, CommonConstruct)):
+                length += 1
+            else:
+                length += (element.index_end - element.index_start) + 1
+        return length
 
-    def encode_lexicographically(self):
+    def get_interaction_points(self, interactions, lane_id):
+        '''
+        Returns all interaction points in the lane in order of traversal.
+        :param self: The summarizing Super Lane
+        :type self: SuperLane
+        param interactions: The list of interactions of the corresponding Super Variant
+        :type interactions: list of type InteractionPoint
+        param lane_id: The original lane_id of the high-level lane
+        :type lane_id: tuple
+        :return: The list of found interaction points
+        :rtype: list of type InteractionPoint
+        '''
+        result = []
+
+        for elem in self.elements:
+            if(type(elem) == InteractionConstruct):
+                interaction_points = IED.get_interaction_points(interactions, lane_id, elem.position)
+                result.extend(interaction_points)
+
+            elif(type(elem) == ChoiceConstruct or type(elem) == OptionalConstruct):
+                for choice in elem.choices:
+                    result.extend(choice.get_interaction_points(interactions, lane_id))
+        return result
+
+
+
+    def encode_lexicographically(self, depth, just_elements = False):
         '''
         Converts the Super Lane into an encoding string.
         :param self: The summarizing Super Lane
         :type self: SuperLane
+        param depth: The current level in the position
+        :type depth: int
+        param just_elements: Whether just the lanes elements should be encoded
+        :type just_elements: bool
         :return: The corresponding lexicographic encoding
         :rtype: str
         '''
-        encoding = f"CAR {self.cardinality}: "
+
+        encoding = ""
+        if(not just_elements):
+            encoding += f"CAR {self.cardinality}: "
 
         for element in self.elements:
 
             if(type(element) == CommonConstruct):
-                encoding += f"CO[{element.position}:{element.position}, {element.activity}] "
+                encoding += f"CO[{element.index}:{element.index}, {element.activity}] "
 
             elif(type(element) == InteractionConstruct):
-                encoding += f"IP[{element.position}:{element.position}, {element.activity}] "
+                encoding += f"IP[{element.index}:{element.index}, {element.activity}] "
                         
             else:
                         
                 # Determine all choice sequences and sort alphabetically
-                choices = [choice.encode_lexicographically() for choice in element.choices]
+                choices = [choice.encode_lexicographically(depth + 1, just_elements = True) for choice in element.choices]
                 choices.sort()
 
-                element.choices.sort(key = lambda x: x.encode_lexicographically())
-                index = 0
-                for choice in element.choices:
-                    choice.lane_id = index
-                    index += 1
+                #element.choices.sort(key = lambda x: x.encode_lexicographically(depth + 1, just_elements = True))
 
+                #index = 0
+                #position_mapping = dict()
+                #for choice in element.choices:
+                    #choice.lane_id = index
+                    #choice.lane_name = "Option " + str(index)
+                    #choice.update_lane_id(index, depth + 1)
+                    #index += 1
+                    
                 # Encode all choices
                 choices_encoding = ""
-                for choice in choices:
-                    choices_encoding += choice
+                for i in range(len(choices)):
+                    choices_encoding += "Option " + str(i) + " "
+                    choices_encoding += choices[i]
                     choices_encoding += ", "
                 choices_encoding = choices_encoding[:-2]
 
                 if(type(element) == ChoiceConstruct):
-                    encoding += f"CH[{element.position_start}:{element.position_end}, [{choices_encoding}]] "
+                    encoding += f"CH[{element.index_start}:{element.index_end}, [{choices_encoding}]] "
                         
                 elif(type(element) == OptionalConstruct):
-                    encoding += f"OP[{element.position_start}:{element.position_end}, [{choices_encoding}]] "
+                    encoding += f"OP[{element.index_start}:{element.index_end}, [{choices_encoding}]] "
 
         return encoding[:-1]
+
+
+    def update_lane_id(self, new_lane_id, depth):
+        '''
+        Updates the positions of a lane after the order of a choice has been changed.
+        :param self: The summarizing Super Lane
+        :type self: SuperLane
+        :param new_lane_id: The new id of this lane.
+        :type new_lane_id: int
+        param depth: The current level in the position
+        :type depth: int
+        '''
+        import copy 
+
+        for elem in self.elements:
+            if (isinstance(elem, CommonConstruct)):
+
+                positions = [copy.deepcopy(elem.position)]
+
+                for i in range(depth-1):
+                    positions.append(positions[-1].position)
+
+                new_position = positions[-1]
+                new_position.lane_id = new_lane_id
+                
+                for i in range(2, depth+1):
+                    current_position = positions[-i]
+                    current_position.position = new_position
+                    new_position = copy.deepcopy(current_position)
+
+                elem.position = new_position
+
+            else:
+                positions_start = [copy.deepcopy(elem.position_start)]
+                positions_end = [copy.deepcopy(elem.position_end)]
+
+                for i in range(depth-1):
+                    positions_start.append(positions_start[-1].position)
+                    positions_end.append(positions_end[-1].position)
+
+                new_position_start = positions_start[-1]
+                new_position_end = positions_end[-1]
+                new_position_start.lane_id = new_lane_id
+                new_position_end.lane_id = new_lane_id
+                
+                for i in range(2, depth+1):
+                    current_position_start = positions_start[-i]
+                    current_position_end = positions_end[-i]
+                    current_position_start.position = new_position_start
+                    current_position_end.position = new_position_end
+                    new_position_start = copy.deepcopy(current_position_start)
+                    new_position_end = copy.deepcopy(current_position_end)
+
+                elem.position_start = new_position_start
+                elem.position_end = new_position_end
+
+                for choice in elem.choices:
+                    choice.update_lane_id(new_lane_id, depth)
 
 
     def same_summarization(self, other):
@@ -338,22 +462,140 @@ class SuperLane:
         index = offset
         for element in elements:
             if(type(element) == CommonConstruct or type(element) == InteractionConstruct):
-                element.position = index
+                index_before = element.index
+                element.index = index
+                element.position.apply_shift(index - index_before)
                 index += 1
             elif(type(element) == ChoiceConstruct or type(element) == OptionalConstruct):
                 normalized_options = []
                 end_index = index
-                for option in element.options:
+                for option in element.choices:
                     normalized_options.append(option.normalize(index))
                     if(isinstance(normalized_options[-1].elements[-1], CommonConstruct)):
-                        end_index = max(end_index, normalized_options[-1].elements[-1].position)
+                        end_index = max(end_index, normalized_options[-1].elements[-1].index)
                     elif(isinstance(normalized_options[-1].elements[-1], GeneralChoiceStructure)):
-                        end_index = max(end_index, normalized_options[-1].elements[-1].position_end)
-                element.position_start = index
-                element.position_end = end_index
+                        end_index = max(end_index, normalized_options[-1].elements[-1].index_end)
+
+                index_start_before = element.index_start
+                index_end_before = element.index_start
+                element.index_start = index
+                element.index_end = end_index
+                element.position.apply_shift(index - index_start_before)
+                element.position.apply_shift(end_index - index_end_before)
                 index += end_index - index + 1
             
-        return SuperLane(0, "normalization", self.object_type, elements, None, 0)
+        return SuperLane(0, "normalization", self.object_type, elements, self.cardinality, self.frequency)
+
+
+    def normalize_option(self, lane_id, option_id, offset = 0):
+        '''
+        Creates an abstraction of a Super Lane that is an option in a choice with normalized positions as well as a mapping from interaction points to their new positions.
+        :param self: The summarizing Super Lane
+        :type self: SuperLane
+        :param offset: The starting index of the normalized Super Lane, defaulted at 0
+        :type offset: int
+        :return: The corresponding normalized Super Lane and the mapping
+        :rtype: SuperLane, dict
+        '''
+        import copy 
+        elements = copy.deepcopy(self.elements)
+        positions_mappings = dict()
+        index = offset
+        for element in elements:
+            if(type(element) == CommonConstruct or type(element) == InteractionConstruct):
+
+                position_before = copy.deepcopy(element.position)
+                index_before = element.index
+                element.index = index
+
+                element.position.apply_shift(index - index_before)
+                position_after_shift = element.position
+                
+                if(isinstance(position_after_shift.position, IED.BasePosition)):
+                    element.position = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.BasePosition(option_id, position_after_shift.position.position)))
+                else:
+                    element.position = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.RecursiveLanePosition(option_id, position_after_shift.position.position)))
+
+                index += 1
+
+                if(type(element) == InteractionConstruct):
+                    positions_mappings[str(position_before)] = element.position
+
+            elif(type(element) == ChoiceConstruct or type(element) == OptionalConstruct):
+                normalized_options = []
+                end_index = index
+
+                for option in element.choices:
+                    normalization, mapping = option.normalize_option(lane_id, option_id, index)
+                    normalized_options.append(normalization)
+
+                    for key in mapping.keys():
+                        positions_mappings[key] = mapping[key]
+
+                    if(isinstance(normalized_options[-1].elements[-1], CommonConstruct)):
+                        end_index = max(end_index, normalized_options[-1].elements[-1].index)
+                    elif(isinstance(normalized_options[-1].elements[-1], GeneralChoiceStructure)):
+                        end_index = max(end_index, normalized_options[-1].elements[-1].index_end)
+
+                index_start_before = element.index_start
+                index_end_before = element.index_start
+                element.index_start = index
+                element.index_end = end_index
+
+                element.position_start.apply_shift(index - index_start_before)
+                element.position_end.apply_shift(end_index - index_end_before)
+                position_start_after_shift = element.position_start
+                position_end_after_shift = element.position_end
+
+                if(isinstance(position_start_after_shift.position, IED.BasePosition)):
+                    element.position_start = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.BasePosition(option_id, position_start_after_shift.position.position)))
+                    element.position_end = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.BasePosition(option_id, position_end_after_shift.position.position)))
+                else:
+                    element.position_start = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.RecursiveLanePosition(option_id, position_start_after_shift.position.position)))
+                    element.position_end = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.RecursiveLanePosition(option_id, position_end_after_shift.position.position)))
+                
+                index += end_index - index + 1
+            
+        return SuperLane(self.lane_id, self.lane_name, self.object_type, elements, self.cardinality, self.frequency), positions_mappings
+
+
+    def extract_option(self):
+        '''
+        Updates all positions in a lane by removing the first given option_id corresponding to the second lane_id.
+        :param self: The summarizing Super Lane
+        :type self: SuperLane
+        :return: The corresponding lane with adjusted positions and it's mapping
+        :rtype: SuperLane, dict
+        '''
+        import copy 
+
+        mapping = dict()
+
+        for element in self.elements:
+            if(type(element) == CommonConstruct or type(element) == InteractionConstruct):
+
+                position_before = copy.deepcopy(element.position)
+                element.position = IED.RecursiveLanePosition(0, position_before.position.position)
+
+                if(type(element) == InteractionConstruct):
+                    mapping[str(position_before)] = element.position
+
+            elif(type(element) == ChoiceConstruct or type(element) == OptionalConstruct):
+
+                for i in range(len(element.choices)):
+
+                    updated_choice, recursive_mapping = element.choices[i].extract_option()
+                    element.choices[i] = updated_choice
+
+                    for key in recursive_mapping.keys():
+                        mapping[key] = recursive_mapping[key]
+
+                    position_start_before = copy.deepcopy(element.position_start)
+                    position_end_before = copy.deepcopy(element.position_end)
+                    element.position_start = IED.RecursiveLanePosition(0, position_start_before.position.position)
+                    element.position_end = IED.RecursiveLanePosition(0, position_end_before.position.position)
+   
+        return self, mapping
 
 
     def get_realizations_normalized(self):
@@ -380,16 +622,29 @@ class SuperLane:
                     for sublist in element.choices[i].get_realizations_normalized(element.start):
                         intermediate_result.extend([realization + sublist.elements for realization in realizations])
                 if(type(element) == OptionalConstruct):
-                    intermediate_result.extend(realizations)
+                    intermediate_result.extend([realization + [EmptyConstruct(element.empty_frequency)] for realization in realizations])
                 realizations = intermediate_result
 
         result = []
         for i in range(len(realizations)):
+
+            frequency = 1
+            for elem in realizations[i]:
+                frequency = frequency * elem.frequency
+            
+            realization_frequency = frequency * self.frequency
+
             index = 0
-            for element in realizations[i]:
-                element.position = index
-                index += 1
-            result.append(SuperLane(i, "realization " + str(i), self.object_type, realizations[i], None, 0))
+            elements = []
+            for elem in realizations[i]:
+                if(not type(elem) == EmptyConstruct):
+                    elements.append(copy.deepcopy(elem))
+                    elements[-1].frequency = frequency
+                    elements[-1].index = index
+                    elements[-1].position = IED.BasePosition(0, index)
+                    index += 1
+                    
+            result.append(SuperLane(i, "realization " + str(i), self.object_type, elements, "1", realization_frequency))
 
         return result
 
@@ -409,7 +664,7 @@ class SuperLane:
             element = copy.deepcopy(elem)
 
             if(type(element) == CommonConstruct or type(element) == InteractionConstruct):
-                realizations = [realization + [element] for realization in realizations]
+                realizations = [realization + [copy.deepcopy(element)] for realization in realizations]
 
             elif(type(element) == ChoiceConstruct or type(element) == OptionalConstruct):
                 intermediate_result = []
@@ -419,55 +674,48 @@ class SuperLane:
                         intermediate_result.extend([realization + sublist.elements for realization in realizations])
 
                 if(type(element) == OptionalConstruct):
-                    intermediate_result.extend(realizations)
+                    intermediate_result.extend([realization + [EmptyConstruct(element.empty_frequency)] for realization in realizations])
                 realizations = intermediate_result
 
         result = []
-        #TODO frequency and count are not the
+
         for i in range(len(realizations)):
             frequency = 1
             for elem in realizations[i]:
                 frequency = frequency*elem.frequency
-            frequency = self.frequency
-            frequency = frequency/len(realizations)
-            elements = []
+            
+            realization_frequency = frequency * self.frequency
+            
+            new_elements = []
             for elem in realizations[i]:
-                elements.append(copy.deepcopy(elem))
-                elements[-1].frequency = frequency
-            result.append(SuperLane(i, "realization " + str(i), self.object_type, elements, self.cardinality, frequency))
+                if(not type(elem) == EmptyConstruct):
+                    new_elements.append(copy.deepcopy(elem))
+                    new_elements[-1].frequency = frequency
+
+            result.append(SuperLane(i, "realization " + str(i), self.object_type, new_elements, self.cardinality, realization_frequency))
 
         return result
 
    
-    def get_element(self, position, highlevel = True, option_id = None):
+    def get_element(self, position):
         '''
         Extracts the element of the Super Lane at the given position.
         :param self: The summarizing Super Lane
         :type self: SuperLane
-        :param position: The positional index of the element
-        :type position: int
-        :param highlevel: Whether to return the high-level element or extract the sub-element from choice structures, default True
-        :type highlevel: bool
-        :param option_id: Only used for a non-highlevel setting. The id of the lane in a choice to consider, otherwise all choices are considered, default None 
-        :type option_id: int
+        :param position: The position of the element
+        :type position: LanePosition
         :return: The element at the given position
         :rtype: SummarizationElement
-        '''
+        ''' 
+        unpacked_position = position.position
+        is_base_position = isinstance(unpacked_position, int)
         for element in self.elements:
-            if((type(element) == CommonConstruct or type(element) == InteractionConstruct) and element.position == position):
+            if((type(element) == CommonConstruct or type(element) == InteractionConstruct) and is_base_position and element.index == unpacked_position):
                 return element
-            if((type(element) == ChoiceConstruct or type(element) == OptionalConstruct) and position >= element.position_start and position <= element.position_end):
-                if(not highlevel):
-                    if(option_id):
-                        return element.choices[option_id].get_element(position)
-                    else:
-                        return_options = [option.get_element(position) for option in element.choices if option.get_element(position)]
-                        if(return_options != []):
-                            return return_options[0]
-                        else:
-                            return None
-                else:
-                    return element
+            elif((type(element) == ChoiceConstruct or type(element) == OptionalConstruct) and not is_base_position and unpacked_position.get_base_index() >= element.index_start and unpacked_position.get_base_index() <= element.index_end):
+                return element.choices[unpacked_position.lane_id].get_element(unpacked_position)
+            elif((type(element) == ChoiceConstruct or type(element) == OptionalConstruct) and is_base_position and unpacked_position >= element.index_start and unpacked_position <= element.index_end):
+                return element
         return None
 
 
@@ -513,7 +761,6 @@ class SuperLane:
 
         return count
     
-    
     def shift_lane(self, start_element, offset, index = None):
         '''
         Shifts the positions of the Super Lane by an offset starting from a given start element.
@@ -530,66 +777,126 @@ class SuperLane:
             index = self.elements.index(start_element)
         for i in range(index, len(self.elements)):
             if(type(self.elements[i]) == CommonConstruct or type(self.elements[i]) == InteractionConstruct):
-                self.elements[i].position += offset
+                self.elements[i].index += offset
+                self.elements[i].position.apply_shift(offset)
             elif(type(self.elements[i]) == ChoiceConstruct or type(self.elements[i]) == OptionalConstruct):
-                self.elements[i].position_start += offset
-                self.elements[i].position_end += offset 
+                self.elements[i].index_start += offset
+                self.elements[i].index_end += offset 
+                self.elements[i].position_start.apply_shift(offset)
+                self.elements[i].position_end.apply_shift(offset)
+
                 for choice in self.elements[i].choices:
-                    choice.shift_lane(choice.elements[0], offset)
+                    choice.shift_lane(choice.elements[0], offset, 0)
 
 
-    def shift_lane_exact(self, start_position, offset, choice_id = 0):
+    def shift_lane_exact(self, start_position, offset, observed_positions, original_position):
         '''
         Shifts the positions of the Super Lane by an offset starting from a given start position.
         :param self: The summarizing Super Lane
         :type self: SuperLane
         :param start_position: The position from which the shifting should begin
-        :type start_position: int
+        :type start_position: LanePosition
         :param offset: The offset of the shift
         :type offset: int
-        :param choice_id: The id of the choice in which the shift should begin
-        :type choice_id: int
-        :return: Whether the shift affected an element partially anf the corresponding start and end positions of that element before the shift
-        :rtype: bool, int, int
+        :param observed_positions: A dictionary with all other interaction point positions relevant for this shift, these are observed and updated accordingly
+        :type observed_positions: dict
+        :param original_position: The original position from which the shifting should begin
+        :type original_position: LanePosition
+        :return: The dictionary with the observed updated positions
+        :rtype: dict
         '''
+        import copy
+        unpacked_position = start_position.position
+        is_base_position = isinstance(unpacked_position, int)
 
         for i in range(len(self.elements)):
 
             # Case 1: Start shifting from a Common Activity
-            if((type(self.elements[i]) == InteractionConstruct) and self.elements[i].position == start_position):
+            if((type(self.elements[i]) == InteractionConstruct) and is_base_position and self.elements[i].index == unpacked_position):
+
                 self.shift_lane(self.elements[i], offset, i)
-                return False, i, start_position, start_position
+                for key in observed_positions.keys():
+                    observed_positions[key].apply_shift(offset)
+                return observed_positions
         
             # Case 2: Start shifting from a Generic Choice Structure
-            elif((type(self.elements[i]) == ChoiceConstruct or type(self.elements[i]) == OptionalConstruct) and self.elements[i].position_end >= start_position and self.elements[i].position_start <= start_position):
-
-                start_position_before_shift = self.elements[i].position_start
-                end_position_before_shift = self.elements[i].position_end
+            elif((type(self.elements[i]) == ChoiceConstruct or type(self.elements[i]) == OptionalConstruct) and not is_base_position and self.elements[i].index_end >= unpacked_position.get_base_index() and self.elements[i].index_start <= unpacked_position.get_base_index()):
+                start_index_before_shift = self.elements[i].index_start
+                end_index_before_shift = self.elements[i].index_end
                 
-                self.elements[i].choices[choice_id].shift_lane_exact(start_position, offset)
+                all_relevant_observed_positions = dict()
+                following_relevant_observed_position = dict()
+                remaining_observed_positions = dict()
+                
+                for key in observed_positions.keys():
+                    if (observed_positions[key].get_base_index() >= start_index_before_shift and observed_positions[key].get_base_index() <= end_index_before_shift):
 
-                all_start_positions = []
-                all_end_positions = []
+                        in_same_lane = True
+                        unpacked_levels = original_position.get_depth() - unpacked_position.get_depth()
+
+                        unpacked_value = copy.deepcopy(observed_positions[key])
+                        unpacked_original = copy.deepcopy(original_position)
+
+                        for j in range(unpacked_levels):
+                            if (unpacked_value.lane_id != unpacked_original.lane_id):
+                                in_same_lane = False
+                                break
+                            else:
+                                unpacked_value = unpacked_value.position
+                                unpacked_original = unpacked_original.position
+                                
+                        in_same_lane = in_same_lane and unpacked_value.lane_id == unpacked_position.lane_id
+
+                        if(in_same_lane):
+                            all_relevant_observed_positions[key] = observed_positions[key]
+
+                        else:
+                            remaining_observed_positions[key] = observed_positions[key]
+
+                    elif(observed_positions[key].get_base_index() > end_index_before_shift):
+                        following_relevant_observed_position[key] = observed_positions[key]
+
+                    else:
+                        remaining_observed_positions[key] = observed_positions[key]
+
+                updated_relevant_observed_shift = self.elements[i].choices[unpacked_position.lane_id].shift_lane_exact(unpacked_position, offset, all_relevant_observed_positions, original_position)
+
+                all_start_indices = []
+                all_end_indices = []
 
                 for choice in self.elements[i].choices:
                     if(isinstance(choice.elements[0], CommonConstruct)):
-                        all_start_positions.append(choice.elements[0].position)
+                        all_start_indices.append(choice.elements[0].index)
                     elif(isinstance(choice.elements[0], GeneralChoiceStructure)):
-                        all_start_positions.append(choice.elements[0].position_start)
+                        all_start_indices.append(choice.elements[0].index_start)
 
                     if(isinstance(choice.elements[-1], CommonConstruct)):
-                        all_end_positions.append(choice.elements[-1].position)
+                        all_end_indices.append(choice.elements[-1].index)
                     elif(isinstance(choice.elements[-1], GeneralChoiceStructure)):
-                        all_end_positions.append(choice.elements[-1].position_end)
+                        all_end_indices.append(choice.elements[-1].index_end)
                         
-
-                self.elements[i].position_start = min(all_start_positions)
-                self.elements[i].position_end = max(all_end_positions)
+                self.elements[i].index_start = min(all_start_indices)
+                self.elements[i].index_end = max(all_end_indices)
+                self.elements[i].position_start.apply_shift(self.elements[i].index_start - start_index_before_shift)
+                self.elements[i].position_end.apply_shift(self.elements[i].index_end - end_index_before_shift)
                 
                 if(i < len(self.elements)-1):
-                    self.shift_lane(self.elements[i+1], self.elements[i].position_end - end_position_before_shift, i+1)
+                    self.shift_lane(self.elements[i+1], self.elements[i].index_end - end_index_before_shift, i+1)
 
-                return True, i, start_position_before_shift, end_position_before_shift
+                for key in following_relevant_observed_position.keys():
+                    following_relevant_observed_position[key].apply_shift(self.elements[i].index_end - end_index_before_shift)
+                    observed_positions[key] = following_relevant_observed_position[key]
+
+                for key in updated_relevant_observed_shift.keys():
+                    observed_positions[key] = updated_relevant_observed_shift[key]
+
+                for key in remaining_observed_positions.keys():
+                    observed_positions[key] = remaining_observed_positions[key]
+        
+
+                return observed_positions
+
+        return observed_positions
                 
 
 
@@ -608,55 +915,54 @@ class SuperLane:
         return SuperLane(self.lane_id, self.lane_name, self.object_type, new_elements, self.cardinality, self.frequency)
 
 
-    def make_optional(self, position, empty_frequency, choice_id = None):
+    def make_optional(self, position, empty_frequency):
         '''
-        Shifts the positions of the Super Lane by an offset starting from a given start position.
+        Makes an element at a certain position optional
         :param self: The summarizing Super Lane
         :type self: SuperLane
         :param position: The position of the element that is to be made optional
-        :type position: int
+        :type position: LanePosition
         :param empty_frequency: The counter-frequency of the optional element that is subtracted from the current element frequency
         :type lane: float
-        :param choice_id: The id of the choice in which an element should be made optional
-        :type choice_id: int
         :return: The modified Super Lane and the modified element
         :rtype: SuperLane, OptionalChoiceConstruct
         '''
+        unpacked_position = position.position
+        is_base_position = isinstance(unpacked_position, int)
         for i in range(len(self.elements)):
-            if (isinstance(self.elements[i], InteractionConstruct) and self.elements[i].position == position):
+            if (isinstance(self.elements[i], InteractionConstruct) and is_base_position and self.elements[i].index == unpacked_position):
                 self.elements[i] = self.elements[i].make_optional(self, empty_frequency)
                 return self, self.elements[i]
-            elif(isinstance(self.elements[i], GeneralChoiceStructure) and self.elements[i].position_start <= position and self.elements[i].position_end >= position):
-                if(choice_id):
-                    self.elements[i].choices[choice_id], element = self.elements[i].choices[choice_id].make_optional(position, empty_frequency)
-                    return self, element
-                else:
-                    self.elements[i].choices[choice_id], element = self.elements[i].choices[0].make_optional(position, empty_frequency)
-                    return self, element
+            elif(isinstance(self.elements[i], GeneralChoiceStructure) and not is_base_position and self.elements[i].index_start <= unpacked_position.get_base_index() and self.elements[i].index_end >= unpacked_position.get_base_index()):
+                self.elements[i].choices[unpacked_position.lane_id], element = self.elements[i].choices[unpacked_position.lane_id].make_optional(unpacked_position, empty_frequency)
+                return self, element
         return self, None
 
-    
-    def add_optional_activity(self, position, activity, choice_id = 0):
+
+    def add_optional_activity(self, position, activity):
         '''
         Inserts an optional element into the Super Lane at the given position.
         :param self: The summarizing Super Lane
         :type self: SuperLane
         :param position: The position at which the optional element should be inserted
-        :type position: int
+        :type position: LanePosition
         :param activity: The optional element that should be inserted
         :type activity: OptionalConstruct
-        :param choice_id: The id of the choice in which the activity should be added
-        :type choice_id: int
         :return: The modified Super Lane
         :rtype: SuperLane
         '''
-
         activity.position_start = position
         activity.position_end = position
         activity.choices[0].elements[0].position = position 
+        activity.index_start = position.get_base_index()
+        activity.index_end = position.get_base_index()
+        activity.choices[0].elements[0].index = position.get_base_index()
+
+        unpacked_position = position.position
+        is_base_position = isinstance(unpacked_position, int)
 
         for i in range(len(self.elements)):
-            if (isinstance(self.elements[i], CommonConstruct) and self.elements[i].position >= position):
+            if ((isinstance(self.elements[i], CommonConstruct) and is_base_position and self.elements[i].index >= unpacked_position) or (isinstance(self.elements[i], GeneralChoiceStructure) and is_base_position and self.elements[i].index_start >= unpacked_position)):
                 self.shift_lane(self.elements[i], 1, i)
                 predecessors = []
                 if(i > 0):
@@ -665,20 +971,21 @@ class SuperLane:
                 self.elements = predecessors + [activity] + successors
                 return self
 
-            elif(isinstance(self.elements[i], GeneralChoiceStructure) and self.elements[i].position_start <= position and self.elements[i].position_end >= position):
+            elif(isinstance(self.elements[i], GeneralChoiceStructure) and not is_base_position and self.elements[i].index_start <= unpacked_position.get_base_index() and self.elements[i].index_end >= unpacked_position.get_base_index()):
 
-                self.elements[i].choices[choice_id] = self.elements[i].choices[choice_id].add_optional_activity(position, activity)
+                self.elements[i].choices[unpacked_position.lane_id] = self.elements[i].choices[unpacked_position.lane_id].add_optional_activity(unpacked_position, activity)
 
-                all_end_positions = []
+                all_end_indices = []
                 for choice in self.elements[i].choices:
                     if(isinstance(choice.elements[-1], CommonConstruct)):
-                        all_end_positions.append(choice.elements[-1].position)
+                        all_end_indices.append(choice.elements[-1].index)
                     elif(isinstance(choice.elements[-1], GeneralChoiceStructure)):
-                        all_end_positions.append(choice.elements[-1].position_end)
+                        all_end_indices.append(choice.elements[-1].index_end)
 
-                new_end = max(all_end_positions)
-                length_difference = new_end - self.elements[i].position_end
-                self.elements[i].position_end = new_end
+                new_end = max(all_end_indices)
+                length_difference = new_end - self.elements[i].index_end
+                self.elements[i].index_end = new_end
+                self.elements[i].position_end.apply_shift(length_difference)
 
                 if(i < len(self.elements)-1):
                     self.shift_lane(self.elements[i+1], length_difference, i+1)
@@ -688,7 +995,7 @@ class SuperLane:
         self.elements = self.elements + [activity]
         return self
 
-    # Might need an update for nested structures
+    
     def shift_activities_up(self, up_to = None):
         '''
         Shifts all non-interaction elements up to the next element's position.
@@ -699,37 +1006,40 @@ class SuperLane:
         :return: The modified Super Lane
         :rtype: SuperLane
         '''
-
         # Shift last element 
         if(isinstance(self.elements[-1], GeneralChoiceStructure)):
-
+            start_index_before_shift = self.elements[-1].index_start
+            end_index_before_shift = self.elements[-1].index_end
+        
             for j in range(len(self.elements[-1].choices)):
                 if(up_to):
                     self.elements[-1].choices[j] = self.elements[-1].choices[j].shift_activities_up(up_to)
                 else: 
-                    self.elements[-1].choices[j] = self.elements[-1].choices[j].shift_activities_up(self.elements[-1].position_end)
+                    self.elements[-1].choices[j] = self.elements[-1].choices[j].shift_activities_up(self.elements[-1].index_end)
 
-            all_start_positions = []
-            all_end_positions = []
+            all_start_indices = []
+            all_end_indices = []
 
             for choice in self.elements[-1].choices:
                 if(isinstance(choice.elements[0], CommonConstruct)):
-                    all_start_positions.append(choice.elements[0].position)
+                    all_start_indices.append(choice.elements[0].index)
                 elif(isinstance(choice.elements[0], GeneralChoiceStructure)):
-                    all_start_positions.append(choice.elements[0].position_start)
+                    all_start_indices.append(choice.elements[0].index_start)
 
                 if(isinstance(choice.elements[-1], CommonConstruct)):
-                    all_end_positions.append(choice.elements[-1].position)
+                    all_end_indices.append(choice.elements[-1].index)
                 elif(isinstance(choice.elements[-1], GeneralChoiceStructure)):
-                    all_end_positions.append(choice.elements[-1].position_end)
+                    all_end_indices.append(choice.elements[-1].index_end)
                         
+            self.elements[-1].index_start = min(all_start_indices)
+            self.elements[-1].index_end = max(all_end_indices)
+            self.elements[-1].position_start.apply_shift(self.elements[-1].index_start - start_index_before_shift)
+            self.elements[-1].position_end.apply_shift(self.elements[-1].index_end - end_index_before_shift)
 
-            self.elements[-1].position_start = min(all_start_positions)
-            self.elements[-1].position_end = max(all_end_positions)
-
-        else:
+        elif(not isinstance(self.elements[-1], InteractionConstruct)):
             if(up_to):
-                self.elements[-1].position = up_to
+                self.elements[-1].position.apply_shift(up_to - self.elements[-1].position.get_base_index())
+                self.elements[-1].index = up_to
 
         # Continue to shift up each element to its successor element
         for i in range(len(self.elements) - 1):
@@ -737,45 +1047,50 @@ class SuperLane:
             if (isinstance(self.elements[index-1], CommonConstruct) and not isinstance(self.elements[index-1], InteractionConstruct)):
 
                 if (isinstance(self.elements[index], CommonConstruct)):
-                    offset = self.elements[index].position - self.elements[index-1].position - 1
+                    offset = self.elements[index].index - self.elements[index-1].index - 1
                 elif (isinstance(self.elements[index], GeneralChoiceStructure)):
-                    offset = self.elements[index].position_start - self.elements[index-1].position - 1
+                    offset = self.elements[index].index_start - self.elements[index-1].index - 1
                 else:
                     offset = 0
 
-                self.elements[index-1].position += offset
+                self.elements[index-1].index += offset
+                self.elements[index-1].position.apply_shift(offset)
 
 
             elif(isinstance(self.elements[index-1], GeneralChoiceStructure)):
 
                 if (isinstance(self.elements[index], CommonConstruct)):
-                    offset = self.elements[index].position
+                    offset = self.elements[index].index - self.elements[index-1].index_end - 1
                 elif (isinstance(self.elements[index], GeneralChoiceStructure)):
-                    offset = self.elements[index].position_start
+                    offset = self.elements[index].index_start - self.elements[index-1].index_end - 1
                 else:
                     offset = 0
 
-                for j in range(len(self.elements[index-1].choices)):
-                    self.elements[index-1].choices[j] = self.elements[index-1].choices[j].shift_activities_up(max(offset-1,0))
+                start_index_before_shift = self.elements[index-1].index_start
+                end_index_before_shift = self.elements[index-1].index_end
 
-                all_start_positions = []
-                all_end_positions = []
+                for j in range(len(self.elements[index-1].choices)):
+                    self.elements[index-1].choices[j] = self.elements[index-1].choices[j].shift_activities_up(max(self.elements[index-1].index_end + offset - 1, self.elements[index-1].index_end))
+
+                all_start_indices = []
+                all_end_indices = []
 
                 for choice in self.elements[index-1].choices:
                     if(isinstance(choice.elements[0], CommonConstruct)):
-                        all_start_positions.append(choice.elements[0].position)
+                        all_start_indices.append(choice.elements[0].index)
                     elif(isinstance(choice.elements[0], GeneralChoiceStructure)):
-                        all_start_positions.append(choice.elements[0].position_start)
+                        all_start_indices.append(choice.elements[0].index_start)
 
                     if(isinstance(choice.elements[-1], CommonConstruct)):
-                        all_end_positions.append(choice.elements[-1].position)
+                        all_end_indices.append(choice.elements[-1].index)
                     elif(isinstance(choice.elements[-1], GeneralChoiceStructure)):
-                        all_end_positions.append(choice.elements[-1].position_end)
+                        all_end_indices.append(choice.elements[-1].index_end)
                         
 
-                self.elements[index-1].position_start = min(all_start_positions)
-                self.elements[index-1].position_end = max(all_end_positions)
-
+                self.elements[index-1].index_start = min(all_start_indices)
+                self.elements[index-1].index_end = max(all_end_indices)
+                self.elements[index-1].position_start.apply_shift(self.elements[index-1].index_start - start_index_before_shift)
+                self.elements[index-1].position_end.apply_shift(self.elements[index-1].index_end - end_index_before_shift)
 
         return self
 
@@ -796,6 +1111,21 @@ class SuperLane:
                         return True
         return False
 
+    def get_depth(self):
+        '''
+        Determines the nested depth of the Super Lane.
+        :param self: The summarizing Super Lane
+        :type self: SuperLane
+        :return: The number of nested structures in the Super Lane
+        :rtype: int
+        '''
+        depth = 0
+        for element in self.elements:
+            if(isinstance(element, GeneralChoiceStructure)):
+                for choice in element.choices:
+                    depth = max(depth, 1 + choice.get_depth())
+        return depth
+
 
 
 class OptionalSuperLane(SuperLane):
@@ -813,20 +1143,28 @@ class OptionalSuperLane(SuperLane):
 class SummarizationElement:
     '''The data structure the elements of a summarized variant'''
 
+class EmptyConstruct(SummarizationElement):
+    frequency = 0
+
+    def __init__(self, frequency):
+        self.frequency = frequency
+
 
 class CommonConstruct(SummarizationElement):
     '''The data structure of common activities in a summarized variant'''
     activity = ""
     frequency = 0
-    position = 0
-    
-    def __init__(self, activity, frequency, position):
+    position = None
+    index = 0
+
+    def __init__(self, activity, frequency, position, index):
         self.activity = activity
         self.frequency = frequency
         self.position = position
+        self.index = index
         
     def __str__(self):
-        return f"(Pos {self.position}: {self.activity})"
+        return "(Pos " + str(self.position) + ": " + str(self.activity) + ")"
     
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -846,14 +1184,14 @@ class CommonConstruct(SummarizationElement):
         :rtype: OptionalConstruct
         '''
         self.frequency -= empty_frequency
-        option = SuperLane(0, "option 0", lane.object_type, [self], 1, self.frequency)
-        return OptionalConstruct([option], self.position, self.position)
+        option = SuperLane(0, "option 0", lane.object_type, [self], 1, self.frequency*lane.frequency)
+        return OptionalConstruct([option], self.position, self.position, self.index, self.index, empty_frequency)
 
 
 class InteractionConstruct(CommonConstruct):
     
     def __str__(self):
-        return f"(Pos {self.position}: Interaction {self.activity})"
+        return "(Pos " + str(self.position) + ": Interaction " + str(self.activity) + ")"
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -864,13 +1202,17 @@ class InteractionConstruct(CommonConstruct):
 class GeneralChoiceStructure(SummarizationElement):
     '''The data structure of an choices of activity sequences in a summarized variant'''
     choices = []
-    position_start = 0
-    position_end = 0
+    position_start = None
+    position_end = None
+    index_start = 0
+    index_end = 0
     
-    def __init__(self, choices, start, end):
+    def __init__(self, choices, start, end, index_start, index_end):
         self.choices = choices
         self.position_start = start
         self.position_end = end
+        self.index_start = index_start
+        self.index_end = index_end
     
     def __eq__(self, other):
         import copy
@@ -910,6 +1252,16 @@ class GeneralChoiceStructure(SummarizationElement):
 
 class OptionalConstruct(GeneralChoiceStructure):
     '''The data structure of an optional choices of activity sequences in a summarized variant'''
+
+    empty_frequency = 1
+
+    def __init__(self, choices, start, end, index_start, index_end, empty_frequency):
+        self.choices = choices
+        self.position_start = start
+        self.position_end = end
+        self.index_start = index_start
+        self.index_end = index_end
+        self.empty_frequency = empty_frequency
     
     def __str__(self):
         result_string = f"(Pos: {self.position_start} - {self.position_end}: Optional Choices "
@@ -929,24 +1281,6 @@ class ChoiceConstruct(GeneralChoiceStructure):
             result_string += str(choice) + ", "
         result_string = result_string[:-2] + ")"
         return result_string
-
-
-def is_interaction_point(interactions, lane, position):
-    '''
-    Determines whether one of the merged original activities of a summarized activity is an interaction point.
-    :param interactions: The interaction points of the variant
-    :type interaction: list of type InteractionPoint
-    :param activity_name: The name of the activity that is checked
-    :type activity_name: str
-    :param positions: The original indices of the merged activities
-    :type positions: tuple
-    :return: Whether the activity at any of the given positions is listed as an interaction point
-    :rtype: bool
-    '''
-    for interaction in interactions:
-        if lane in interaction.interaction_lanes and interaction.index_in_lanes == position:
-            return True, interaction
-    return False, None
 
 
 def summarized_variant_layouting(summarized_variant):
@@ -972,15 +1306,16 @@ def summarized_variant_layouting(summarized_variant):
 
             interactions = [lane.lane_id]
 
-            if(isinstance(elem,InteractionConstruct)):
+            if(isinstance(elem, InteractionConstruct)):
                 for interactionPoint in summarized_variant.interaction_points:
-                    if(lane.lane_id in interactionPoint.interaction_lanes and elem.position == interactionPoint.index_in_lanes):
-                        interactions.extend(interactionPoint.interaction_lanes)
+                    for i in range(len(interactionPoint.interaction_lanes)):
+                        if(lane.lane_id in interactionPoint.interaction_lanes and elem.index == interactionPoint.exact_positions[i]):
+                            interactions.extend(interactionPoint.interaction_lanes)
 
-            if(isinstance(elem,CommonConstruct) or isinstance(elem,InteractionConstruct)):
-                activities.append([elem,[[elem.position, elem.position],list(set(interactions))]])
+            if(isinstance(elem, CommonConstruct) or isinstance(elem, InteractionConstruct)):
+                activities.append([elem,[[elem.index, elem.index], list(set(interactions))]])
             else:
-                activities.append([elem,[[elem.position_start, elem.position_end],list(set(interactions))]])
+                activities.append([elem,[[elem.index_start, elem.index_end], list(set(interactions))]])
     
     # Remove duplicate activities that are interaction points
     unique_activities = []

@@ -46,19 +46,16 @@ class VariantLane:
         '''
         elements = []
         for i in range(len(self.activities)):
-            position = self.horizontal_indices[i]
+            index = self.horizontal_indices[i]
+            position = BasePosition(0, index)
             activity_label = self.activities[i]
-            is_interaction_point = False
-            for interaction_point in interactions:
-                if(interaction_point.index_in_lanes == position and self.lane_id in interaction_point.interaction_lanes):
-                    interaction_point = interaction_point
-                    is_interaction_point = True
-                    break
-            if(is_interaction_point):
-                elements.append(SVD.InteractionConstruct(activity_label, 1, position))
+            is_interacting, interaction_point = is_interaction_point(interactions, self.lane_id, position)
+
+            if(is_interacting):
+                elements.append(SVD.InteractionConstruct(activity_label, 1, position, index))
 
             else:
-                elements.append(SVD.CommonConstruct(activity_label, 1, position))
+                elements.append(SVD.CommonConstruct(activity_label, 1, position, index))
 
         return SVD.SuperLane(self.lane_id, self.lane_name, self.object_type, elements, "1", 1)
 
@@ -69,15 +66,113 @@ class InteractionPoint:
     interaction_lanes = []
     interacting_types = {}
     index_in_lanes = 0
+    exact_positions = []
     
-    def __init__(self, activity_label, lanes, types, index):
+    def __init__(self, activity_label, lanes, types, index, positions):
         self.activity_name = activity_label                                                                    
         self.interaction_lanes = lanes                                                                      
         self.interacting_types = types
         self.index_in_lanes = index
+        self.exact_positions = positions
         
     def __str__(self):
         return f"Interaction Point: {self.activity_name} at Pos: {self.index_in_lanes}"
+
+class LanePosition:
+    '''The data structure for storing element positions in lanes'''
+
+class RecursiveLanePosition(LanePosition):
+    '''The recursive data structure for storing element positions in lanes'''
+
+    lane_id = 0
+    position = None
+
+    def __init__(self, lane, position):
+        self.lane_id = lane
+        self.position = position
+
+    def __eq__(self, other):
+        return type(self) == type(other) and (self.lane_id == other.lane_id) and (self.position == other.position)
+
+    def __str__(self):
+        return "R(" + str(self.lane_id) + ", " + str(self.position) + ")"
+
+    def get_base_index(self):
+        ''' 
+        Gets the horizontal index of the position element.
+        :param self: The position element
+        :type self: RecursiveLanePosition
+        :return: The recursive result
+        :rtype: int
+        '''
+        return self.position.get_base_index()
+
+    def apply_shift(self, offset):
+        ''' 
+        Shifts the horizontal index by a given offset.
+        :param self: The position element
+        :type self: RecursiveLanePosition
+        :param offset: The offset
+        :type offset: int
+        '''
+        self.position.apply_shift(offset)
+
+    def get_depth(self):
+        ''' 
+        Gets the vertical_depth of the element.
+        :param self: The position element
+        :type self: RecursiveLanePosition
+        :return: The nested depth of the element
+        :rtype: int
+        '''
+        return 1 + self.position.get_depth()
+
+class BasePosition(LanePosition):
+    '''The data structure for storing the index of a lane as a position'''
+    lane_id = 0
+    position = 0
+
+    def __init__(self, lane, position):
+        self.lane_id = lane
+        self.position = position
+
+    def __eq__(self, other):
+        return type(self) == type(other) and (self.lane_id == other.lane_id) and (self.position == other.position)
+
+    def __str__(self):
+        return "B(" + str(self.lane_id) + ", " + str(self.position) + ")"
+
+    def get_base_index(self):
+        ''' 
+        Gets the horizontal index of the position element.
+        :param self: The position element
+        :type self: BasePosition
+        :return: The index of the base position
+        :rtype: int
+        '''
+        return self.position
+
+    def apply_shift(self, offset):
+        ''' 
+        Shifts the horizontal index by a given offset.
+        :param self: The position element
+        :type self: BasePosition
+        :param offset: The offset
+        :type offset: int
+        '''
+        self.position  += offset
+
+
+    def get_depth(self):
+        ''' 
+        Gets the vertical_depth of the element.
+        :param self: The position element
+        :type self: BasePosition
+        :return: The nested depth of the element
+        :rtype: int
+        '''
+        return 1
+
 
 
 class ExtractedVariant:
@@ -166,7 +261,7 @@ def extract_lanes(variant, frequency):
             types = []
             for j in range(len(events[i][1][1])):
                 types.append(objects[events[i][1][1][j]][0])
-            extracted_interactions.append(InteractionPoint((events[i][0]), events[i][1][1], set(types), events[i][1][0][0]))
+            extracted_interactions.append(InteractionPoint(events[i][0], events[i][1][1], set(types), events[i][1][0][0], [BasePosition(0,events[i][1][0][0]) for event in events[i][1][1]]))
     
     extracted_types = set([object[0] for object in objects.values()])
     extracted_variant = ExtractedVariant(extracted_lanes, extracted_types, extracted_interactions, frequency)
@@ -179,13 +274,36 @@ def is_interaction_point(interactions, lane, position):
     :param interactions: The interaction points of the corresponding variant
     :type interaction: list of type InteractionPoint
     :param lane: The lane id
-    :type lane: int
+    :type lane: tuple
     :param position: The position index
     :type position: int
     :return: Whether the activity at the position is an interaction point, The corresponding interaction point
     :rtype: bool, InteractionType
     '''
     for interaction in interactions:
-        if lane in interaction.interaction_lanes and interaction.index_in_lanes == position:
-            return True, interaction
+        for i in range(len(interaction.interaction_lanes)):
+            if ((interaction.interaction_lanes[i] == lane) and (interaction.exact_positions[i] == position)):
+                return True, interaction
     return False, None
+
+
+
+def get_interaction_points(interactions, lane, position):
+    '''
+    Determines all interaction points given at a position in a certain lane.
+    :param interactions: The interaction points of the corresponding variant
+    :type interaction: list of type InteractionPoint
+    :param lane: The lane id
+    :type lane: tuple
+    :param position: The position index
+    :type position: int
+    :return: The list of all found interaction points
+    :rtype: list
+    '''
+
+    result = []
+    for interaction in interactions:
+        for i in range(len(interaction.interaction_lanes)):
+            if ((interaction.interaction_lanes[i] == lane) and (interaction.exact_positions[i] == position)):
+                result.append(interaction)
+    return result

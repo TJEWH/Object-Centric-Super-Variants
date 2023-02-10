@@ -10,7 +10,10 @@ class Distribution(Enum):
     EXPLORATION = 3
 
 
-def generate_super_variant_hierarchy(initial_super_variant_set, number_of_super_variants, max_number_of_levels = math.inf, frequency_distribution_type = Distribution.EXPLORATION, base = 2, print_results = False):
+NESTED_STRUCTURES = True
+
+
+def generate_super_variant_hierarchy(initial_super_variant_set, number_of_super_variants = 1, max_number_of_levels = math.inf, frequency_distribution_type = Distribution.EXPLORATION, base = 2, print_results = False):
     return generate_super_variant_hierarchy_by_classification([initial_super_variant_set], number_of_super_variants, max_number_of_levels, frequency_distribution_type, base, print_results)
 
 
@@ -117,7 +120,7 @@ def generate_super_variant_hierarchy_by_cost(initial_super_variant_set, max_numb
             super_variant1 = indexed_initial_set[cluster[0]]
             for i in range(1, len(cluster)):
                 super_variant2 = indexed_initial_set[cluster[i]]
-                super_variant, cost = IVS.join_super_variants(super_variant1, super_variant2 ,False)
+                super_variant, cost = IVS.join_super_variants(super_variant1, super_variant2 , NESTED_STRUCTURES, False)
                 accumulated_cost += cost
                 super_variant1 = copy.deepcopy(super_variant)
             level_result.append(super_variant1)
@@ -143,7 +146,7 @@ def cluster_by_frequency(indexed_initial_set, number_of_clusters, distribution_t
         ideal_cluster_frequency = []
         for i in range(number_of_clusters):
             ideal_cluster_frequency.append((((st.norm.cdf(i+1*stepsize)- 0.5)*2) - ((st.norm.cdf(i*stepsize)- 0.5)*2))*accumulated_frequency)
-        print(ideal_cluster_frequency)
+
 
     import gurobipy
     model = gurobipy.Model("ClusteringByFrequency")
