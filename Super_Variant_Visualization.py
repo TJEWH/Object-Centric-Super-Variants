@@ -2,9 +2,16 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import Super_Variant_Definition as SVD
 import Input_Extraction_Definition as IED
+from enum import Enum
 
 DEFAULT_CHEVRON_LENGTH = 15.
 DEFAULT_CHEVRON_HEIGHT = 6.
+
+class MODE(Enum):
+    LANE_FREQUENCY = 1
+    ACTICITY_FREQUENCY = 2
+
+CURRENT_MODE = MODE.ACTICITY_FREQUENCY
 
 def visualize_super_variant(super_variant, suppression_char = "*"):
     '''
@@ -214,7 +221,7 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
     
     if(not is_interacting):
         interacting_lanes = [original_lane]
-        print("INTERACTION NOT FOUND")
+        print("Interaction not found.")
 
     else:
         interacting_lanes = interaction_point.interaction_lanes
@@ -231,27 +238,10 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
         label = label[:12] + "..."
     sizing_factor = 1
 
-    #possible_splitting_indices = []
-    #if(len(label) > 14):
-        #for i in range(len(label)):
-            #if (label[i] == " "):
-                #possible_splitting_indices.append(i)
-    #possible_splitting_indices.append(len(label))
-    #splitting_index = min(possible_splitting_indices, key = lambda x: abs(x - (len(label)/2)))
-    #label = label[:splitting_index] + "\n" + label[splitting_index + 1:]
-
-    #longest_section = 0
-    #for i in range(len(label.split("\n"))):
-        #longest_section = max(longest_section, len(label.split("\n")[i]))
-    #sizing_factor = min(14 / longest_section , 1)
-    #if (label[-1] == "\n"):
-        #label = label[:-1]
-    #else:
+    #if(frequency):
+        #label += "\n " + str(round(element.frequency * 100, 2)) + "%"
         #offset += 0.7
 
-    if(frequency):
-        label += "\n " + str(round(element.frequency * 100, 2)) + "%"
-        offset += 0.7
     ax.text(index * chevron_length+ 2.0 + current_horizontal_position, current_vertical_position * chevron_height + 0.5 * chevron_height * lane_properties[lane]["Height"] - offset, label, zorder = 15, fontsize = fontsize * sizing_factor)
 
     for i in range(len(interacting_lanes)):
@@ -303,25 +293,7 @@ def __common_activity_chevron(ax, lane, element, index, lane_properties, current
         label = label[:12] + "..."
     sizing_factor = 1
 
-    #possible_splitting_indices = []
-    #if(len(label) > 14):
-        #for i in range(len(label)):
-            #if (label[i] == " "):
-                #possible_splitting_indices.append(i)
-    #possible_splitting_indices.append(len(label))
-    #splitting_index = min(possible_splitting_indices, key = lambda x: abs(x - (len(label)/2)))
-    #label = label[:splitting_index] + "\n" + label[splitting_index + 1:]
-
-    #longest_section = 0
-    #for i in range(len(label.split("\n"))):
-        #longest_section = max(longest_section, len(label.split("\n")[i]))
-    #sizing_factor = min(14 / longest_section , 1)
-    #if (label[-1] == "\n"):
-        #label = label[:-1]
-    #else:
-        #offset += 0.7
-
-    if(frequency):
+    if(frequency and CURRENT_MODE ==MODE.ACTICITY_FREQUENCY):
         label += "\n " + str(round(element.frequency * 100, 2)) + "%"
         offset += 1
     ax.text(current_horizontal_position + index * chevron_length + 2.0, current_vertical_position * chevron_height + 0.5 * chevron_height * lane_properties[lane]["Height"] - offset, label, zorder = 15, fontsize = fontsize*sizing_factor)

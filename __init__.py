@@ -21,8 +21,9 @@ parameters = {"execution_extraction": "leading_type",
               "leading_type": "application"}
 ocel = ocel_import_factory.apply(file_path = filename , parameters = parameters)
 
-all_summarizations, per_variant_dict, per_encoding_dict = IAVG.complete_intra_variant_summarization(ocel, print_results = False)
+all_summarizations, per_variant_dict, per_encoding_dict = IAVG.complete_intra_variant_summarization(ocel)
 summarizations = SS.intra_variant_summarization_selection(all_summarizations, per_variant_dict, per_encoding_dict)
+
 
 #filename = "EventLogs/order_process.jsonocel"
 #ocel = ocel_import_factory.apply(file_path = filename)
@@ -50,9 +51,9 @@ elif(MODE == 3):
     SVV.visualize_super_variant(super_variant)
 
 elif(MODE == 4):
-    super_variant, cost = IEVS.join_super_variants(summarizations[6], summarizations[7], False, False)
-    super_variant, cost = IEVS.join_super_variants(super_variant, summarizations[8], False, False)
-    super_variant, cost = IEVS.join_super_variants(super_variant, summarizations[9], False, False)
+    super_variant1, cost = IEVS.join_super_variants(summarizations[6], summarizations[7], False, False)
+    super_variant2, cost = IEVS.join_super_variants(summarizations[9], summarizations[8], False, False)
+    super_variant, cost = IEVS.join_super_variants(super_variant1, super_variant2, True, False)
     SVV.visualize_super_variant(super_variant)
 
 elif(MODE == 5):

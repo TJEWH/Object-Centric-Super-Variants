@@ -1,8 +1,5 @@
 import Super_Variant_Definition as SVD
 import Input_Extraction_Definition as IED
-import Inter_Variant_Summarization as IEVS
-
-MAXIMAL_DEPTH = 2
 
 def __nested_inter_lane_summarization(lanes, interactions, print_results, current_lane = 0, offset = 0, intra = False):
     '''
@@ -26,9 +23,6 @@ def __nested_inter_lane_summarization(lanes, interactions, print_results, curren
     depth = 0
     for lane in lanes:
         depth = max(depth, lane.get_depth())
-
-    #if (depth >= 2):
-        #return __inter_lane_summarization(lanes, interactions, print_results, current_lane, offset)
 
     elements = []
     new_interaction_points_mapping = {}
@@ -162,6 +156,7 @@ def __nested_inter_lane_summarization(lanes, interactions, print_results, curren
     new_interaction_points_mapping.update(interval_mapping)
     current_horizontal_index += interval_length
 
+
     return elements, new_interaction_points_mapping
 
 
@@ -274,6 +269,7 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
 
  
     if(len(choices) == 1 and len(choices[0].elements) == 1 and isinstance(choices[0].elements[0], SVD.GeneralChoiceStructure)):
+        # Resolve side-case
         extracted_choices = []
         i = 0
         for extracted_choice in choices[0].elements[0].choices:
@@ -468,7 +464,7 @@ def __inter_lane_summarization(lanes, interactions, print_results, current_lane 
     elements.extend(interval_elements)
     new_interaction_points_mapping.update(interval_mapping)
     current_horizontal_index += interval_length
-
+ 
     return elements, new_interaction_points_mapping
 
 
@@ -612,49 +608,6 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
     return returned_elements, end_index - start_index + 1, new_mapping
 
 
-def find_best_matching(nodes, arc):
-    '''
-    Computes an optimal matching in a graph with the given limited arcs and nodes.
-    that interaction points between multiple lanes have the same horizontal index
-    :param nodes: The set of nodes
-    :type nodes: list
-    :param distances: The arcs of the matching
-    :type distances: dict
-    :return: The list of node pairs that have been matched
-    :rtype: list
-    '''
-    import gurobipy
-    model = gurobipy.Model("limitedMatching")
-    
-    x = {}
-    for key in arc.keys():
-        x[key] = model.addVar(name="x_%s, %s" % (key[0],key[1]), vtype = gurobipy.GRB.BINARY)
-
-    model.update()
-
-    for i in range(len(nodes)):
-        i_keys = []
-        for key in x.keys():
-            if(i in key):
-                i_keys.append(key)
-
-        model.addConstr(sum(x[key] for key in i_keys) <= 1)
-    
-    model.setObjective(sum(x[key] for key in x.keys()))
-    model.modelSense = gurobipy.GRB.MAXIMIZE
-    model.optimize()
-    
-    print('\n Objective value: %g\n' % model.ObjVal)
-    print('\n Variable values: \n')
-    solution = []
-    for key in arc.keys():
-        print(str(key) + ": " + str(x[key].X))
-        if(x[key].X == 1.0):
-            solution.append(key)
-    print("-----------------------------")
-    return solution
-
-
 def __get_longest_common_subsequence(lanes, intra = False, interactions = None):
     '''
     Computes the Longest Common Subsequence among the activity sequences of a set of Super Lanes.
@@ -721,277 +674,3 @@ def __get_longest_common_subsequence(lanes, intra = False, interactions = None):
 
 
             return maximum_result, maximum_value, maximum_interaction
-
-
-def __merge_interactions(merged_interactions):
-    '''
-    Merges the interaction point mappings that are at the same position in the final Super Lane.
-    :param merged_interactions: The already combined mappings of original interaction points to new indices in the summarized lanes
-    :type merged_interactions: dict
-    :return: Each interaction point of the final Super Lanes and their current positions in the involved lanes, merged by position
-    :rtype: dict
-    '''
-    result_interactions = dict()
-    for key1 in merged_interactions.keys():
-        exists = False
-        for key2 in result_interactions.keys():
-            if (merged_interactions[key1] == result_interactions[key2]):
-                exists = True
-        if(not exists):
-            result_interactions[key1] = merged_interactions[key1]
-
-    return result_interactions
-
-def __merge_interaction_mappings(mappings):
-    '''
-    Pre-processes the mappings from the summarization for later alignment by merging the mappings for each Super Lane.
-    :param mappings: The mappings of original interaction points to new indices in the summarized lanes for each lane in the Super Variant
-    :type mappings: list 
-    :return: Each interaction point of the final Super Lanes and their current positions in the involved lanes
-    :rtype: dict
-    '''
-    merged_mappings = {}
-    # merge the individual dictionaries for all lanes
-    for i in range(len(mappings)):
-        mapping = mappings[i][1]
-        for key in mapping.keys():
-            positions = {}
-            positions[mappings[i][0]] = mappings[i][1][key]
-            for k in range(i+1, len(mappings)):
-                if(key in list(mappings[k][1].keys())):
-                    positions[mappings[k][0]] = mappings[k][1][key]
-            if(len(positions.keys()) > 1 and key not in merged_mappings.keys()):
-                merged_mappings[key] = positions
-    
-    return merged_mappings
-
-def split_interaction_mappings(mappings):
-    import itertools
-    new_mappings = dict()
-
-    for interaction in mappings.keys():
-        positions = []
-        for id in mappings[interaction].keys():
-            id_positions = []
-            for position in mappings[interaction][id]:
-                id_positions.append((id, position))
-            positions.append(id_positions)
-        
-        combinations = list(itertools.product(*positions))
-        for i in range(len(combinations)):
-            new_positions = dict()
-            for item in combinations[i]:
-                new_positions[item[0]] = item[1]
-            new_mappings[(interaction[0], str(interaction[1]) + " " + str(i))] = new_positions
-
-    return new_mappings
-
-
-def __re_align_lanes(lanes, mappings, print_result):
-    '''
-    Given the summarized Super Lanes and the mappings from original interaction points to new indices, the lanes are aligned according to the interaction points.
-    :param lanes: The summarized lanes of the Super Variant
-    :type lanes: list of type SuperLane
-    :param mappings: The mappings of original interaction points to new indices in the summarized lanes for each lane
-    :type mappings: dict
-    :param print_result: Whether or not the print commands should be executed
-    :type print_result: bool
-    :return: The Super Lanes with updated horizontal indices and a list of the corresponding interaction points
-    :rtype: list of type SuperLane, list of type InteractionPoint
-    '''
-    # Initialize variables and return values
-    import copy
-    import math
-    #updated_mappings, aligned_lanes = create_duplicate_interactions(copy.deepcopy(mappings), copy.deepcopy(lanes))
-    
-    split_mappings = split_interaction_mappings(copy.deepcopy(mappings))
-    updated_mappings, aligned_lanes = copy.deepcopy(split_mappings), copy.deepcopy(lanes)
-    updated_interaction_points = []
-
-    # Align the lanes such that the interaction points have the same horizontal index
-    for i in range(len(split_mappings.keys())):
-
-        earliest_interaction_point = min(updated_mappings.items(), key=lambda x: min([position.get_base_index() for position in x[1].values()]))
-        lanes = [lane for lane in aligned_lanes if lane.lane_id in list(earliest_interaction_point[1].keys())]
-
-        if(print_result):
-            print("We have an interaction at the following positions in the interacting lanes:")
-            for key in earliest_interaction_point[1].keys():
-                print(str(key) + ": " + str(earliest_interaction_point[1][key]))
-        
-        types = set([lane.object_type for lane in lanes])
-        element = lanes[0].get_element(updated_mappings[earliest_interaction_point[0]][lanes[0].lane_id])
-        activity_label = element.activity
-
-        all_positions = [value for value in earliest_interaction_point[1].values()]
-
-        if(len(set([value.get_base_index() for value in all_positions])) == 1):
-            if(print_result):
-                print("No alignment required.")
-            position = all_positions[0]
-            index = position.get_base_index()
-            interacting_lanes = list(earliest_interaction_point[1].keys())
-            exact_positions = list(earliest_interaction_point[1].values())
-                    
-        else: 
-            target_position = max(all_positions, key = lambda x: x.get_base_index())
-            position = target_position
-            index = position.get_base_index()
-
-            interacting_lanes = []
-            exact_positions = []
-            
-            for lane in lanes:
-                
-                # Shift indices by the offset
-                current_position = updated_mappings[earliest_interaction_point[0]][lane.lane_id]
-                offset = target_position.get_base_index() - current_position.get_base_index()
-
-                interacting_lanes.append(lane.lane_id)
-                exact_positions.append(current_position)
-
-                if(offset == 0):
-                    continue 
-
-                updated_positions = dict()
-
-                for key in updated_mappings.keys():
-                    if(lane.lane_id in updated_mappings[key].keys() and updated_mappings[key][lane.lane_id].get_base_index() >= current_position.get_base_index()):
-                        updated_positions[str(updated_mappings[key][lane.lane_id])] = updated_mappings[key][lane.lane_id]
-
-                updated_positions = lane.shift_lane_exact(current_position, offset, copy.deepcopy(updated_positions), current_position)
-                
-                exact_positions[-1] = updated_positions[str(current_position)]
-
-                
-                if(print_result):
-                    print("We have shifted lane " + lane.lane_name + " by " + str(offset) + " starting from the element at the position " + str(current_position) + ".")
-
-                # Update all values in the dictionary accordingly
-                for key in updated_mappings.keys():
-                    if(lane.lane_id in updated_mappings[key].keys() and updated_mappings[key][lane.lane_id].get_base_index() >= current_position.get_base_index()):
-                        updated_mappings[key][lane.lane_id] = updated_positions[str(updated_mappings[key][lane.lane_id])]
-
-                        
-        
-        del updated_mappings[earliest_interaction_point[0]]
-        updated_interaction_points.append(IED.InteractionPoint(activity_label, interacting_lanes, types, index, exact_positions))
-     
-    final_lanes = []
-    for lane in aligned_lanes:
-        final_lanes.append(copy.deepcopy(lane).shift_activities_up())
-
-    return final_lanes, updated_interaction_points
-
-
-
-# TODO refine
-def create_duplicate_interaction(mappings, lanes):
-
-    import copy
-    new_mappings = copy.deepcopy(mappings)
-    duplicates = []
-
-    for i in range(len(list(mappings.keys()))):
-        mapping1 = list(mappings.keys())[i]
-        duplicate_mappings = dict()
-        lane_id = 0
-
-        # Find the sets of interaction points that map to the same positions in one lane
-        for key1 in mappings[mapping1].keys():
-            position1 = mappings[mapping1][key1]
-
-            for j in range(i+1,len(list(mappings.keys()))):
-                mapping2 = list(mappings.keys())[j]
-
-                for key2 in mappings[mapping2].keys():
-                    position2 = mappings[mapping2][key2]
-
-                    if(key1 == key2 and position1 == position2):
-                         del new_mappings[mapping1]
-                         del new_mappings[mapping2]
-                         duplicate_mappings[mapping1] = mappings[mapping1]
-                         duplicate_mappings[mapping2] = mappings[mapping2]
-                         lane_id = key1
-
-        if (len(duplicate_mappings)):
-            duplicates.append((duplicate_mappings, lane_id))
-    
-    new_lanes = []
-
-    # For each set of interaction points sharing the same positions in one lane, but not in another lane, split the element at the shared position such that every interaction point can be aligned with one copy
-    for duplicate in duplicates:
-
-        # Determine the element that requires duplication and create a modified copy of the lane with that element being optional
-        earliest_interaction_point = min(duplicate[0].items(), key=lambda x: min([position.get_base_index() for position in x[1].values()]))
-        del duplicate[0][earliest_interaction_point[0]]
-        for lane in lanes:
-            if (lane.lane_id == duplicate[1]):
-                position = earliest_interaction_point[1][duplicate[1]]
-                original_element = lane.get_element(position)
-                empty_frequency = original_element.frequency - (original_element.frequency / (len(duplicate[0]) + 1))
-                new_lane, new_element = copy.deepcopy(lane).make_optional(position, empty_frequency)
-                new_mappings[earliest_interaction_point[0]] = earliest_interaction_point[1]
-                break
- 
-        # Create a duplicate of the element for each other interaction and find a suitable position
-        for i in range(len(duplicate[0])):
-
-            current_interaction_point = min(duplicate[0].items(), key=lambda x: min([position.get_base_index() for position in x[1].values()]))
-            del duplicate[0][current_interaction_point[0]]
-
-            # Default position is directly with the original element
-            suitable_position = copy.deepcopy(new_element).position_end.apply_shift(1)
-            watchlist = list(current_interaction_point[1].keys())
-            observed_interactions = dict()
-
-            # For every other interaction in that lane, check whether its position is after the lower_bound 
-            for key in mappings.keys():
-                if(key != earliest_interaction_point[0] and key != current_interaction_point[0]):
-                    if(duplicate[1] in mappings[key].keys() and new_lane.greater_than(suitable_position, mappings[key][duplicate[1]])):
-
-                        #observed_interactions[key] = 
-
-                        # For the counterparts of such an interaction position in the relevant lanes, check whether they are happening before or after the current investigated interaction
-                        for lane_id in mappings[key].keys():
-                            if(lane_id != duplicate[1] and lane_id in watchlist):
-                                
-                                if(lane_id in [lane.lane_id for lane in new_lanes]):
-                                    current_lane = [lane.lane_id for lane in new_lanes if lane.lane_id == lane_id][0]
-                                else:
-                                    current_lane = [lane.lane_id for lane in lanes if lane.lane_id == lane_id][0]
-
-                                changes_position = current_lane.greater_than(earliest_interaction_point[1][lane_id], mappings[key][lane_id])
-
-                                if(not changes_position):
-                                    watchlist = [id for id in watchlist if id != lane_id]
-
-                                else:
-                                    print("Update suitable position")
-                                    #TODO
-                                    #if(mappings[key][key2][1] < current_interaction_point[1][key2][1]):
-                                    #lower_bound = max(mappings[key][duplicate[1]][1] + 1, lower_bound)
-
-            # Update all mappings due to the shift of element positions
-            new_mappings[current_interaction_point[0]] = current_interaction_point[1]
-            new_mappings[current_interaction_point[0]][duplicate[1]] = suitable_position
-            new_lane = new_lane.add_optional_activity(suitable_position, copy.deepcopy(new_element))
-            
-            #TODO update mappings
-            #for key in new_mappings.keys():
-                #if(key != earliest_interaction_point[0] and key != current_interaction_point[0]):
-                    #if(duplicate[1] in mappings[key].keys() and mappings[key][duplicate[1]][1] > lower_bound):
-                        #old_position = new_mappings[key][duplicate[1]]
-                        #new_mappings[key][duplicate[1]] = (old_position[0], old_position[1]+1)
-                        
-        new_lanes.append(new_lane)
-        
-
-    # Append the remaining lanes that required no modification
-    for lane in lanes:
-        if (lane.lane_id not in [new_lane.lane_id for new_lane in new_lanes]):
-            new_lanes.append(lane)
-
-    return new_mappings, new_lanes
-
-
