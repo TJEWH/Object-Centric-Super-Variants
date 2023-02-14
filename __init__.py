@@ -14,7 +14,7 @@ import Inter_Variant_Summarization as IEVS
 import Inter_Variant_Generation as IEVG
 import Super_Variant_Hierarchy as SVH
 
-MODE = 4
+MODE = 6
 
 filename = "EventLogs/BPI2017-Top10.jsonocel"
 parameters = {"execution_extraction": "leading_type",
@@ -53,7 +53,7 @@ elif(MODE == 3):
 elif(MODE == 4):
     super_variant1, cost = IEVS.join_super_variants(summarizations[6], summarizations[7], False, False)
     super_variant2, cost = IEVS.join_super_variants(summarizations[9], summarizations[8], False, False)
-    super_variant, cost = IEVS.join_super_variants(super_variant1, super_variant2, True, False)
+    super_variant, cost = IEVS.join_super_variants(super_variant1, super_variant2, True, True)
     SVV.visualize_super_variant(super_variant)
 
 elif(MODE == 5):

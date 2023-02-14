@@ -221,12 +221,11 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
                 else:
                     new_choices = []
                     length = 1
-                    option_id = 0
                     
                     for option in elements[1][i].choices:
 
                         interaction_points = option.get_interaction_points(interactions[elements[0]], base_lanes[elements[0]].lane_id)
-                        normalized_lane, positions_mapping = copy.deepcopy(option).normalize_option(current_lane, option_id, position)
+                        normalized_lane, positions_mapping = copy.deepcopy(option).normalize_option(current_lane, current_choice, position)
                         
                         for interaction_point in interaction_points:
                             for j in range(len(interaction_point.interaction_lanes)):
@@ -244,7 +243,6 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
 
                         length = max(length, normalized_lane.get_length())
                         new_choices.append(normalized_lane)
-                        option_id += 1
 
                     if(isinstance(elements[1][i], SVD.OptionalConstruct)):
                         choice.append(SVD.OptionalConstruct(new_choices, IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)), IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position + length - 1)), position, position + length - 1, elements[1][i].empty_frequency))

@@ -513,9 +513,9 @@ class SuperLane:
                 position_after_shift = element.position
                 
                 if(isinstance(position_after_shift.position, IED.BasePosition)):
-                    element.position = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.BasePosition(option_id, position_after_shift.position.position)))
+                    element.position = IED.RecursiveLanePosition(lane_id, IED.RecursiveLanePosition(option_id, IED.BasePosition(position_after_shift.position.lane_id, position_after_shift.position.position)))
                 else:
-                    element.position = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.RecursiveLanePosition(option_id, position_after_shift.position.position)))
+                    element.position = IED.RecursiveLanePosition(lane_id, IED.RecursiveLanePosition(option_id, IED.RecursiveLanePosition(position_after_shift.position.lane_id, position_after_shift.position.position)))
 
                 index += 1
 
@@ -549,11 +549,11 @@ class SuperLane:
                 position_end_after_shift = element.position_end
 
                 if(isinstance(position_start_after_shift.position, IED.BasePosition)):
-                    element.position_start = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.BasePosition(option_id, position_start_after_shift.position.position)))
-                    element.position_end = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.BasePosition(option_id, position_end_after_shift.position.position)))
+                    element.position_start = IED.RecursiveLanePosition(lane_id, IED.RecursiveLanePosition(option_id, IED.BasePosition(position_end_after_shift.position.lane_id, position_start_after_shift.position.position)))
+                    element.position_end = IED.RecursiveLanePosition(lane_id, IED.RecursiveLanePosition(option_id, IED.BasePosition(position_end_after_shift.position.lane_id, position_end_after_shift.position.position)))
                 else:
-                    element.position_start = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.RecursiveLanePosition(option_id, position_start_after_shift.position.position)))
-                    element.position_end = IED.RecursiveLanePosition(0, IED.RecursiveLanePosition(lane_id, IED.RecursiveLanePosition(option_id, position_end_after_shift.position.position)))
+                    element.position_start = IED.RecursiveLanePosition(lane_id, IED.RecursiveLanePosition(option_id, IED.RecursiveLanePosition(position_start_after_shift.position.lane_id, position_start_after_shift.position.position)))
+                    element.position_end = IED.RecursiveLanePosition(lane_id, IED.RecursiveLanePosition(option_id, IED.RecursiveLanePosition(position_start_after_shift.position.lane_id, position_end_after_shift.position.position)))
                 
                 index += end_index - index + 1
             

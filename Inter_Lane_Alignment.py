@@ -138,6 +138,7 @@ def __re_align_lanes(lanes, mappings, print_result, intra = True):
     updated_mappings, aligned_lanes = copy.deepcopy(split_mappings), copy.deepcopy(lanes)
 
     updated_interaction_points = []
+
     is_fixed = dict()
     for lane in aligned_lanes:
         is_fixed[lane.lane_id] = dict()
@@ -234,13 +235,11 @@ def __re_align_lanes(lanes, mappings, print_result, intra = True):
 
         aligned_lanes = new_aligned_lanes
         
-     
-
     final_lanes = []
     for lane in aligned_lanes:
         final_lanes.append(copy.deepcopy(lane).shift_activities_up())
 
-    return aligned_lanes, updated_interaction_points
+    return final_lanes, updated_interaction_points
 
 
 

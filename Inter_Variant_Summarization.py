@@ -21,19 +21,20 @@ def join_super_variants(super_variant1, super_variant2, allow_nested_structures 
     :rtype: SuperVariant
     '''
     import copy
-    mapping1, cost1 = decide_matching(copy.deepcopy(super_variant1), copy.deepcopy(super_variant2), copy.deepcopy(super_variant1.lanes), copy.deepcopy(super_variant2.lanes), True, print_result)
-    mapping2, cost2 = decide_matching(copy.deepcopy(super_variant2), copy.deepcopy(super_variant1), copy.deepcopy(super_variant2.lanes), copy.deepcopy(super_variant1.lanes), True, print_result)
+    mapping12, cost12 = decide_matching(copy.deepcopy(super_variant1), copy.deepcopy(super_variant2), copy.deepcopy(super_variant1.lanes), copy.deepcopy(super_variant2.lanes), True, print_result)
+    mapping21, cost21 = decide_matching(copy.deepcopy(super_variant2), copy.deepcopy(super_variant1), copy.deepcopy(super_variant2.lanes), copy.deepcopy(super_variant1.lanes), True, print_result)
     
-    if(cost2 < cost1):
+    if(cost21 < cost12):
         if(print_result):
-            print("The estimated cost of joining these Super Variants is " + str(cost2) + ".")
+            print("The estimated cost of joining these Super Variants is " + str(cost21) + ".")
 
-        return inter_variant_summarization(copy.deepcopy(super_variant2), copy.deepcopy(super_variant1), mapping2, allow_nested_structures, print_result), cost2
+        return inter_variant_summarization(copy.deepcopy(super_variant2), copy.deepcopy(super_variant1), mapping21, allow_nested_structures, print_result), cost21
+        
     else:
         if(print_result):
-            print("The estimated cost of joining these Super Variants is " + str(cost1) + ".")
+            print("The estimated cost of joining these Super Variants is " + str(cost12) + ".")
 
-        return inter_variant_summarization(copy.deepcopy(super_variant1), copy.deepcopy(super_variant2), mapping1, allow_nested_structures, print_result), cost1
+        return inter_variant_summarization(copy.deepcopy(super_variant1), copy.deepcopy(super_variant2), mapping12, allow_nested_structures, print_result), cost12
     
     
 
