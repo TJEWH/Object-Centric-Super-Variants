@@ -14,7 +14,7 @@ import Inter_Variant_Summarization as IEVS
 import Inter_Variant_Generation as IEVG
 import Super_Variant_Hierarchy as SVH
 
-MODE = 4
+MODE = 6
 
 filename = "EventLogs/BPI2017-Top10.jsonocel"
 parameters = {"execution_extraction": "leading_type",
@@ -32,7 +32,6 @@ summarizations = SS.intra_variant_summarization_selection(all_summarizations, pe
 #SVV.visualize_variant(extracted_variant)
 
 if(MODE == 1):
-
     initial_super_variants = IEVG.classify_initial_super_variants_by_activity([summarizations[3], summarizations[4], summarizations[6], summarizations[7], summarizations[8], summarizations[9]], "Refuse offer")
     initial_super_variants = [initial_super_variants[0]] + IEVG.classify_initial_super_variants_by_activity(initial_super_variants[1], "Accept offer")
     hierarchy, final_super_variants = IEVG.generate_super_variant_hierarchy_by_classification(initial_super_variants, 1, 3)

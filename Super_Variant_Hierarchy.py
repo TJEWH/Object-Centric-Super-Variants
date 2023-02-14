@@ -1,9 +1,13 @@
 import Super_Variant_Visualization as SVV
 import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
+from matplotlib.patches import ConnectionPatch
 
 def visualize_super_variant_layer(super_variants):
 
-    fig, ax = plt.subplots(1, len(super_variants), figsize=(8,2)) 
+    SVV.CURRENT_MODE = SVV.MODE.ACTICITY_FREQUENCY
+
+    fig, ax = plt.subplots(1, len(super_variants), figsize=(8,2), sharex = True, sharey = True) 
     ax = list(ax)
 
     for i in (range(len(super_variants))):
@@ -21,8 +25,8 @@ def visualize_super_variant_layer(super_variants):
 
 
 def visualize_single_super_variant_hierarchy(super_variant_1, super_variant_2, new_super_variant):
-    import matplotlib.pyplot as plt
-    from matplotlib.patches import ConnectionPatch
+
+    SVV.CURRENT_MODE = SVV.MODE.ACTICITY_FREQUENCY
 
     fig = plt.figure(figsize=(8,2))
 

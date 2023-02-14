@@ -301,16 +301,6 @@ class SuperLane:
                 # Determine all choice sequences and sort alphabetically
                 choices = [choice.encode_lexicographically(depth + 1, just_elements = True) for choice in element.choices]
                 choices.sort()
-
-                #element.choices.sort(key = lambda x: x.encode_lexicographically(depth + 1, just_elements = True))
-
-                #index = 0
-                #position_mapping = dict()
-                #for choice in element.choices:
-                    #choice.lane_id = index
-                    #choice.lane_name = "Option " + str(index)
-                    #choice.update_lane_id(index, depth + 1)
-                    #index += 1
                     
                 # Encode all choices
                 choices_encoding = ""
@@ -683,7 +673,7 @@ class SuperLane:
         for i in range(len(realizations)):
             frequency = 1
             for elem in realizations[i]:
-                frequency = frequency*elem.frequency
+                frequency = frequency * elem.frequency
             
             realization_frequency = frequency * self.frequency
             

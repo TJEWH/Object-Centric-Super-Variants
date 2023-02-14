@@ -69,6 +69,9 @@ def visualize_super_variant(super_variant, suppression_char = "*"):
                             
             fig.canvas.mpl_connect('motion_notify_event', hover_tooltip)
 
+        manager = plt.get_current_fig_manager()
+        manager.window.showMaximized()
+        #fig.savefig("SuperVariant_" + str(super_variant.id) + ".svg", dpi = 600)
         plt.show()
 
 
@@ -511,40 +514,6 @@ def __chevron_at_position(horizontal_index, vertical_index, length, height):
         Path.MOVETO,
         Path.LINETO,
         Path.LINETO,
-        Path.LINETO,
-        Path.LINETO,
-        Path.LINETO,
-        Path.CLOSEPOLY,
-    ]
-
-    return Path(verts, codes)
-
-
-def __box_at_position(horizontal_index, vertical_index, length, height):
-    '''
-    Generates a vector drawing of a rectangle at a given position with a given length and height.
-    :param horizontal_index: The x-value of the position
-    :type horizontal_index: float
-    :param vertical_index: The y-value of the position
-    :type vertical_index: float
-    :param length: A factor scaling the length of the rectangle
-    :type length: int
-    :param height: A factor scaling the height of the rectangle
-    :type height: int
-    :return: The rectangle as a path instance
-    :rtype: path
-    '''
-    from matplotlib.path import Path
-    verts = [
-       (horizontal_index + 2, vertical_index),  # Left bottom coner
-       (horizontal_index + DEFAULT_CHEVRON_LENGTH * length, vertical_index),  # Right bottom corner
-       (horizontal_index + DEFAULT_CHEVRON_LENGTH * length, vertical_index + height),  # Right top coner
-       (horizontal_index + 2, vertical_index + height),  # Left bottom coner
-       (horizontal_index + 2, vertical_index),  # Left bottom coner
-    ]
-
-    codes = [
-        Path.MOVETO,
         Path.LINETO,
         Path.LINETO,
         Path.LINETO,
