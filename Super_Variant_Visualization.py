@@ -3,6 +3,7 @@ import matplotlib.patches as patches
 import Super_Variant_Definition as SVD
 import Input_Extraction_Definition as IED
 from enum import Enum
+import time
 
 DEFAULT_CHEVRON_LENGTH = 15.
 DEFAULT_CHEVRON_HEIGHT = 6.
@@ -11,7 +12,9 @@ class MODE(Enum):
     LANE_FREQUENCY = 1
     ACTICITY_FREQUENCY = 2
 
-CURRENT_MODE = MODE.ACTICITY_FREQUENCY
+CURRENT_MODE = MODE.LANE_FREQUENCY
+
+current_annotations = []
 
 def visualize_super_variant(super_variant, suppression_char = "*"):
     '''
@@ -32,7 +35,48 @@ def visualize_super_variant(super_variant, suppression_char = "*"):
         ax.set_xlim(-15, width + 2)
         ax.set_ylim(-2, height + 2)
         plt.axis('off')
+
+        if(CURRENT_MODE == MODE.LANE_FREQUENCY):
+
+            annotate = ax.annotate("", (0, 0), xytext = (0, 10), textcoords = 'offset points', color = 'w', ha = 'center', fontsize = 8, fontweight = 'bold', 
+                                                    bbox = dict(boxstyle='round, pad = .5', fc = (.1, .1, .1, .8), ec = (0., 0, 0), lw = 0, zorder = 50))
+            ax.figure.texts.append(ax.texts.pop())
+
+            def hover_tooltip(event):
+                annotation_visbility = annotate.get_visible()
+                if event.inaxes == ax:
+                    
+                    event_position = (round(event.xdata), round(event.ydata))
+                    positions = [(round(position[0][0]),round(position[0][1])) for position in current_annotations]
+                    for i in range(len(positions)):
+                        is_contained = False
+                        index = 0
+                        if is_inside(positions[i], 5, event_position):
+                            is_contained = True
+                            index = i
+                            break
+
+                    if(is_contained):
+                        annotate.xy = current_annotations[index][0]
+                        annotate.set_text(current_annotations[index][1])
+                        annotate.set_fontsize(current_annotations[index][2])
+                        annotate.set_visible(True)
+                        fig.canvas.draw_idle()
+
+                    elif(annotation_visbility):
+                        annotate.set_visible(False)
+                        fig.canvas.draw_idle()
+                            
+            fig.canvas.mpl_connect('motion_notify_event', hover_tooltip)
+
         plt.show()
+
+
+def is_inside(circle_xy, rad, xy):
+
+    return ((xy[0] - circle_xy[0]) * (xy[0] - circle_xy[0]) +
+        (xy[1] - circle_xy[1]) * (xy[1] - circle_xy[1]) <= rad * rad)
+
 
 
 def visualize_variant(variant):
@@ -92,14 +136,18 @@ def arrange_super_variant(super_variant, ax, vertical_start_position, horizontal
             lane_properties[lane.lane_id]["Color"] = scale_lightness(color, scale)
             scale += offset
             vertical_height = 1
+
             for elem in lane.elements:
                 if (isinstance(elem, SVD.GeneralChoiceStructure)):
                     vertical_height = max(vertical_height, elem.get_vertical_height())
                     maximal_lane_length = max(maximal_lane_length, elem.index_end)
+
                 else:
                     maximal_lane_length = max(maximal_lane_length, elem.index)
+                    
             lane_properties[lane.lane_id]["Height"] = vertical_height
             lane_properties[lane.lane_id]["IsOptional"] = isinstance(lane, SVD.OptionalSuperLane)
+            lane_properties[lane.lane_id]["Frequency"] = lane.frequency
 
     
     current_vertical_position = vertical_start_position
@@ -114,12 +162,18 @@ def arrange_super_variant(super_variant, ax, vertical_start_position, horizontal
             cardinality = super_variant.lanes[i].cardinality
 
         ax.text(-15 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * lane_properties[lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT - 0.3, cardinality, zorder = 10)
-        ax.text(-12.5 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * lane_properties[lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT - 0.3, super_variant.lanes[i].lane_name, zorder = 10)
+        split_label = super_variant.lanes[i].lane_name.split(" ")
+        if (len(split_label[0]) > 8):
+            label = split_label[0][:8] + ". " + split_label[-1]
+        else:
+            label = super_variant.lanes[i].lane_name
+
+        ax.text(-12.5 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * lane_properties[lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT - 0.3, label, zorder = 10)
         
         if(lane_properties[lane_id]["IsOptional"]):
-            ax.add_patch(patches.Rectangle((-13 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length+2) * DEFAULT_CHEVRON_LENGTH, lane_properties[lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0, hatch='///'))
+            ax.add_patch(patches.Rectangle((-13 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length + 2) * DEFAULT_CHEVRON_LENGTH, lane_properties[lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0, hatch='///'))
         else:
-            ax.add_patch(patches.Rectangle((-13 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length+2) * DEFAULT_CHEVRON_LENGTH, lane_properties[lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0))
+            ax.add_patch(patches.Rectangle((-13 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length + 2) * DEFAULT_CHEVRON_LENGTH, lane_properties[lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0))
         
         properties = copy.deepcopy(lane_properties)
         ax = __visualize_lane_elements(ax, lane_id, super_variant.lanes[i].elements, properties, copy.deepcopy(super_variant.interaction_points), current_vertical_position, horizontal_start_position)
@@ -127,9 +181,10 @@ def arrange_super_variant(super_variant, ax, vertical_start_position, horizontal
     
 
     ax.text(-13 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.7, "Frequency: " + str(round(super_variant.frequency, 3)), zorder = 10)
+    ax.text(-13 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 4, "Super Variant: " +str(super_variant.id), zorder = 10, fontsize = 10, fontweight = 'bold')
 
     width = (maximal_lane_length + 1) * DEFAULT_CHEVRON_LENGTH - horizontal_start_position
-    height = current_vertical_position * DEFAULT_CHEVRON_HEIGHT - vertical_start_position
+    height = current_vertical_position * DEFAULT_CHEVRON_HEIGHT - vertical_start_position + 4
     return ax, width, height
 
 def __visualize_lane_elements(ax, lane, elements, lane_properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length = DEFAULT_CHEVRON_LENGTH, chevron_height = DEFAULT_CHEVRON_HEIGHT, offset = 0, frequency = False, fontsize = 9, original_lane = None, original_lane_properties = None):
@@ -232,17 +287,18 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
     interacting_lanes.sort(key = lambda x: original_lane_properties[x]["Color"])
 
     label = element.activity
-    offset = 0.3
+    heigth_offset = 0.3
+    length_offset = 2.0
 
-    if(len(label) > 14):
-        label = label[:12] + "..."
+    if(len(label) > 13):
+        label = label[:11] + "..."
     sizing_factor = 1
 
-    #if(frequency):
-        #label += "\n " + str(round(element.frequency * 100, 2)) + "%"
-        #offset += 0.7
+    if(frequency and CURRENT_MODE == MODE.ACTICITY_FREQUENCY):
+        label += "\n " + str(round(element.frequency * 100, 2)) + "%"
+        heigth_offset += 0.7
 
-    ax.text(index * chevron_length+ 2.0 + current_horizontal_position, current_vertical_position * chevron_height + 0.5 * chevron_height * lane_properties[lane]["Height"] - offset, label, zorder = 15, fontsize = fontsize * sizing_factor)
+    ax.text(index * chevron_length + length_offset + current_horizontal_position, current_vertical_position * chevron_height + 0.5 * chevron_height * lane_properties[lane]["Height"] - heigth_offset, label, zorder = 15, fontsize = fontsize * sizing_factor)
 
     for i in range(len(interacting_lanes)):
         color = original_lane_properties[interacting_lanes[i]]["Color"]
@@ -287,18 +343,22 @@ def __common_activity_chevron(ax, lane, element, index, lane_properties, current
         overall_line_style = '--'
         
     label = element.activity
-    offset = 0.3
+    height_offset = 0.3
+    length_offset = 2.0
     
-    if(len(label) > 14):
-        label = label[:12] + "..."
+    if(len(label) > 13):
+        label = label[:11] + "..."
     sizing_factor = 1
 
-    if(frequency and CURRENT_MODE ==MODE.ACTICITY_FREQUENCY):
+    if(frequency and CURRENT_MODE == MODE.ACTICITY_FREQUENCY):
         label += "\n " + str(round(element.frequency * 100, 2)) + "%"
-        offset += 1
-    ax.text(current_horizontal_position + index * chevron_length + 2.0, current_vertical_position * chevron_height + 0.5 * chevron_height * lane_properties[lane]["Height"] - offset, label, zorder = 15, fontsize = fontsize*sizing_factor)
+        height_offset += 1
+
+    ax.text(current_horizontal_position + index * chevron_length + length_offset, current_vertical_position * chevron_height + 0.5 * chevron_height * lane_properties[lane]["Height"] - height_offset, label, zorder = 15, fontsize = fontsize*sizing_factor)
+    
     ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length, current_vertical_position * chevron_height, chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height), facecolor = lane_properties[lane]["Color"], lw = 1.3, ls = overall_line_style, zorder = 10))
     return ax
+
 
 def __choice_structure_chevron(ax, lane, element, index, lane_properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, fontsize, original_lane, original_lane_properties, overall_line_style = '-'):
     '''
@@ -352,6 +412,7 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
 
     choice_properties = dict()
     accumulated_height = 0
+
     for choice in element.choices:
 
         choice_properties[choice.lane_id] = dict()
@@ -389,13 +450,20 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
                 line_offset = 1.25 - (vertical_position - chevron_vertical_half)/vertical_half * 1.25
             ax.add_patch(patches.PathPatch(__line_at_position(current_horizontal_position  + index * chevron_length + line_offset, vertical_position, ((element.index_end - element.index_start) + 1) * chevron_length / DEFAULT_CHEVRON_LENGTH), lw = 1.1, ls = overall_line_style, zorder = 15))
 
-        horizontal_start_position = current_horizontal_position + (index * chevron_length) + 1 + margin_length 
+        horizontal_start_position = current_horizontal_position + (index * chevron_length) + 1 + margin_length
 
         ax = __visualize_lane_elements(ax, choice, element.choices[i].elements, copy.deepcopy(choice_properties), interaction_points, ((vertical_position + margin_height * choice_properties[choice]["Height"]) / sub_default_chevron_height), horizontal_start_position, chevron_length = sub_default_chevron_length, chevron_height = sub_default_chevron_height, offset = offset + index, frequency = True, fontsize = fontsize * ((sub_default_chevron_length - 2) / DEFAULT_CHEVRON_LENGTH) + 1, original_lane = original_lane, original_lane_properties = original_lane_properties)
-
+        
+        if(CURRENT_MODE == MODE.LANE_FREQUENCY):
+            frequency = choice_properties[choice]["Frequency"]/lane_properties[lane]["Frequency"]
+            frequency = str(round(frequency * 100, 2)) + "%"
+            ax.plot(horizontal_start_position + 0.8 * chevron_height/DEFAULT_CHEVRON_HEIGHT, vertical_position + choice_properties[choice]["Height"] * chevron_height * height_factor - 1 * chevron_height/DEFAULT_CHEVRON_HEIGHT, 'kv', zorder = 25, markersize = 10 * chevron_height/DEFAULT_CHEVRON_HEIGHT)
+           
+            current_annotations.append(((horizontal_start_position + 0.8 * chevron_height/DEFAULT_CHEVRON_HEIGHT, vertical_position + choice_properties[choice]["Height"] * chevron_height * height_factor - 1 * chevron_height/DEFAULT_CHEVRON_HEIGHT), frequency, 8 * chevron_height/DEFAULT_CHEVRON_HEIGHT))
+        
         vertical_position += choice_properties[choice]["Height"] * chevron_height * height_factor
 
-    return ax  
+    return ax
 
 
 
@@ -452,6 +520,40 @@ def __chevron_at_position(horizontal_index, vertical_index, length, height):
     return Path(verts, codes)
 
 
+def __box_at_position(horizontal_index, vertical_index, length, height):
+    '''
+    Generates a vector drawing of a rectangle at a given position with a given length and height.
+    :param horizontal_index: The x-value of the position
+    :type horizontal_index: float
+    :param vertical_index: The y-value of the position
+    :type vertical_index: float
+    :param length: A factor scaling the length of the rectangle
+    :type length: int
+    :param height: A factor scaling the height of the rectangle
+    :type height: int
+    :return: The rectangle as a path instance
+    :rtype: path
+    '''
+    from matplotlib.path import Path
+    verts = [
+       (horizontal_index + 2, vertical_index),  # Left bottom coner
+       (horizontal_index + DEFAULT_CHEVRON_LENGTH * length, vertical_index),  # Right bottom corner
+       (horizontal_index + DEFAULT_CHEVRON_LENGTH * length, vertical_index + height),  # Right top coner
+       (horizontal_index + 2, vertical_index + height),  # Left bottom coner
+       (horizontal_index + 2, vertical_index),  # Left bottom coner
+    ]
+
+    codes = [
+        Path.MOVETO,
+        Path.LINETO,
+        Path.LINETO,
+        Path.LINETO,
+        Path.CLOSEPOLY,
+    ]
+
+    return Path(verts, codes)
+
+
 def __line_at_position(horizontal_index, vertical_index, length):
     '''
     Generates a vector drawing of a line at a given position with a given length.
@@ -476,7 +578,6 @@ def __line_at_position(horizontal_index, vertical_index, length):
     ]
 
     return Path(verts, codes)
-
 
 
 

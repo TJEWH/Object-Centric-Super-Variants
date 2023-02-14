@@ -29,7 +29,7 @@ def join_super_variants(super_variant1, super_variant2, allow_nested_structures 
             print("The estimated cost of joining these Super Variants is " + str(cost21) + ".")
 
         return inter_variant_summarization(copy.deepcopy(super_variant2), copy.deepcopy(super_variant1), mapping21, allow_nested_structures, print_result), cost21
-        
+
     else:
         if(print_result):
             print("The estimated cost of joining these Super Variants is " + str(cost12) + ".")
@@ -93,7 +93,9 @@ def inter_variant_summarization(summarization1, summarization2, mapping, allow_n
             intermediate_mappings.append((super_lane.lane_id, mapping))
 
     result_lanes, result_interaction_points = ILA.__re_align_lanes(copy.deepcopy(intermediate_lanes), ILA.__merge_interactions(ILA.__merge_interaction_mappings(intermediate_mappings)), print_result, False)
-    super_variant = SVD.SuperVariant(summarization1.id + summarization2.id, copy.deepcopy(result_lanes), summarization1.object_types.union(summarization2.object_types), result_interaction_points, summarization1.frequency + summarization2.frequency)
+    new_id = list(summarization1.id + summarization2.id)
+    new_id.sort()
+    super_variant = SVD.SuperVariant(tuple(new_id), copy.deepcopy(result_lanes), summarization1.object_types.union(summarization2.object_types), result_interaction_points, summarization1.frequency + summarization2.frequency)
     if(print_result):
         print(super_variant)
     

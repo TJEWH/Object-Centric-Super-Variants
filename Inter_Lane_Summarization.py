@@ -260,7 +260,7 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
             empty_frequency += 1
 
         else:
-            choices.append(SVD.SuperLane(current_choice, "Option " + str(current_choice), base_lanes[0].object_type, choice, "1", 1))
+            choices.append(SVD.SuperLane(current_choice, "Option " + str(current_choice), base_lanes[0].object_type, choice, "1", base_lanes[elements[0]].frequency))
             current_choice += 1
         
         end_index = max(end_index, position - 1)
@@ -272,7 +272,7 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
         i = 0
         for extracted_choice in choices[0].elements[0].choices:
             extracted_elements, extracted_positions_mapping = copy.deepcopy(extracted_choice).extract_option()
-            extracted_choices.append(SVD.SuperLane(i, "Option " + str(i), base_lanes[0].object_type, extracted_elements.elements, "1", 1))
+            extracted_choices.append(SVD.SuperLane(i, "Option " + str(i), base_lanes[0].object_type, extracted_elements.elements, "1", extracted_choice.frequency))
             i += 1
 
         for mapping in new_mapping.keys():
