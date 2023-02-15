@@ -49,6 +49,7 @@ class VariantLane:
             index = self.horizontal_indices[i]
             position = BasePosition(0, index)
             activity_label = self.activities[i]
+            
             is_interacting, interaction_point = is_interaction_point(interactions, self.lane_id, position)
 
             if(is_interacting):
@@ -57,7 +58,8 @@ class VariantLane:
             else:
                 elements.append(SVD.CommonConstruct(activity_label, 1, position, index))
 
-        return SVD.SuperLane(self.lane_id, self.lane_name, self.object_type, elements, "1", 1)
+        super_lane = SVD.SuperLane(self.lane_id, self.lane_name, self.object_type, elements, "1", 1, [SVD.SuperLane(0, "realization 0", self.object_type, elements, "1", 1, [])])
+        return super_lane
 
 
 class InteractionPoint:

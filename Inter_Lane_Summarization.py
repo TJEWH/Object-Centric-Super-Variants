@@ -1,9 +1,10 @@
 import Super_Variant_Definition as SVD
 import Input_Extraction_Definition as IED
 
-def __nested_inter_lane_summarization(lanes, interactions, print_results, current_lane = 0, offset = 0, intra = False):
+
+def __inter_lane_summarization(lanes, interactions, print_results, current_lane = 0, offset = 0, intra = False, nested = False):
     '''
-    Performs the summarization of the given Super Lanes using the set of defined patterns that allows nested_structures.
+    Performs the summarization of the given Super Lanes using the set of defined patterns.
     :param lanes: The Super Lanes that should be summarized
     :type lanes: list of type SuperLane
     :param interactions: The sets of interaction points corresponding to the involved Super Lanes
@@ -16,30 +17,35 @@ def __nested_inter_lane_summarization(lanes, interactions, print_results, curren
     :type offset: int
     :param intra: Whether the all lanes are from the same variant
     :type intra: bool
+    :param intra: Whether the to allow nested structures or not
+    :type intra: bool
     :return: The summarizing elements, a mapping from original interaction positions to the new positions
     :rtype: list of type SummarizationElement, dict
     '''
-
-    depth = 0
-    for lane in lanes:
-        depth = max(depth, lane.get_depth())
-
     elements = []
     new_interaction_points_mapping = {}
     current_horizontal_index = offset
 
     base_lanes = [lane.remove_non_common_elements() for lane in lanes]
+    if(not nested):
+        realization_lanes = [lane.get_valid_realizations() for lane in lanes]
+    
+    if(nested):
+        all_lanes = []
+        for i in range(len(lanes)):
+            all_lanes.append((i, lanes[i], len(lanes[i].elements)))
+    else:
+        all_lanes = []
+        for i in range(len(realization_lanes)):
+            for realization in realization_lanes[i]:
+                all_lanes.append((i, realization, len(realization.elements)))
 
     base_lanes_indexed = []
     for i in range(len(base_lanes)):
             base_lanes_indexed.append((i, base_lanes[i], len(base_lanes[i].elements)))
 
-    all_lanes = []
-    for i in range(len(lanes)):
-        all_lanes.append((i, lanes[i], len(lanes[i].elements)))
-
-    if(intra):
-        longest_common_sequence, length, number_of_interactions = __get_longest_common_subsequence(base_lanes_indexed,intra, interactions[0])
+    if (intra):
+        longest_common_sequence, length, number_of_interactions = __get_longest_common_subsequence(base_lanes_indexed, intra, interactions[0])
     else:
         longest_common_sequence, length, number_of_interactions = __get_longest_common_subsequence(base_lanes_indexed)
 
@@ -65,13 +71,18 @@ def __nested_inter_lane_summarization(lanes, interactions, print_results, curren
                     else:
                         if(elem.index_start >= last_positions[index] and elem.index_end < current_positions[index]):
                             subprocess.append(elem)
+
                 interval_subprocesses.append((all_lanes[j][0], subprocess))
             else:
                 interval_subprocesses.append((all_lanes[j][0],[]))
     
         
         # Add summarized subprocess to elements
-        interval_elements, interval_length, interval_mapping = __apply_patterns_nested(interval_subprocesses, current_horizontal_index, interactions, base_lanes, current_lane, print_results, intra)
+        if(nested):
+            interval_elements, interval_length, interval_mapping = __apply_patterns_nested(interval_subprocesses, current_horizontal_index, interactions, base_lanes, current_lane, print_results, intra)
+        else:
+            interval_elements, interval_length, interval_mapping = __apply_patterns(interval_subprocesses, current_horizontal_index, interactions, base_lanes, current_lane, print_results, intra)
+        
         elements.extend(interval_elements)
         new_interaction_points_mapping.update(interval_mapping)
         current_horizontal_index += interval_length
@@ -110,6 +121,7 @@ def __nested_inter_lane_summarization(lanes, interactions, print_results, curren
                     identifier = 0
                 else: 
                     identifier = i
+
                 if((identifier, str([str(position) for position in interaction_points[i].exact_positions]), str(interaction_points[i].interaction_lanes)) in new_interaction_points_mapping.keys()):
                     new_interaction_points_mapping[(identifier, str([str(position) for position in interaction_points[i].exact_positions]), str(interaction_points[i].interaction_lanes))].append(IED.BasePosition(current_lane, current_horizontal_index))
                 else:
@@ -151,14 +163,17 @@ def __nested_inter_lane_summarization(lanes, interactions, print_results, curren
             interval_subprocesses.append((all_lanes[j][0],[]))
 
     # Add summarized subprocess to elements
-    interval_elements, interval_length, interval_mapping = __apply_patterns_nested(interval_subprocesses, current_horizontal_index, interactions, base_lanes, current_lane, print_results, intra)
+    if(nested):
+        interval_elements, interval_length, interval_mapping = __apply_patterns_nested(interval_subprocesses, current_horizontal_index, interactions, base_lanes, current_lane, print_results, intra)
+    else:
+        interval_elements, interval_length, interval_mapping = __apply_patterns(interval_subprocesses, current_horizontal_index, interactions, base_lanes, current_lane, print_results, intra)
+    
     elements.extend(interval_elements)
     new_interaction_points_mapping.update(interval_mapping)
     current_horizontal_index += interval_length
-
-
+ 
     return elements, new_interaction_points_mapping
-
+    
 
 def __apply_patterns_nested(interval_subprocesses, start_index, interactions, base_lanes, current_lane, print_results, intra = False):
     '''
@@ -194,6 +209,7 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
 
     # Determine choices and their frequencies
     choices = []
+    total_frequency = sum([lane.frequency for lane in base_lanes])
     is_optional = False
     empty_frequency = 0
     current_choice = 0
@@ -216,7 +232,7 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
                             new_mapping[(identifier, str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))].append(IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)))
                         else:
                             new_mapping[(identifier, str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))] = [IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position))]
-                    choice.append(SVD.InteractionConstruct(elements[1][i].activity, 1 / len(interval_subprocesses), IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)), position))
+                    choice.append(SVD.InteractionConstruct(elements[1][i].activity, base_lanes[elements[0]].frequency / total_frequency, IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)), position))
                     length = 1
                 else:
                     new_choices = []
@@ -250,7 +266,7 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
                         choice.append(SVD.ChoiceConstruct(new_choices, IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)), IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position + length - 1)), position, position + length - 1))
                     
             else:
-                choice.append(SVD.CommonConstruct(elements[1][i].activity, 1 / len(interval_subprocesses), IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)), position))
+                choice.append(SVD.CommonConstruct(elements[1][i].activity, base_lanes[elements[0]].frequency / total_frequency, IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)), position))
                 length = 1
 
             position += length
@@ -260,24 +276,37 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
             empty_frequency += 1
 
         else:
-            choices.append(SVD.SuperLane(current_choice, "Option " + str(current_choice), base_lanes[0].object_type, choice, "1", base_lanes[elements[0]].frequency))
-            current_choice += 1
+            duplicate = False
+            for j in range(len(choices)):
+                is_identical, update_lane = choices[j].check_identical(choice)
+
+                if(is_identical):
+                    choices[j] = update_lane
+                    choices[j].cardinality = "n"
+                    choices[j].frequency += base_lanes[elements[0]].frequency
+                    duplicate = True
+                    break
+
+            if(not duplicate):
+                choices.append(SVD.SuperLane(current_choice, "Option " + str(current_choice), base_lanes[0].object_type, choice, "1", base_lanes[elements[0]].frequency, []))
+                current_choice += 1
         
         end_index = max(end_index, position - 1)
 
- 
+
     if(len(choices) == 1 and len(choices[0].elements) == 1 and isinstance(choices[0].elements[0], SVD.GeneralChoiceStructure)):
-        # Resolve side-case
+
         extracted_choices = []
         i = 0
         for extracted_choice in choices[0].elements[0].choices:
             extracted_elements, extracted_positions_mapping = copy.deepcopy(extracted_choice).extract_option()
-            extracted_choices.append(SVD.SuperLane(i, "Option " + str(i), base_lanes[0].object_type, extracted_elements.elements, "1", extracted_choice.frequency))
+            extracted_choices.append(SVD.SuperLane(i, "Option " + str(i), base_lanes[0].object_type, extracted_elements.elements, "1", extracted_choice.frequency, []))
             i += 1
 
         for mapping in new_mapping.keys():
             for i in range(len(new_mapping[mapping])):
-                new_mapping[mapping][i] = extracted_positions_mapping[str(new_mapping[mapping][i])]
+                if(str(new_mapping[mapping][i]) in extracted_positions_mapping.keys()):
+                    new_mapping[mapping][i] = extracted_positions_mapping[str(new_mapping[mapping][i])]
 
         if(print_results):
         # Output printing
@@ -295,6 +324,7 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
 
         returned_elements.append(SVD.OptionalConstruct(extracted_choices, IED.BasePosition(current_lane, start_index), IED.BasePosition(current_lane, end_index), start_index, end_index, empty_frequency))
         return returned_elements, end_index - start_index + 1, new_mapping
+
    
     # Applying Optional Pattern
     if(is_optional):
@@ -325,145 +355,6 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
         returned_elements.append(SVD.ChoiceConstruct(choices, IED.BasePosition(current_lane, start_index), IED.BasePosition(current_lane, end_index), start_index, end_index))
             
     return returned_elements, end_index - start_index + 1, new_mapping
-
-
-def __inter_lane_summarization(lanes, interactions, print_results, current_lane = 0, offset = 0, intra = False):
-    '''
-    Performs the summarization of the given Super Lanes using the set of defined patterns.
-    :param lanes: The Super Lanes that should be summarized
-    :type lanes: list of type SuperLane
-    :param interactions: The sets of interaction points corresponding to the involved Super Lanes
-    :type interactions: list
-    :param current_lane: The lane number that is currently summarized (default 0, otherwise the number of choice this lane represents)
-    :type current_lane: int
-    :param print_results: Whether the results should be output in the console
-    :type print_results: bool
-    :param offset: The starting index of the horizontal positions
-    :type offset: int
-    :param intra: Whether the all lanes are from the same variant
-    :type intra: bool
-    :return: The summarizing elements, a mapping from original interaction positions to the new positions
-    :rtype: list of type SummarizationElement, dict
-    '''
-    elements = []
-    new_interaction_points_mapping = {}
-    current_horizontal_index = offset
-
-    base_lanes = [lane.remove_non_common_elements() for lane in lanes]
-    realization_lanes = [lane.get_realizations() for lane in lanes]
-
-    all_lanes = []
-    for i in range(len(realization_lanes)):
-        for realization in realization_lanes[i]:
-            all_lanes.append((i, realization, len(realization.elements)))
-
-    base_lanes_indexed = []
-    for i in range(len(base_lanes)):
-            base_lanes_indexed.append((i, base_lanes[i], len(base_lanes[i].elements)))
-
-    if (intra):
-        longest_common_sequence, length, number_of_interactions = __get_longest_common_subsequence(base_lanes_indexed, intra, interactions[0])
-    else:
-        longest_common_sequence, length, number_of_interactions = __get_longest_common_subsequence(base_lanes_indexed)
-
-    last_positions = [0 for lane in base_lanes]
-
-    for common_element in longest_common_sequence:
-
-        current_positions = []
-        for i in range(len(common_element[1])):
-            current_positions.append(common_element[1][i][2])
-
-
-        # Determine all interval subprocesses and summarize them
-        interval_subprocesses = []
-        for j in range(len(all_lanes)):
-            index = all_lanes[j][0]
-            if(current_positions[index] - last_positions[index] >= 0):
-                subprocess = []
-                for elem in all_lanes[j][1].elements:
-                    if(elem.index >= last_positions[index] and elem.index < current_positions[index]):
-                        subprocess.append(elem)
-                interval_subprocesses.append((all_lanes[j][0], subprocess))
-            else:
-                interval_subprocesses.append((all_lanes[j][0],[]))
-    
-        
-        # Add summarized subprocess to elements
-        interval_elements, interval_length, interval_mapping = __apply_patterns(interval_subprocesses, current_horizontal_index, interactions, base_lanes, current_lane, print_results, intra)
-        elements.extend(interval_elements)
-        new_interaction_points_mapping.update(interval_mapping)
-        current_horizontal_index += interval_length
-                     
-        # Add the common activity to the elements of the summarized lane
-        if(print_results):
-            print("\n")
-            print("Adding the common activity: " + str(common_element[0]))
-
-        # Get frequency of the event
-        element_frequency = 0
-        for i in range(len(base_lanes)):
-            element_frequency += base_lanes[i].get_element(common_element[2][i][2]).frequency
-        element_frequency = element_frequency / len(base_lanes)
-
-        
-        # Checks if the common activity is an interaction point
-        is_interacting_activity = False
-        for i in range(len(base_lanes)):
-            is_interacting_activity = is_interacting_activity or isinstance(base_lanes[i].get_element(common_element[2][i][2]), SVD.InteractionConstruct)
-
-        if(print_results):
-            print("This is an interaction point: " + str(is_interacting_activity))
-
-        if (is_interacting_activity):
-
-            interaction_points = []
-  
-            for i in range(len(base_lanes)):
-                element = base_lanes[i].get_element(common_element[2][i][2])
-                interaction_point_list = IED.get_interaction_points(interactions[i], base_lanes[i].lane_id, element.position)
-                interaction_points.extend(interaction_point_list)
-
-            for i in range(len(interaction_points)):
-                if(intra):
-                    identifier = 0
-                else: 
-                    identifier = i
-                new_interaction_points_mapping[(identifier, str([str(position) for position in interaction_points[i].exact_positions]), str(interaction_points[i].interaction_lanes))] = [IED.BasePosition(current_lane, current_horizontal_index)]
-
-            elements.append(SVD.InteractionConstruct(common_element[0], element_frequency, IED.BasePosition(current_lane, current_horizontal_index), current_horizontal_index))
-
-        else:
-            elements.append(SVD.CommonConstruct(common_element[0], element_frequency, IED.BasePosition(current_lane, current_horizontal_index), current_horizontal_index))
-
-        current_horizontal_index += 1
-        
-        # Update indices for the next iteration
-        for i in range(len(last_positions)):
-            last_positions[i] = current_positions[i] + 1
-
-
-    # Determine all interval subprocesses and summarize them
-    interval_subprocesses = []
-    for j in range(len(all_lanes)):
-        index = all_lanes[j][0]
-        current_position = all_lanes[j][1].elements[-1].index + 1
-        if(current_position - last_positions[index] >= 0):
-            subprocess = []
-            for elem in all_lanes[j][1].elements:
-                if(elem.index >= last_positions[index] and elem.index < current_position):
-                    subprocess.append(elem)
-            interval_subprocesses.append((all_lanes[j][0], subprocess))
-        else:
-            interval_subprocesses.append((all_lanes[j][0],[]))
-
-    # Add summarized subprocess to elements
-    interval_elements, interval_length, interval_mapping = __apply_patterns(interval_subprocesses, current_horizontal_index, interactions, base_lanes, current_lane, print_results, intra)
-    elements.extend(interval_elements)
-    new_interaction_points_mapping.update(interval_mapping)
-    current_horizontal_index += interval_length
- 
-    return elements, new_interaction_points_mapping
 
 
 def __apply_patterns(interval_subprocesses, start_index, interactions, base_lanes, current_lane, print_results, intra = False):
@@ -568,11 +459,10 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
                     else:
                         new_mapping[key].append(IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_index, current_mappings[key])))
 
-
     for i in range(len(choices)):
         for elem in choices[i][0]:
             elem.frequency = choices[i][2] / len(interval_subprocesses)
-        choices[i] = SVD.SuperLane(i, "Option " + str(i), base_lanes[0].object_type, choices[i][0], choices[i][1], choices[i][2])
+        choices[i] = SVD.SuperLane(i, "Option " + str(i), base_lanes[0].object_type, choices[i][0], choices[i][1], choices[i][2], [])
 
    
     # Applying Optional Pattern

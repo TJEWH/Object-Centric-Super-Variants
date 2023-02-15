@@ -12,7 +12,7 @@ class MODE(Enum):
     LANE_FREQUENCY = 1
     ACTICITY_FREQUENCY = 2
 
-CURRENT_MODE = MODE.LANE_FREQUENCY
+CURRENT_MODE = MODE.ACTICITY_FREQUENCY
 
 current_annotations = []
 
@@ -51,7 +51,7 @@ def visualize_super_variant(super_variant, suppression_char = "*"):
                     for i in range(len(positions)):
                         is_contained = False
                         index = 0
-                        if is_inside(positions[i], 5, event_position):
+                        if is_inside(positions[i], 0.75, event_position):
                             is_contained = True
                             index = i
                             break
@@ -409,7 +409,7 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
     
     offset = element.index_start - index
 
-    ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length, current_vertical_position * chevron_height, ((element.index_end - element.index_start) + 1) * chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height), facecolor = "None", lw = 1.3, ls = overall_line_style, zorder = 5))
+    ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length, current_vertical_position * chevron_height, ((element.index_end - element.index_start) + 1) * chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height), facecolor = "None", lw = 1, ls = overall_line_style, zorder = 5))
     
     overall_line_style = "-"
 
@@ -460,9 +460,9 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
         if(CURRENT_MODE == MODE.LANE_FREQUENCY):
             frequency = choice_properties[choice]["Frequency"]/lane_properties[lane]["Frequency"]
             frequency = str(round(frequency * 100, 2)) + "%"
-            ax.plot(horizontal_start_position + 0.8 * chevron_height/DEFAULT_CHEVRON_HEIGHT, vertical_position + choice_properties[choice]["Height"] * chevron_height * height_factor - 1 * chevron_height/DEFAULT_CHEVRON_HEIGHT, 'kv', zorder = 25, markersize = 10 * chevron_height/DEFAULT_CHEVRON_HEIGHT)
+            ax.plot(horizontal_start_position + 0.8 * chevron_length/DEFAULT_CHEVRON_LENGTH, vertical_position + choice_properties[choice]["Height"] * chevron_height * height_factor - 0.8 * chevron_length/DEFAULT_CHEVRON_LENGTH, 'kv', zorder = 25, markersize = 8 * chevron_length/DEFAULT_CHEVRON_LENGTH)
            
-            current_annotations.append(((horizontal_start_position + 0.8 * chevron_height/DEFAULT_CHEVRON_HEIGHT, vertical_position + choice_properties[choice]["Height"] * chevron_height * height_factor - 1 * chevron_height/DEFAULT_CHEVRON_HEIGHT), frequency, 8 * chevron_height/DEFAULT_CHEVRON_HEIGHT))
+            current_annotations.append(((horizontal_start_position + 0.8 * chevron_length/DEFAULT_CHEVRON_LENGTH, vertical_position + choice_properties[choice]["Height"] * chevron_height * height_factor - 1 * chevron_length/DEFAULT_CHEVRON_LENGTH), frequency, 8 * chevron_length/DEFAULT_CHEVRON_LENGTH))
         
         vertical_position += choice_properties[choice]["Height"] * chevron_height * height_factor
 

@@ -70,9 +70,18 @@ def __branch_on_candidates(variant, remaining_candidates, init_summarization, le
         cardinality = "1"
         if len(partition) > 1:
             cardinality = "n"
-        elements, new_intermediate_mappings = ILS.__inter_lane_summarization([lane.to_super_lane(variant.interaction_points) for lane in partition], [variant.interaction_points for lane in partition], print_results = print_results, intra = True)
+        elements, new_intermediate_mappings = ILS.__inter_lane_summarization([lane.to_super_lane(variant.interaction_points) for lane in partition], [variant.interaction_points for lane in partition], print_results = print_results, intra = True, nested = False)
         
-        super_lane = SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality, len(partition))
+        realizations = []
+        for i in range(len(partition)):
+            realizations.extend(partition[i].to_super_lane(variant.interaction_points).realizations)
+            
+        for i in range(len(realizations)):
+            realizations[i].lane_name = "realization " + str(i)
+            realizations[i].lane_id = i
+
+        super_lane = SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality, len(partition), realizations)
+        
         new_lanes.append(super_lane)
         new_mappings.append((super_lane.lane_id, new_intermediate_mappings))
 

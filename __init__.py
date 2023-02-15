@@ -14,7 +14,7 @@ import Inter_Variant_Summarization as IEVS
 import Inter_Variant_Generation as IEVG
 import Super_Variant_Hierarchy as SVH
 
-MODE = 6
+MODE = 4
 
 filename = "EventLogs/BPI2017-Top10.jsonocel"
 parameters = {"execution_extraction": "leading_type",
@@ -43,17 +43,16 @@ elif(MODE == 2):
     SVV.visualize_super_variant(super_variant)
 
 elif(MODE == 3):
-    super_variant, cost = IEVS.join_super_variants(summarizations[6], summarizations[7], False, False)
-    super_variant, cost = IEVS.join_super_variants(super_variant, summarizations[8], False, False)
-    super_variant, cost = IEVS.join_super_variants(super_variant, summarizations[9], True, False)
+    #TODO FIX
+    super_variant, cost = IEVS.join_super_variants(summarizations[0], summarizations[1], False, False)
+    super_variant, cost = IEVS.join_super_variants(super_variant, summarizations[6], False, False)
+    super_variant, cost = IEVS.join_super_variants(super_variant, summarizations[7], True, False)
     SVV.visualize_super_variant(super_variant)
 
 elif(MODE == 4):
     super_variant1, cost = IEVS.join_super_variants(summarizations[6], summarizations[7], False, False)
     super_variant2, cost = IEVS.join_super_variants(summarizations[9], summarizations[8], False, False)
-    super_variant, cost = IEVS.join_super_variants(super_variant1, super_variant2, False, True)
-    SVV.visualize_super_variant(super_variant1)
-    SVV.visualize_super_variant(super_variant2)
+    super_variant, cost = IEVS.join_super_variants(super_variant1, super_variant2, True, False)
     SVV.visualize_super_variant(super_variant)
 
 elif(MODE == 5):
@@ -73,12 +72,18 @@ elif(MODE == 7):
     #SVH.visualize_single_super_variant_hierarchy(summarizations[4], summarizations[6], super_variant)
 
 elif(MODE == 8):
-    for i in range(len(summarizations)-1):
-        for j in range(i+1, len(summarizations)):
-            super_variant, cost = IEVS.join_super_variants(summarizations[i], summarizations[j], True, False)
-            print(i)
-            print(j)
-            print("---")
-            SVV.visualize_super_variant(super_variant)
+    for i in range(len(summarizations)-2):
+        if(i != 5):
+            for j in range(i+1, len(summarizations)-1):
+                if(j != 5):
+                    super_variant, cost = IEVS.join_super_variants(summarizations[i], summarizations[j], True, False)
+                    for k in range(j+1, len(summarizations)):
+                        if(k != 5):
+                            super_variant, cost = IEVS.join_super_variants(super_variant, summarizations[k], True, False)
+                            print(i)
+                            print(j)
+                            print(k)
+                            print("---")
+                            SVV.visualize_super_variant(super_variant)
     #super_variant, cost = IEVS.join_super_variants(summarizations[4], summarizations[6], False, False)
     #SVH.visualize_single_super_variant_hierarchy(summarizations[4], summarizations[6], super_variant)

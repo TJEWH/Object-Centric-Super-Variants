@@ -213,14 +213,16 @@ class SuperLane:
     elements = []
     cardinality = "0" 
     frequency = 0
+    realizations = []
     
-    def __init__(self, lane_id, name, object_type, elements, cardinality, frequency):
+    def __init__(self, lane_id, name, object_type, elements, cardinality, frequency, realizations):
         self.lane_id = lane_id
         self.object_type = object_type
         self.lane_name = name
         self.elements = elements
         self.cardinality = cardinality
         self.frequency = frequency
+        self.realizations = realizations
     
     def __str__(self):
         result_string = f"ID: {self.lane_id}, Name: {self.lane_name}, Cardinality: {self.cardinality}:  ["
@@ -475,7 +477,7 @@ class SuperLane:
                 element.position.apply_shift(end_index - index_end_before)
                 index += end_index - index + 1
             
-        return SuperLane(0, "normalization", self.object_type, elements, self.cardinality, self.frequency)
+        return SuperLane(0, "normalization", self.object_type, elements, self.cardinality, self.frequency, [])
 
 
     def normalize_option(self, lane_id, option_id, offset = 0):
@@ -547,7 +549,7 @@ class SuperLane:
                 
                 index += end_index - index + 1
             
-        return SuperLane(self.lane_id, self.lane_name, self.object_type, elements, self.cardinality, self.frequency), positions_mappings
+        return SuperLane(self.lane_id, self.lane_name, self.object_type, elements, self.cardinality, self.frequency, []), positions_mappings
 
 
     def extract_option(self):
@@ -635,11 +637,11 @@ class SuperLane:
                     elements[-1].position = IED.BasePosition(0, index)
                     index += 1
                     
-            result.append(SuperLane(i, "realization " + str(i), self.object_type, elements, "1", realization_frequency))
+            result.append(SuperLane(i, "realization " + str(i), self.object_type, elements, "1", realization_frequency, []))
 
         return result
 
-    def get_realizations(self):
+    def get_all_realizations(self):
         '''
         Generates all realizations of a Super Lane.
         :param self: The summarizing Super Lane
@@ -661,7 +663,7 @@ class SuperLane:
                 intermediate_result = []
                 for i in range(len(element.choices)):
 
-                    for sublist in element.choices[i].get_realizations():
+                    for sublist in element.choices[i].get_all_realizations():
                         intermediate_result.extend([realization + sublist.elements for realization in realizations])
 
                 if(type(element) == OptionalConstruct):
@@ -683,9 +685,94 @@ class SuperLane:
                     new_elements.append(copy.deepcopy(elem))
                     new_elements[-1].frequency = frequency
 
-            result.append(SuperLane(i, "realization " + str(i), self.object_type, new_elements, self.cardinality, realization_frequency))
+            result.append(SuperLane(i, "realization " + str(i), self.object_type, new_elements, self.cardinality, realization_frequency, []))
 
         return result
+
+    
+    def get_valid_realizations(self):
+        '''
+        Generates all realizations of a Super Lane and cross-references them with the stored realizations.
+        :param self: The summarizing Super Lane
+        :type self: SuperLane
+        :return: The list of all valid realizations
+        :rtype: list of type SuperLane
+        '''
+        all_realizations = self.get_all_realizations()
+        valid_realizations = []
+
+        for realization in all_realizations:
+            is_valid = False
+            for comparison in self.realizations:
+
+                if (len(comparison.elements) != len(realization.elements)):
+                    continue
+                else:
+
+                    is_equivalent = True
+                    for i in range(len(realization.elements)):
+                        if(type(realization.elements[i]) ==  type(comparison.elements[i])):
+                            if(type(realization.elements[i]) == InteractionConstruct and type(comparison.elements[i]) == InteractionConstruct and comparison.elements[i].activity == realization.elements[i].activity):
+                                continue
+                            elif(type(realization.elements[i]) == CommonConstruct and type(comparison.elements[i]) == CommonConstruct and comparison.elements[i].activity == realization.elements[i].activity):
+                                continue
+                            else:
+                                is_equivalent = False
+                                break
+                        else:
+                            is_equivalent = False
+                            break
+
+                    if(is_equivalent):
+                        is_valid = True
+                        break
+            if(is_valid):
+                valid_realizations.append(realization)
+
+        return valid_realizations
+
+    def check_identical(self, elements):
+        '''
+        Checks the elements of the lane againts a list of other elements
+        :param self: The summarizing Super Lane
+        :type self: SuperLane
+        :param elements: The list of elements
+        :type elements: list of type SummarizationElement
+        :return: Whether the elements are identical
+        :rtype: bool
+        '''
+        import copy
+        if (len(self.elements) != len(elements)):
+            return False, self
+        
+        else:
+            update_self = copy.deepcopy(self)
+            for i in range(len(elements)):
+                if(type(elements[i]) ==  type(self.elements[i])):
+                    if(type(elements[i]) == InteractionConstruct and type(self.elements[i]) == InteractionConstruct and elements[i].activity == self.elements[i].activity):
+                        update_self.elements[i].frequency += elements[i].frequency
+                        continue
+                    elif(type(elements[i]) == CommonConstruct and type(self.elements[i]) == CommonConstruct and elements[i].activity == self.elements[i].activity):
+                        update_self.elements[i].frequency += elements[i].frequency
+                        continue
+                    elif((type(elements[i]) == OptionalConstruct and type(self.elements[i]) == OptionalConstruct) or (type(elements[i]) == ChoiceConstruct and type(self.elements[i]) == ChoiceConstruct)):
+                        
+                        if(len(elements[i].choices) == 1 and len(self.elements[i].choices) == 1):
+                            is_identical, new_choice = self.elements[i].choices[0].check_identical(elements[i].choices[0].elements)
+                            
+                            if(is_identical):
+                                self.elements[i].choices[0] = new_choice
+                                self.elements[i].choices[0].cardinality = "n"
+                                self.elements[i].choices[0].frequency += elements[i].choices[0].frequency
+                        
+                        # TODO Handling multiple choices
+                        else:
+                            return False, self
+                else:
+                    return False, self
+        
+        return True, update_self
+
 
    
     def get_element(self, position):
@@ -903,7 +990,7 @@ class SuperLane:
         for elem in self.elements:
             if(isinstance(elem, CommonConstruct)):
                 new_elements.append(elem)
-        return SuperLane(self.lane_id, self.lane_name, self.object_type, new_elements, self.cardinality, self.frequency)
+        return SuperLane(self.lane_id, self.lane_name, self.object_type, new_elements, self.cardinality, self.frequency, [])
 
 
     def make_optional(self, position, empty_frequency):
@@ -1175,7 +1262,7 @@ class CommonConstruct(SummarizationElement):
         :rtype: OptionalConstruct
         '''
         self.frequency -= empty_frequency
-        option = SuperLane(0, "option 0", lane.object_type, [self], 1, self.frequency*lane.frequency)
+        option = SuperLane(0, "option 0", lane.object_type, [self], 1, self.frequency*lane.frequency, [])
         return OptionalConstruct([option], self.position, self.position, self.index, self.index, empty_frequency)
 
 

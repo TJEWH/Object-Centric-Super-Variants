@@ -118,7 +118,7 @@ def optional_super_lane(summarization, lane, first):
 
     new_lane, new_interaction_points_mapping = new_super_lane(summarization, lane, first)
 
-    return SVD.OptionalSuperLane(tuple(lane.lane_id), lane.object_type + " i", new_lane.object_type, new_lane.elements, new_lane.cardinality, new_lane.frequency), new_interaction_points_mapping
+    return SVD.OptionalSuperLane(tuple(lane.lane_id), lane.object_type + " i", new_lane.object_type, new_lane.elements, new_lane.cardinality, new_lane.frequency, new_lane.realizations), new_interaction_points_mapping
 
 
 def new_super_lane(summarization, lane, first, start_index = 0, outer_position = None, option = 0):
@@ -142,6 +142,7 @@ def new_super_lane(summarization, lane, first, start_index = 0, outer_position =
     lane_id = lane.lane_id
     cardinality = lane.cardinality
     lane_frequency = lane.frequency
+    realizations = lane.realizations
 
     new_interaction_points_mapping = {}
     current_horizontal_index = start_index
@@ -199,7 +200,7 @@ def new_super_lane(summarization, lane, first, start_index = 0, outer_position =
 
             current_horizontal_index += length
 
-    return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality, lane_frequency), new_interaction_points_mapping
+    return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality, lane_frequency, realizations), new_interaction_points_mapping
 
 
 
@@ -230,11 +231,13 @@ def join_super_lanes(summarization1, summarization2, lane1, lane2, allow_nested_
     else:
         cardinality = "1..n"
 
-    if(allow_nested_structures):
-        elements, mappings =  ILS.__nested_inter_lane_summarization([lane1, lane2], [summarization1.interaction_points, summarization2.interaction_points], print_result)
-    else:
-        elements, mappings =  ILS.__inter_lane_summarization([lane1, lane2], [summarization1.interaction_points, summarization2.interaction_points], print_result)
-    return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality, frequency), mappings
+    realizations = lane1.realizations + lane2.realizations
+    for i in range(len(realizations)):
+        realizations[i].lane_id = i
+        realizations[i].lane_name = "realization " + str(i)
+
+    elements, mappings =  ILS.__inter_lane_summarization([lane1, lane2], [summarization1.interaction_points, summarization2.interaction_points], print_result, nested = allow_nested_structures)
+    return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality, frequency, realizations), mappings
 
 
 
@@ -506,8 +509,8 @@ def levenshtein_distance(lane1, lane2):
     :rtype: int
     '''
     import math
-    realizations1 = lane1.get_realizations()
-    realizations2 = lane2.get_realizations()
+    realizations1 = lane1.get_valid_realizations()
+    realizations2 = lane2.get_valid_realizations()
     minimum = math.inf
 
     if(len(realizations1) >= len(realizations2)):
