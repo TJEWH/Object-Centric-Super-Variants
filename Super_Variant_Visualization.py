@@ -12,8 +12,7 @@ class MODE(Enum):
     LANE_FREQUENCY = 1
     ACTICITY_FREQUENCY = 2
 
-CURRENT_MODE = MODE.ACTICITY_FREQUENCY
-
+CURRENT_MODE = MODE.LANE_FREQUENCY
 current_annotations = []
 
 def visualize_super_variant(super_variant, suppression_char = "*"):
@@ -51,7 +50,7 @@ def visualize_super_variant(super_variant, suppression_char = "*"):
                     for i in range(len(positions)):
                         is_contained = False
                         index = 0
-                        if is_inside(positions[i], 0.75, event_position):
+                        if is_inside(positions[i], 1, event_position):
                             is_contained = True
                             index = i
                             break

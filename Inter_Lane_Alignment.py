@@ -3,10 +3,46 @@ import Input_Extraction_Definition as IED
 
 ALIGN = True
 
+def join_interaction_mappings(interaction_mappings):
+    '''
+    Performs a series of pre-processing steps to the multiple interaction mappings necessary for later alignment.
+    :param interaction_mappings: A list of the various interaction_mappings for each super lane
+    :type interaction_mappings: list of type dict
+    :return: A dictionary with each entry corresponding to a unified Interaction Point
+    :rtype: dict
+    '''
+    return __split_interaction_mappings(__merge_interactions(__merge_interaction_mappings(interaction_mappings)))
+
+
+def get_preliminary_interaction_points(mappings, lanes):
+    '''
+    Extracts the list of preliminary InteractionPoints from a given mapping and the corresponding Super Lanes.
+    :param mappings: A dictionary with each entry corresponding to a unified Interaction Point
+    :type mappings: dict
+    :param lanes: The summarized lanes of the Super Variant
+    :type lanes: list of type SuperLane
+    :return: The list of preliminary interactions of the un-aligned lanes
+    :rtype: list of type InteractionPoint
+    '''
+
+    interaction_points = []
+    for mapping in mappings.keys():
+
+        types = set([lane.object_type for lane in lanes if lane.lane_id in mappings[mapping].keys()])
+        first_key = list(mappings[mapping].keys())[0]
+        element = [lane for lane in lanes if lane.lane_id == first_key][0].get_element(mappings[mapping][first_key])
+        activity_label = element.activity
+
+        interaction_point = IED.InteractionPoint(activity_label, list(mappings[mapping].keys()), types, None, list(mappings[mapping].values()))
+        interaction_points.append(interaction_point)
+
+    return interaction_points
+
+
 def __merge_interactions(merged_interactions):
     '''
     Merges the interaction point mappings that are at the same position in the final Super Lane.
-    :param merged_interactions: The already combined mappings of original interaction points to new indices in the summarized lanes
+    :param merged_interactions: The combined mappings of original interaction points to new indices in the summarized lanes
     :type merged_interactions: dict
     :return: Each interaction point of the final Super Lanes and their current positions in the involved lanes, merged by position
     :rtype: dict
@@ -26,7 +62,7 @@ def __merge_interaction_mappings(mappings):
     '''
     Pre-processes the mappings from the summarization for later alignment by merging the mappings for each Super Lane.
     :param mappings: The mappings of original interaction points to new indices in the summarized lanes for each lane in the Super Variant
-    :type mappings: list 
+    :type mappings: list of type dict
     :return: Each interaction point of the final Super Lanes and their current positions in the involved lanes
     :rtype: dict
     '''
@@ -116,7 +152,6 @@ def __combine_interactions(mappings):
     return new_mappings
 
 
-
 def __re_align_lanes(lanes, mappings, print_result, intra = True):
     '''
     Given the summarized Super Lanes and the mappings from original interaction points to new indices, the lanes are aligned according to the interaction points.
@@ -134,8 +169,7 @@ def __re_align_lanes(lanes, mappings, print_result, intra = True):
     import math
     #updated_mappings, aligned_lanes = create_duplicate_interactions(copy.deepcopy(mappings), copy.deepcopy(lanes))
     
-    split_mappings = __split_interaction_mappings(copy.deepcopy(mappings))
-    updated_mappings, aligned_lanes = copy.deepcopy(split_mappings), copy.deepcopy(lanes)
+    updated_mappings, aligned_lanes = copy.deepcopy(mappings), copy.deepcopy(lanes)
 
     updated_interaction_points = []
 
@@ -144,7 +178,7 @@ def __re_align_lanes(lanes, mappings, print_result, intra = True):
         is_fixed[lane.lane_id] = dict()
 
     # Align the lanes such that the interaction points have the same horizontal index
-    for i in range(len(split_mappings.keys())):
+    for i in range(len(mappings.keys())):
 
         earliest_interaction_point = min(updated_mappings.items(), key=lambda x: min([position.get_base_index() for position in x[1].values()]))
         relevant_lanes = [copy.deepcopy(l) for l in aligned_lanes if l.lane_id in list(earliest_interaction_point[1].keys())]
@@ -178,6 +212,7 @@ def __re_align_lanes(lanes, mappings, print_result, intra = True):
             shifted_lanes = []
             
             for lane in relevant_lanes:
+
                 # Shift indices by the offset
                 current_position = updated_mappings[earliest_interaction_point[0]][lane.lane_id]
                 offset = target_position.get_base_index() - current_position.get_base_index()
@@ -243,7 +278,7 @@ def __re_align_lanes(lanes, mappings, print_result, intra = True):
 
 
 
-# TODO refine
+# TODO Finish implementation, used to create Interaction Point duplicates
 def create_duplicate_interaction(mappings, lanes):
 
     import copy

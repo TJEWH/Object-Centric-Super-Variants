@@ -92,7 +92,7 @@ def inter_variant_summarization(summarization1, summarization2, mapping, allow_n
             intermediate_lanes.append(super_lane)
             intermediate_mappings.append((super_lane.lane_id, mapping))
 
-    result_lanes, result_interaction_points = ILA.__re_align_lanes(copy.deepcopy(intermediate_lanes), ILA.__merge_interactions(ILA.__merge_interaction_mappings(intermediate_mappings)), print_result, False)
+    result_lanes, result_interaction_points = ILA.__re_align_lanes(copy.deepcopy(intermediate_lanes), ILA.join_interaction_mappings(intermediate_mappings), print_result, False)
     new_id = list(summarization1.id + summarization2.id)
     new_id.sort()
     super_variant = SVD.SuperVariant(tuple(new_id), copy.deepcopy(result_lanes), summarization1.object_types.union(summarization2.object_types), result_interaction_points, summarization1.frequency + summarization2.frequency)

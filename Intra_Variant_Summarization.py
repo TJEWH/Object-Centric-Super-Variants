@@ -150,7 +150,7 @@ def within_variant_summarization(variant, print_results = False):
     result = []
     for summarization in all_summarizations:
 
-        result_lanes, result_interaction_points = ILA.__re_align_lanes(summarization["Lanes"], ILA.__merge_interactions(ILA.__merge_interaction_mappings(summarization["Mappings"])), print_results)
+        result_lanes, result_interaction_points = ILA.__re_align_lanes(summarization["Lanes"], ILA.join_interaction_mappings(summarization["Mappings"]), print_results)
         result.append(SVD.SummarizedVariant(result_lanes, variant.object_types, result_interaction_points, variant.frequency))
         result[-1].encode_lexicographically()
 

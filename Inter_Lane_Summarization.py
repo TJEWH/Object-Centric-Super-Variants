@@ -173,7 +173,7 @@ def __inter_lane_summarization(lanes, interactions, print_results, current_lane 
     current_horizontal_index += interval_length
  
     return elements, new_interaction_points_mapping
-    
+
 
 def __apply_patterns_nested(interval_subprocesses, start_index, interactions, base_lanes, current_lane, print_results, intra = False):
     '''
@@ -239,7 +239,7 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
                     length = 1
                     
                     for option in elements[1][i].choices:
-
+                        
                         interaction_points = option.get_interaction_points(interactions[elements[0]], base_lanes[elements[0]].lane_id)
                         normalized_lane, positions_mapping = copy.deepcopy(option).normalize_option(current_lane, current_choice, position)
                         
@@ -297,16 +297,16 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
     if(len(choices) == 1 and len(choices[0].elements) == 1 and isinstance(choices[0].elements[0], SVD.GeneralChoiceStructure)):
 
         extracted_choices = []
-        i = 0
+        id = 0
         for extracted_choice in choices[0].elements[0].choices:
             extracted_elements, extracted_positions_mapping = copy.deepcopy(extracted_choice).extract_option()
-            extracted_choices.append(SVD.SuperLane(i, "Option " + str(i), base_lanes[0].object_type, extracted_elements.elements, "1", extracted_choice.frequency, []))
-            i += 1
+            extracted_choices.append(SVD.SuperLane(id, "Option " + str(id), base_lanes[0].object_type, extracted_elements.elements, "1", extracted_choice.frequency, []))
+            id += 1
 
-        for mapping in new_mapping.keys():
-            for i in range(len(new_mapping[mapping])):
-                if(str(new_mapping[mapping][i]) in extracted_positions_mapping.keys()):
-                    new_mapping[mapping][i] = extracted_positions_mapping[str(new_mapping[mapping][i])]
+            for mapping in new_mapping.keys():
+                for i in range(len(new_mapping[mapping])):
+                    if(str(new_mapping[mapping][i]) in extracted_positions_mapping.keys()):
+                        new_mapping[mapping][i] = extracted_positions_mapping[str(new_mapping[mapping][i])]
 
         if(print_results):
         # Output printing

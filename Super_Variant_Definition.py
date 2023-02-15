@@ -494,13 +494,14 @@ class SuperLane:
         elements = copy.deepcopy(self.elements)
         positions_mappings = dict()
         index = offset
+
         for element in elements:
             if(type(element) == CommonConstruct or type(element) == InteractionConstruct):
 
                 position_before = copy.deepcopy(element.position)
                 index_before = element.index
                 element.index = index
-
+    
                 element.position.apply_shift(index - index_before)
                 position_after_shift = element.position
                 
@@ -508,7 +509,6 @@ class SuperLane:
                     element.position = IED.RecursiveLanePosition(lane_id, IED.RecursiveLanePosition(option_id, IED.BasePosition(position_after_shift.position.lane_id, position_after_shift.position.position)))
                 else:
                     element.position = IED.RecursiveLanePosition(lane_id, IED.RecursiveLanePosition(option_id, IED.RecursiveLanePosition(position_after_shift.position.lane_id, position_after_shift.position.position)))
-
                 index += 1
 
                 if(type(element) == InteractionConstruct):
@@ -519,7 +519,8 @@ class SuperLane:
                 end_index = index
 
                 for option in element.choices:
-                    normalization, mapping = option.normalize_option(lane_id, option_id, index)
+                    new_option = copy.deepcopy(option)
+                    normalization, mapping = new_option.normalize_option(lane_id, option_id, index)
                     normalized_options.append(normalization)
 
                     for key in mapping.keys():
@@ -530,6 +531,7 @@ class SuperLane:
                     elif(isinstance(normalized_options[-1].elements[-1], GeneralChoiceStructure)):
                         end_index = max(end_index, normalized_options[-1].elements[-1].index_end)
 
+                element.choices = normalized_options
                 index_start_before = element.index_start
                 index_end_before = element.index_start
                 element.index_start = index
@@ -757,7 +759,7 @@ class SuperLane:
                         continue
                     elif((type(elements[i]) == OptionalConstruct and type(self.elements[i]) == OptionalConstruct) or (type(elements[i]) == ChoiceConstruct and type(self.elements[i]) == ChoiceConstruct)):
                         
-                        if(len(elements[i].choices) == 1 and len(self.elements[i].choices) == 1):
+                        if(len(elements[i].choices) == 1 and len(self.elements[i].choices) == 1 and elements[i].empty_frequency == self.elements[i].empty_frequency):
                             is_identical, new_choice = self.elements[i].choices[0].check_identical(elements[i].choices[0].elements)
                             
                             if(is_identical):
