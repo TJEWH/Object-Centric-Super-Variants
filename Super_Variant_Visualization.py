@@ -3,39 +3,42 @@ import matplotlib.patches as patches
 import Super_Variant_Definition as SVD
 import Input_Extraction_Definition as IED
 from enum import Enum
-import time
 
-DEFAULT_CHEVRON_LENGTH = 15.
-DEFAULT_CHEVRON_HEIGHT = 6.
+DEFAULT_CHEVRON_LENGTH = 30.
+DEFAULT_CHEVRON_HEIGHT = 15.
 
 class MODE(Enum):
     LANE_FREQUENCY = 1
-    ACTICITY_FREQUENCY = 2
+    ACTIVITY_FREQUENCY = 2
+    NO_FREQUENCY = 3
 
-CURRENT_MODE = MODE.LANE_FREQUENCY
+
 current_annotations = []
 
-def visualize_super_variant(super_variant, suppression_char = "*"):
+def visualize_super_variant(super_variant, suppression_char = "*", mode = MODE.ACTIVITY_FREQUENCY):
     '''
     Visualizes a Super Variant using sequentially aligned chevrons.
     :param super_variant: The Super Variant that should be visualized
     :type super_variant: SummarizedVariant
     :param suppression_char: The character used to suppress cardinalities greater 1
     :type suppression_char: str
+    :param mode: One of the available modes for displaying frequencies
+    :type mode: MODE
     '''
     if(len(super_variant.lanes) > 20):
         print("Summarization too large, cannot be visualized.")
         return
      
     else:
+
         fig, ax = plt.subplots()
-        ax, width, height = arrange_super_variant(super_variant, ax, 0, 0, suppression_char)
+        ax, width, height = arrange_super_variant(super_variant, ax, 0, 0, suppression_char, mode, 9, 9, 13)
         ax.set_aspect('equal')
-        ax.set_xlim(-15, width + 2)
+        ax.set_xlim(-20, width + 2)
         ax.set_ylim(-2, height + 2)
         plt.axis('off')
 
-        if(CURRENT_MODE == MODE.LANE_FREQUENCY):
+        if(mode == MODE.LANE_FREQUENCY):
 
             annotate = ax.annotate("", (0, 0), xytext = (0, 10), textcoords = 'offset points', color = 'w', ha = 'center', fontsize = 8, fontweight = 'bold', 
                                                     bbox = dict(boxstyle='round, pad = .5', fc = (.1, .1, .1, .8), ec = (0., 0, 0), lw = 0, zorder = 50))
@@ -55,37 +58,50 @@ def visualize_super_variant(super_variant, suppression_char = "*"):
                             index = i
                             break
 
-                    if(is_contained):
-                        annotate.xy = current_annotations[index][0]
-                        annotate.set_text(current_annotations[index][1])
-                        annotate.set_fontsize(current_annotations[index][2])
-                        annotate.set_visible(True)
-                        fig.canvas.draw_idle()
+                        if(is_contained):
+                            annotate.xy = current_annotations[index][0]
+                            annotate.set_text(current_annotations[index][1])
+                            annotate.set_fontsize(current_annotations[index][2])
+                            annotate.set_visible(True)
+                            fig.canvas.draw_idle()
 
-                    elif(annotation_visbility):
-                        annotate.set_visible(False)
-                        fig.canvas.draw_idle()
+                        elif(annotation_visbility):
+                            annotate.set_visible(False)
+                            fig.canvas.draw_idle()
                             
             fig.canvas.mpl_connect('motion_notify_event', hover_tooltip)
 
         manager = plt.get_current_fig_manager()
         manager.window.showMaximized()
-        #fig.savefig("SuperVariant_" + str(super_variant.id) + ".svg", dpi = 600)
         plt.show()
+        fig.savefig("SingleSuperVariants/SuperVariant_" + str(super_variant.id) + ".svg")
 
 
 def is_inside(circle_xy, rad, xy):
+    '''
+    Checks if a point is within the radius of another point.
+    :param circle_xy: The center of the circle
+    :type circle_xy: tuple
+    :param rad: The radius of the circle
+    :type rad: float
+    :param xy: The point coordinates
+    :type xy: tuple
+    :return: Whether the point is inside the circle
+    :rtype: bool
+    '''
 
     return ((xy[0] - circle_xy[0]) * (xy[0] - circle_xy[0]) +
         (xy[1] - circle_xy[1]) * (xy[1] - circle_xy[1]) <= rad * rad)
 
 
 
-def visualize_variant(variant):
+def visualize_variant(variant, mode = MODE.NO_FREQUENCY):
     '''
     Visualizes a variant using sequentially aligned chevrons.
-    :param ariant: The variant that should be visualized
+    :param variant: The variant that should be visualized
     :type variant: ExtractedVariant
+    :param mode: One of the available modes for displaying frequencies
+    :type mode: MODE
     '''
     if(len(variant.lanes) > 20):
         print("Summarization too large, cannot be visualized.")
@@ -94,15 +110,18 @@ def visualize_variant(variant):
     else:
         super_variant = variant.to_super_variant()
         fig, ax = plt.subplots()
-        ax, width, height =  arrange_super_variant(super_variant, ax, 0, 0, "")
+        ax, width, height =  arrange_super_variant(super_variant, ax, 0, 0, "", mode, 9, 9, 13)
         ax.set_aspect('equal')
-        ax.set_xlim(-15, width + 2)
+        ax.set_xlim(-20, width + 2)
         ax.set_ylim(-2, height + 2)
         plt.axis('off')
+
+        manager = plt.get_current_fig_manager()
+        manager.window.showMaximized()
         plt.show()
 
 
-def arrange_super_variant(super_variant, ax, vertical_start_position, horizontal_start_position, suppression_char):
+def arrange_super_variant(super_variant, ax, vertical_start_position, horizontal_start_position, suppression_char, mode, fontsize_title, fontsize_activities, cut_off_point):
     '''
     Generates the visualization of a Super Variant.
     :param super_variant: The Super Variant that should be visualized
@@ -115,6 +134,14 @@ def arrange_super_variant(super_variant, ax, vertical_start_position, horizontal
     :type horizontal_start_position: float
     :param suppression_char: The character used to suppress cardinalities greater 1
     :type suppression_char: str
+    :param mode: One of the available modes for displaying frequencies
+    :type mode: MODE
+    :param fontsize_title: The fontsize of the title
+    :type fontsize_title: float
+    :param fontsize_activities: The fontsize of the activity labels
+    :type fontsize_activities: float
+    :param cut_off_point: The maximal length an activity label can have
+    :type cut_off_point: int
     :return: The visualization region with the added Super Variant visualization elements as well as its width and height
     :rtype: axes, float, float
     '''
@@ -163,33 +190,33 @@ def arrange_super_variant(super_variant, ax, vertical_start_position, horizontal
         else:
             cardinality = super_variant.lanes[i].cardinality
 
-        ax.text(-15 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * lane_properties[lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT - 0.3, cardinality, zorder = 10)
+        ax.text(-20 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * lane_properties[lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT - 0.3, cardinality, zorder = 10, fontsize = fontsize_title)
         split_label = super_variant.lanes[i].lane_name.split(" ")
         if (len(split_label[0]) > 8):
             label = split_label[0][:8] + ". " + split_label[-1]
         else:
             label = super_variant.lanes[i].lane_name
 
-        ax.text(-12.5 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * lane_properties[lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT - 0.3, label, zorder = 10)
+        ax.text(-14 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.5 * lane_properties[lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT - 0.3, label, zorder = 10, fontsize = fontsize_title)
         
         if(lane_properties[lane_id]["IsOptional"]):
-            ax.add_patch(patches.Rectangle((-13 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length + 2) * DEFAULT_CHEVRON_LENGTH, lane_properties[lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0, hatch='///'))
+            ax.add_patch(patches.Rectangle((-15 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length + 2) * DEFAULT_CHEVRON_LENGTH, lane_properties[lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0, hatch='///'))
         else:
-            ax.add_patch(patches.Rectangle((-13 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length + 2) * DEFAULT_CHEVRON_LENGTH, lane_properties[lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0))
+            ax.add_patch(patches.Rectangle((-15 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT), (maximal_lane_length + 2) * DEFAULT_CHEVRON_LENGTH, lane_properties[lane_id]["Height"] * DEFAULT_CHEVRON_HEIGHT, color = color, alpha = 0.8, zorder = 0))
         
         properties = copy.deepcopy(lane_properties)
-        ax = __visualize_lane_elements(ax, lane_id, super_variant.lanes[i].elements, properties, copy.deepcopy(super_variant.interaction_points), current_vertical_position, horizontal_start_position)
+        ax = __visualize_lane_elements(ax, lane_id, super_variant.lanes[i].elements, properties, copy.deepcopy(super_variant.interaction_points), current_vertical_position, horizontal_start_position, mode, fontsize_activities, cut_off_point)
         current_vertical_position += lane_properties[lane_id]["Height"]
     
 
-    ax.text(-13 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.7, "Frequency: " + str(round(super_variant.frequency, 3)), zorder = 10)
-    ax.text(-13 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 4, "Super Variant: " +str(super_variant.id), zorder = 10, fontsize = 10, fontweight = 'bold')
+    ax.text(-15 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 0.7 * 9 / fontsize_title, "Frequency: " + str(round(super_variant.frequency, 3)), zorder = 10, fontsize = fontsize_title)
+    ax.text(-15 + horizontal_start_position, current_vertical_position * DEFAULT_CHEVRON_HEIGHT + 5 * 9 / fontsize_title, "Super Variant: " +str(super_variant.id), zorder = 10, fontsize = fontsize_title * 1.2, fontweight = 'bold')
 
     width = (maximal_lane_length + 1) * DEFAULT_CHEVRON_LENGTH - horizontal_start_position
-    height = current_vertical_position * DEFAULT_CHEVRON_HEIGHT - vertical_start_position + 4
+    height = current_vertical_position * DEFAULT_CHEVRON_HEIGHT - vertical_start_position + 5 * 9 / fontsize_title
     return ax, width, height
 
-def __visualize_lane_elements(ax, lane, elements, lane_properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length = DEFAULT_CHEVRON_LENGTH, chevron_height = DEFAULT_CHEVRON_HEIGHT, offset = 0, frequency = False, fontsize = 9, original_lane = None, original_lane_properties = None):
+def __visualize_lane_elements(ax, lane, elements, lane_properties, interaction_points, current_vertical_position, current_horizontal_position, mode, fontsize, cut_off_point, chevron_length = DEFAULT_CHEVRON_LENGTH, chevron_height = DEFAULT_CHEVRON_HEIGHT, offset = 0, frequency = False, original_lane = None, original_lane_properties = None):
     '''
     Generates the chevrons for a single SuperLane at a given position.
     :param ax: The visualization region in which the Super Variant should be visualized
@@ -206,6 +233,12 @@ def __visualize_lane_elements(ax, lane, elements, lane_properties, interaction_p
     :type vertical_start_position: float
     :param horizontal_start_position: The x-value of the lower-left corner of the first activity chevron
     :type horizontal_start_position: float
+    :param mode: One of the available modes for displaying frequencies
+    :type mode: MODE
+    :param fontsize: The fontsize of the activity labels
+    :type fontsize: float
+    :param cut_off_point: The maximal length an activity label can have
+    :type cut_off_point: int
     :param chevron_length: The length of one unit of a chevron
     :type chevron_length: float
     :param chevron_height: The hight of one unit of a chevron
@@ -214,8 +247,6 @@ def __visualize_lane_elements(ax, lane, elements, lane_properties, interaction_p
     :type offset: int
     :param frequency: Whether the frequency of the elements should be displayed
     :type frequency: bool
-    :param fontsize: The fontsize for the activity label
-    :type fontsize: int
     :return: The visualization region with the added sequential activity chevrons
     :rtype: axes
     '''
@@ -229,15 +260,15 @@ def __visualize_lane_elements(ax, lane, elements, lane_properties, interaction_p
     for element in elements:
         properties = copy.deepcopy(lane_properties)
         if(isinstance(element, SVD.InteractionConstruct)):
-            ax = __interaction_activity_chevron(ax, lane, element, element.index - offset, properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, frequency, fontsize, original_lane, original_lane_properties)
+            ax = __interaction_activity_chevron(ax, lane, element, element.index - offset, properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, frequency, fontsize, original_lane, original_lane_properties, mode, cut_off_point)
         elif(isinstance(element, SVD.CommonConstruct)):
-            ax = __common_activity_chevron(ax, lane, element, element.index - offset, properties, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, frequency, fontsize)
+            ax = __common_activity_chevron(ax, lane, element, element.index - offset, properties, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, frequency, fontsize, mode, cut_off_point)
         else:
-            ax = __choice_structure_chevron(ax, lane, element, element.index_start - offset, properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, fontsize, original_lane, original_lane_properties)
+            ax = __choice_structure_chevron(ax, lane, element, element.index_start - offset, properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, fontsize, original_lane, original_lane_properties, mode, cut_off_point)
     return ax
 
 
-def __interaction_activity_chevron(ax, lane, element, index, lane_properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, frequency, fontsize, original_lane, original_lane_properties, overall_line_style = '-'):
+def __interaction_activity_chevron(ax, lane, element, index, lane_properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, frequency, fontsize, original_lane, original_lane_properties, mode, cut_off_point, overall_line_style = '-'):
     '''
     Generates the chevrons for a single InteractionConstruct element of a lane.
     :param ax: The visualization region in which the chevron should be visualized
@@ -264,6 +295,14 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
     :type frequency: str
     :param fontsize: The fontsize for the activity label
     :type fontsize: bool
+    :param original_lane: The high-level id of the lane
+    :type original_lane: tuple
+    :param original_lane_properties: The properties of the high-level Super Lane
+    :type original_lane_properties: dict
+    :param mode: One of the available modes for displaying frequencies
+    :type mode: MODE
+    :param cut_off_point: The maximal length an activity label can have
+    :type cut_off_point: int
     :param overall_line_style: The line style of the chevron outline
     :type overall_line_style: str
     :return: The visualization region with the added chevron
@@ -292,24 +331,24 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
     heigth_offset = 0.3
     length_offset = 2.0
 
-    if(len(label) > 13):
-        label = label[:11] + "..."
+    if(len(label) > cut_off_point):
+        label = label[: cut_off_point - 2] + "..."
     sizing_factor = 1
 
-    if(frequency and CURRENT_MODE == MODE.ACTICITY_FREQUENCY):
+    if(frequency and mode == MODE.ACTIVITY_FREQUENCY):
         label += "\n " + str(round(element.frequency * 100, 2)) + "%"
-        heigth_offset += 0.7
+        heigth_offset += 3 * chevron_length/DEFAULT_CHEVRON_LENGTH
 
     ax.text(index * chevron_length + length_offset + current_horizontal_position, current_vertical_position * chevron_height + 0.5 * chevron_height * lane_properties[lane]["Height"] - heigth_offset, label, zorder = 15, fontsize = fontsize * sizing_factor)
 
     for i in range(len(interacting_lanes)):
         color = original_lane_properties[interacting_lanes[i]]["Color"]
         ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length + i * length_sub_chevron * chevron_length, current_vertical_position * chevron_height, length_sub_chevron * chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height), facecolor = color, lw = 0, ls = overall_line_style, zorder = 10))
-    ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length, current_vertical_position * chevron_height, chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height), facecolor = "None", lw = 1.3, ls = overall_line_style, zorder = 12))
+    ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length, current_vertical_position * chevron_height, chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height), facecolor = "None", lw = 1.3 * fontsize / 9, ls = overall_line_style, zorder = 12))
     
     return ax
 
-def __common_activity_chevron(ax, lane, element, index, lane_properties, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, frequency, fontsize, overall_line_style = '-'):
+def __common_activity_chevron(ax, lane, element, index, lane_properties, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, frequency, fontsize, mode, cut_off_point, overall_line_style = '-'):
     '''
     Generates the chevrons for a single CommonConstruct element of a lane.
     :param ax: The visualization region in which the chevron should be visualized
@@ -334,6 +373,10 @@ def __common_activity_chevron(ax, lane, element, index, lane_properties, current
     :type frequency: bool
     :param fontsize: The fontsize for the activity label
     :type fontsize: int
+    :param mode: One of the available modes for displaying frequencies
+    :type mode: MODE
+    :param cut_off_point: The maximal length an activity label can have
+    :type cut_off_point: int
     :param overall_line_style: The line style of the chevron outline
     :type overall_line_style: str
     :return: The visualization region with the added chevron
@@ -348,21 +391,21 @@ def __common_activity_chevron(ax, lane, element, index, lane_properties, current
     height_offset = 0.3
     length_offset = 2.0
     
-    if(len(label) > 13):
-        label = label[:11] + "..."
+    if(len(label) > cut_off_point):
+        label = label[: cut_off_point - 2] + "..."
     sizing_factor = 1
 
-    if(frequency and CURRENT_MODE == MODE.ACTICITY_FREQUENCY):
+    if(frequency and mode == MODE.ACTIVITY_FREQUENCY):
         label += "\n " + str(round(element.frequency * 100, 2)) + "%"
-        height_offset += 1
+        height_offset += 3 * chevron_length/DEFAULT_CHEVRON_LENGTH
 
-    ax.text(current_horizontal_position + index * chevron_length + length_offset, current_vertical_position * chevron_height + 0.5 * chevron_height * lane_properties[lane]["Height"] - height_offset, label, zorder = 15, fontsize = fontsize*sizing_factor)
+    ax.text(current_horizontal_position + index * chevron_length + length_offset, current_vertical_position * chevron_height + 0.5 * chevron_height * lane_properties[lane]["Height"] - height_offset, label, zorder = 15, fontsize = fontsize * sizing_factor)
     
-    ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length, current_vertical_position * chevron_height, chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height), facecolor = lane_properties[lane]["Color"], lw = 1.3, ls = overall_line_style, zorder = 10))
+    ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length, current_vertical_position * chevron_height, chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height), facecolor = lane_properties[lane]["Color"], lw = 1.3 * fontsize / 9, ls = overall_line_style, zorder = 10))
     return ax
 
 
-def __choice_structure_chevron(ax, lane, element, index, lane_properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, fontsize, original_lane, original_lane_properties, overall_line_style = '-'):
+def __choice_structure_chevron(ax, lane, element, index, lane_properties, interaction_points, current_vertical_position, current_horizontal_position, chevron_length, chevron_height, fontsize, original_lane, original_lane_properties, mode, cut_off_point, overall_line_style = '-'):
     '''
     Generates the chevrons for a single GenericChoiceStructure element of a lane.
     :param ax: The visualization region in which the chevron should be visualized
@@ -387,6 +430,14 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
     :type chevron_height: float
     :param fontsize: The fontsize for the activity label
     :type fontsize: int
+    :param original_lane: The high-level id of the lane
+    :type original_lane: tuple
+    :param original_lane_properties: The properties of the high-level Super Lane
+    :type original_lane_properties: dict
+    :param mode: One of the available modes for displaying frequencies
+    :type mode: MODE
+    :param cut_off_point: The maximal length an activity label can have
+    :type cut_off_point: int
     :param overall_line_style: The line style of the chevron outline
     :type overall_line_style: str
     :return: The visualization region with the added chevron
@@ -408,7 +459,7 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
     
     offset = element.index_start - index
 
-    ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length, current_vertical_position * chevron_height, ((element.index_end - element.index_start) + 1) * chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height), facecolor = "None", lw = 1, ls = overall_line_style, zorder = 5))
+    ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length, current_vertical_position * chevron_height, ((element.index_end - element.index_start) + 1) * chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height), facecolor = "None", lw = 1 * fontsize / 9, ls = overall_line_style, zorder = 5))
     
     overall_line_style = "-"
 
@@ -450,13 +501,13 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
                 line_offset = (vertical_position - current_vertical_position * chevron_height)/vertical_half * 1.25
             else:
                 line_offset = 1.25 - (vertical_position - chevron_vertical_half)/vertical_half * 1.25
-            ax.add_patch(patches.PathPatch(__line_at_position(current_horizontal_position  + index * chevron_length + line_offset, vertical_position, ((element.index_end - element.index_start) + 1) * chevron_length / DEFAULT_CHEVRON_LENGTH), lw = 1.1, ls = overall_line_style, zorder = 15))
+            ax.add_patch(patches.PathPatch(__line_at_position(current_horizontal_position  + index * chevron_length + line_offset, vertical_position, ((element.index_end - element.index_start) + 1) * chevron_length / DEFAULT_CHEVRON_LENGTH), lw = 1.1 * fontsize / 9, ls = overall_line_style, zorder = 15))
 
         horizontal_start_position = current_horizontal_position + (index * chevron_length) + 1 + margin_length
 
-        ax = __visualize_lane_elements(ax, choice, element.choices[i].elements, copy.deepcopy(choice_properties), interaction_points, ((vertical_position + margin_height * choice_properties[choice]["Height"]) / sub_default_chevron_height), horizontal_start_position, chevron_length = sub_default_chevron_length, chevron_height = sub_default_chevron_height, offset = offset + index, frequency = True, fontsize = fontsize * ((sub_default_chevron_length - 2) / DEFAULT_CHEVRON_LENGTH) + 1, original_lane = original_lane, original_lane_properties = original_lane_properties)
+        ax = __visualize_lane_elements(ax, choice, element.choices[i].elements, copy.deepcopy(choice_properties), interaction_points, ((vertical_position + margin_height * choice_properties[choice]["Height"]) / sub_default_chevron_height), horizontal_start_position, mode, fontsize * (sub_default_chevron_length / DEFAULT_CHEVRON_LENGTH), cut_off_point, chevron_length = sub_default_chevron_length, chevron_height = sub_default_chevron_height, offset = offset + index, frequency = True, original_lane = original_lane, original_lane_properties = original_lane_properties)
         
-        if(CURRENT_MODE == MODE.LANE_FREQUENCY):
+        if(mode == MODE.LANE_FREQUENCY):
             frequency = choice_properties[choice]["Frequency"]/lane_properties[lane]["Frequency"]
             frequency = str(round(frequency * 100, 2)) + "%"
             ax.plot(horizontal_start_position + 0.8 * chevron_length/DEFAULT_CHEVRON_LENGTH, vertical_position + choice_properties[choice]["Height"] * chevron_height * height_factor - 0.8 * chevron_length/DEFAULT_CHEVRON_LENGTH, 'kv', zorder = 25, markersize = 8 * chevron_length/DEFAULT_CHEVRON_LENGTH)

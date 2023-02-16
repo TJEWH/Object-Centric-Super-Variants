@@ -35,8 +35,6 @@ def generate_super_variant_hierarchy_by_classification(initial_super_variant_cla
 
         result.append(class_result)
 
-    for super_variant in final_level_super_variants:
-        SVV.visualize_super_variant(super_variant)
     return result, final_level_super_variants
 
 

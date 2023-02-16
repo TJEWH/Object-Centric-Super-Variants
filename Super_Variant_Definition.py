@@ -37,6 +37,23 @@ class SummarizedVariant:
             depth = max(depth, lane.get_depth())
         return depth
 
+    def get_length(self):
+        '''
+        Determines the total length of the Super Variant.
+        :param self: The summarized variant
+        :type self: SummarizedVariant
+        :return: The highest index in the lanes
+        :rtype: int
+        '''
+        length = 0
+        for lane in self.lanes:
+            if(isinstance(lane.elements[-1], CommonConstruct)):
+                length = max(length, lane.elements[-1].index)
+            else:
+                length = max(length, lane.elements[-1].index_end)
+        return length
+
+
     def rename_lane(self, lane_id, new_name):
         '''
         Replaces the name of the lane in the summarized variant with the given lane id with a new name.
