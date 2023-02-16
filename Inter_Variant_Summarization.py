@@ -1,6 +1,9 @@
 import Super_Variant_Definition as SVD
 import Inter_Lane_Summarization as ILS
+import Inter_Lane_Alignment as ILA
 import Input_Extraction_Definition as IED
+
+MINIMUM = True
 
 
 def join_super_variants(super_variant1, super_variant2, allow_nested_structures = True, print_result = True):
@@ -18,12 +21,21 @@ def join_super_variants(super_variant1, super_variant2, allow_nested_structures 
     :rtype: SuperVariant
     '''
     import copy
-    mapping, cost = decide_matching(super_variant1, super_variant2, copy.deepcopy(super_variant1.lanes), copy.deepcopy(super_variant2.lanes), True, print_result)
+    mapping12, cost12 = decide_matching(copy.deepcopy(super_variant1), copy.deepcopy(super_variant2), copy.deepcopy(super_variant1.lanes), copy.deepcopy(super_variant2.lanes), True, print_result)
+    mapping21, cost21 = decide_matching(copy.deepcopy(super_variant2), copy.deepcopy(super_variant1), copy.deepcopy(super_variant2.lanes), copy.deepcopy(super_variant1.lanes), True, print_result)
+    
+    if(cost21 < cost12):
+        if(print_result):
+            print("The estimated cost of joining these Super Variants is " + str(cost21) + ".")
 
-    if(print_result):
-        print("The estimated cost of joining these Super Variants is " + str(cost) + ".")
+        return inter_variant_summarization(copy.deepcopy(super_variant2), copy.deepcopy(super_variant1), mapping21, allow_nested_structures, print_result), cost21
 
-    return inter_variant_summarization(super_variant1, super_variant2, mapping, allow_nested_structures, print_result), cost
+    else:
+        if(print_result):
+            print("The estimated cost of joining these Super Variants is " + str(cost12) + ".")
+
+        return inter_variant_summarization(copy.deepcopy(super_variant1), copy.deepcopy(super_variant2), mapping12, allow_nested_structures, print_result), cost12
+    
     
 
 def inter_variant_summarization(summarization1, summarization2, mapping, allow_nested_structures, print_result):
@@ -42,6 +54,8 @@ def inter_variant_summarization(summarization1, summarization2, mapping, allow_n
     :return: The summarization of the two Super Variants
     :rtype: SuperVariant
     '''
+
+    import copy
     intermediate_lanes = []
     intermediate_mappings = []
 
@@ -78,12 +92,14 @@ def inter_variant_summarization(summarization1, summarization2, mapping, allow_n
             intermediate_lanes.append(super_lane)
             intermediate_mappings.append((super_lane.lane_id, mapping))
 
-    
-    result_lanes, result_interaction_points = ILS.__re_align_lanes(intermediate_lanes, ILS.__merge_interactions(ILS.__merge_interaction_mappings(intermediate_mappings)), print_result)
-
-    super_variant = SVD.SuperVariant(summarization1.id + summarization2.id, result_lanes, summarization1.object_types.union(summarization2.object_types), result_interaction_points, summarization1.frequency + summarization2.frequency)
+    result_lanes, result_interaction_points = ILA.__re_align_lanes(copy.deepcopy(intermediate_lanes), ILA.join_interaction_mappings(intermediate_mappings), print_result, False)
+    new_id = list(summarization1.id + summarization2.id)
+    new_id.sort()
+    super_variant = SVD.SuperVariant(tuple(new_id), copy.deepcopy(result_lanes), summarization1.object_types.union(summarization2.object_types), result_interaction_points, summarization1.frequency + summarization2.frequency)
     if(print_result):
         print(super_variant)
+    
+    super_variant.encode_lexicographically()
     return super_variant
 
 
@@ -102,10 +118,10 @@ def optional_super_lane(summarization, lane, first):
 
     new_lane, new_interaction_points_mapping = new_super_lane(summarization, lane, first)
 
-    return SVD.OptionalSuperLane(tuple(lane.lane_id), lane.object_type + " i", new_lane.object_type, new_lane.elements, new_lane.cardinality, new_lane.frequency), new_interaction_points_mapping
+    return SVD.OptionalSuperLane(tuple(lane.lane_id), lane.object_type + " i", new_lane.object_type, new_lane.elements, new_lane.cardinality, new_lane.frequency, new_lane.realizations), new_interaction_points_mapping
 
 
-def new_super_lane(summarization, lane, first, start_index = 0):
+def new_super_lane(summarization, lane, first, start_index = 0, outer_position = None, option = 0):
     '''
     Creates a new normalized lane from a given Super Lane and stores the new mappings to the new interaction points
     :param summarization: The Super Variant corresponding to the given lane
@@ -119,13 +135,14 @@ def new_super_lane(summarization, lane, first, start_index = 0):
     :return: The normalized equivalence to the lane
     :rtype: SuperLane
     '''
-   
+    import copy
     elements = []
     object_type = lane.object_type
     lane_name = lane.lane_name
     lane_id = lane.lane_id
     cardinality = lane.cardinality
     lane_frequency = lane.frequency
+    realizations = lane.realizations
 
     new_interaction_points_mapping = {}
     current_horizontal_index = start_index
@@ -135,17 +152,24 @@ def new_super_lane(summarization, lane, first, start_index = 0):
         if(isinstance(elem, SVD.CommonConstruct) or isinstance(elem, SVD.InteractionConstruct)):
             activity = elem.activity
             frequency = elem.frequency
-            if(not isinstance(elem, SVD.InteractionConstruct)):
-                elements.append(SVD.CommonConstruct(activity, frequency, IED.BasePosition(0, current_horizontal_index), current_horizontal_index))
+
+            if(outer_position):
+                position = copy.deepcopy(outer_position)
+                position.set_base_position(IED.BasePosition(option, current_horizontal_index))
             else:
-                elements.append(SVD.InteractionConstruct(activity, frequency, IED.BasePosition(0, current_horizontal_index), current_horizontal_index))
+                position = IED.BasePosition(option, current_horizontal_index)
+
+            if(not isinstance(elem, SVD.InteractionConstruct)):
+                elements.append(SVD.CommonConstruct(activity, frequency, position, current_horizontal_index))
+            else:
+                elements.append(SVD.InteractionConstruct(activity, frequency, position, current_horizontal_index))
 
                 current_interaction_points = IED.get_interaction_points(summarization.interaction_points, lane.lane_id, elem.position)
                 for current_interaction_point in current_interaction_points:
                     if(first):
-                        new_interaction_points_mapping[(0, str([str(position) for position in current_interaction_point.exact_positions]), str(current_interaction_point.interaction_lanes))] = [IED.BasePosition(0, current_horizontal_index)]
+                        new_interaction_points_mapping[(0, str([str(position) for position in current_interaction_point.exact_positions]), str(current_interaction_point.interaction_lanes))] = [position]
                     else:
-                        new_interaction_points_mapping[(1, str([str(position) for position in current_interaction_point.exact_positions]), str(current_interaction_point.interaction_lanes))] = [IED.BasePosition(0, current_horizontal_index)]
+                        new_interaction_points_mapping[(1, str([str(position) for position in current_interaction_point.exact_positions]), str(current_interaction_point.interaction_lanes))] = [position]
 
             current_horizontal_index += 1
                 
@@ -155,26 +179,28 @@ def new_super_lane(summarization, lane, first, start_index = 0):
 
             for i in range(len(elem.choices)):
                 index = current_horizontal_index
-                new_choice, new_choice_mapping = new_super_lane(summarization, elem.choices[i], first, index)
+
+            if(outer_position):
+                new_outer_position = outer_position.add_level(IED.BasePosition(i, current_horizontal_index))
+            else:
+                new_outer_position = IED.RecursiveLanePosition(option, IED.BasePosition(i, current_horizontal_index))
+
+                new_choice, new_choice_mapping = new_super_lane(summarization, elem.choices[i], first, index, new_outer_position, i)
+
                 for mapping in new_choice_mapping.keys():
                     new_interaction_points_mapping[mapping] = new_choice_mapping[mapping]
-                for elem in new_choice.elements:
-                    if(isinstance(elem, SVD.CommonConstruct)):
-                        elem.position = IED.RecursiveLanePosition(0, IED.BasePosition(i, elem.position.position))
-                    else:
-                        elem.position_start = IED.RecursiveLanePosition(0, IED.BasePosition(i, elem.position_start.position))
-                        elem.position_end = IED.RecursiveLanePosition(0, IED.BasePosition(i, elem.position_end.position))
+
                 new_choices.append(new_choice)
                 length = max(length, len(new_choice))
 
             if(isinstance(elem, SVD.ChoiceConstruct)):
-                elements.append(SVD.ChoiceConstruct(new_choices, IED.BasePosition(current_horizontal_index), IED.BasePosition(current_horizontal_index + length-1), current_horizontal_index, current_horizontal_index + length-1))
+                elements.append(SVD.ChoiceConstruct(new_choices, IED.BasePosition(option, current_horizontal_index), IED.BasePosition(option, current_horizontal_index + length-1), current_horizontal_index, current_horizontal_index + length-1))
             else:
-                elements.append(SVD.OptionalConstruct(new_choices, IED.BasePosition(current_horizontal_index), IED.BasePosition(current_horizontal_index + length-1), current_horizontal_index, current_horizontal_index + length-1, elem.empty_frequency))
+                elements.append(SVD.OptionalConstruct(new_choices, IED.BasePosition(option, current_horizontal_index), IED.BasePosition(option, current_horizontal_index + length-1), current_horizontal_index, current_horizontal_index + length-1, elem.empty_frequency))
 
             current_horizontal_index += length
 
-    return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality, lane_frequency), new_interaction_points_mapping
+    return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality, lane_frequency, realizations), new_interaction_points_mapping
 
 
 
@@ -205,11 +231,13 @@ def join_super_lanes(summarization1, summarization2, lane1, lane2, allow_nested_
     else:
         cardinality = "1..n"
 
-    if(allow_nested_structures):
-        elements, mappings =  ILS.__nested_inter_lane_summarization([lane1, lane2], [summarization1.interaction_points, summarization2.interaction_points], print_result)
-    else:
-        elements, mappings =  ILS.__inter_lane_summarization([lane1, lane2], [summarization1.interaction_points, summarization2.interaction_points], print_result)
-    return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality, frequency), mappings
+    realizations = lane1.realizations + lane2.realizations
+    for i in range(len(realizations)):
+        realizations[i].lane_id = i
+        realizations[i].lane_name = "realization " + str(i)
+
+    elements, mappings =  ILS.__inter_lane_summarization([lane1, lane2], [summarization1.interaction_points, summarization2.interaction_points], print_result, nested = allow_nested_structures)
+    return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality, frequency, realizations), mappings
 
 
 
@@ -284,7 +312,7 @@ def decide_matching(summarization1, summarization2, remaining_lanes1, remaining_
 
             for candidate_2 in matching_candidates_2:
                 if(print_result):
-                    print("Evaluating the decision of matching lane " + str(current_matching_candidate_1.lane_id) + " of Super Variant 1 with the lane " + str(current_matching_candidate_1.lane_id) + " of Super Variant 2.")
+                    print("Evaluating the decision of matching lane " + str(current_matching_candidate_1.lane_id) + " of Super Variant 1 with the lane " + str(candidate_2.lane_id) + " of Super Variant 2.")
                 intermediate_matching = [(current_matching_candidate_1.lane_id, candidate_2.lane_id)]
                 intermediate_cost = levenshtein_distance(current_matching_candidate_1, candidate_2)
                 if(isinstance(current_matching_candidate_1, SVD.OptionalSuperLane) and not isinstance(candidate_2, SVD.OptionalSuperLane)):
@@ -481,19 +509,92 @@ def levenshtein_distance(lane1, lane2):
     :rtype: int
     '''
     import math
-    realizations1 = lane1.get_realizations()
-    realizations2 = lane2.get_realizations()
+    realizations1 = lane1.get_valid_realizations()
+    realizations2 = lane2.get_valid_realizations()
     minimum = math.inf
 
-    # Adjust cost function -> Earth Mover Distance
+    if(len(realizations1) >= len(realizations2)):
+        longer_realization_set = realizations1
+        shorter_realization_set = realizations2
+    else:
+        longer_realization_set = realizations2
+        shorter_realization_set = realizations1
+
     distances = dict()
-    for realization1 in realizations1:
-        for realization2 in realizations2:
+    for realization1 in longer_realization_set:
+        distances[(realization1.lane_id, "None")] = len(realization1.elements)
+
+        for realization2 in shorter_realization_set:
             distance = __levenshtein_distance_realizations(realization1.elements, realization2.elements)
             minimum = min(minimum, distance)
             distances[(realization1.lane_id, realization2.lane_id)] = distance
 
-    return minimum
+    if(MINIMUM):
+        return minimum
+    else:
+
+        nodes = []
+        nodes.append([realization.lane_id for realization in longer_realization_set])
+        nodes.append([realization.lane_id for realization in shorter_realization_set])
+        nodes.append(["None"])
+
+        cost = find_best_matching(nodes, distances)
+
+    return cost
+
+
+def find_best_matching(nodes, arcs):
+    '''
+    Computes an optimal matching in a graph with the given limited arcs and nodes.
+    that interaction points between multiple lanes have the same horizontal index
+    :param nodes: The set of nodes
+    :type nodes: list
+    :param arcs: The arcs of the matching
+    :type arcs: dict
+    :return: The list of node pairs that have been matched
+    :rtype: list
+    '''
+    import gurobipy
+    model = gurobipy.Model("limitedMatching")
+    
+    x = {}
+    for key in arcs.keys():
+        x[key] = model.addVar(name="x_%s, %s" % (key[0], key[1]), vtype = gurobipy.GRB.BINARY)
+
+    model.update()
+
+    for i in range(len(nodes[0])):
+        i_keys = []
+        for key in x.keys():
+            if(nodes[0][i] == key[0]):
+                i_keys.append(key)
+
+        model.addConstr(sum(x[key] for key in i_keys) == 1)
+
+    for i in range(len(nodes[1])):
+        i_keys = []
+        for key in x.keys():
+            if(nodes[1][i] == key[1]):
+                i_keys.append(key)
+
+        model.addConstr(sum(x[key] for key in i_keys) == 1)
+
+    
+    model.setObjective(sum(x[key] * arcs[key] for key in x.keys()))
+    model.modelSense = gurobipy.GRB.MINIMIZE
+    model.optimize()
+
+    cost = 0
+    
+    print('\n Objective value: %g\n' % model.ObjVal)
+    print('\n Variable values: \n')
+    for key in arcs.keys():
+        print(str(key) + ": " + str(x[key].X))
+        if(x[key].X == 1.0 and key[1] != "None"):
+            cost += arcs[key]
+    print("-----------------------------")
+    return cost
+
 
 def __levenshtein_distance_realizations(lane1, lane2):
     '''

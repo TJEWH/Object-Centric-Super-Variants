@@ -49,6 +49,7 @@ class VariantLane:
             index = self.horizontal_indices[i]
             position = BasePosition(0, index)
             activity_label = self.activities[i]
+            
             is_interacting, interaction_point = is_interaction_point(interactions, self.lane_id, position)
 
             if(is_interacting):
@@ -57,7 +58,8 @@ class VariantLane:
             else:
                 elements.append(SVD.CommonConstruct(activity_label, 1, position, index))
 
-        return SVD.SuperLane(self.lane_id, self.lane_name, self.object_type, elements, "1", 1)
+        super_lane = SVD.SuperLane(self.lane_id, self.lane_name, self.object_type, elements, "1", 1, [SVD.SuperLane(0, "realization 0", self.object_type, elements, "1", 1, [])])
+        return super_lane
 
 
 class InteractionPoint:
@@ -127,6 +129,31 @@ class RecursiveLanePosition(LanePosition):
         '''
         return 1 + self.position.get_depth()
 
+    def set_base_position(self, new_position):
+        ''' 
+        Replaces the base position of the position element.
+        :param self: The current position element
+        :type self: RecursiveLanePosition
+        :param new_position: The new base position element
+        :type new_position: BasePosition
+        '''
+        self.position.set_base_position(new_position)
+
+    def add_level(self, new_position):
+        ''' 
+        Addes another nested level to the position.
+        :param self: The current position element
+        :type self: RecursiveLanePosition
+        :param new_position: The new base position element
+        :type new_position: BasePosition
+        '''
+        if(isinstance(self.position, BasePosition)):
+            added_position = RecursiveLanePosition(self.position.lane_id, new_position)
+            self.position = added_position
+        else:
+            self.position.add_level(new_position)
+            
+
 class BasePosition(LanePosition):
     '''The data structure for storing the index of a lane as a position'''
     lane_id = 0
@@ -172,6 +199,16 @@ class BasePosition(LanePosition):
         :rtype: int
         '''
         return 1
+
+    def set_base_position(self, new_position):
+        ''' 
+        Replaces the base position.
+        :param self: The position element
+        :type self: BasePosition
+        :param new_position: The new position element
+        :type new_position: BasePosition
+        '''
+        self = new_position
 
 
 
