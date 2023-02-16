@@ -571,11 +571,13 @@ class SuperLane:
         return SuperLane(self.lane_id, self.lane_name, self.object_type, elements, self.cardinality, self.frequency, []), positions_mappings
 
 
-    def extract_option(self):
+    def extract_option(self, new_frequency = None):
         '''
         Updates all positions in a lane by removing the first given option_id corresponding to the second lane_id.
         :param self: The summarizing Super Lane
         :type self: SuperLane
+        :param new_frequency: The updated frequency for the elements
+        :type new_frequency: float
         :return: The corresponding lane with adjusted positions and it's mapping
         :rtype: SuperLane, dict
         '''
@@ -588,6 +590,8 @@ class SuperLane:
 
                 position_before = copy.deepcopy(element.position)
                 element.position = IED.RecursiveLanePosition(0, position_before.position.position)
+                if(new_frequency != None):
+                    element.frequency = new_frequency
 
                 if(type(element) == InteractionConstruct):
                     mapping[str(position_before)] = element.position

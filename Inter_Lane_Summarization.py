@@ -299,7 +299,7 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
         extracted_choices = []
         id = 0
         for extracted_choice in choices[0].elements[0].choices:
-            extracted_elements, extracted_positions_mapping = copy.deepcopy(extracted_choice).extract_option()
+            extracted_elements, extracted_positions_mapping = copy.deepcopy(extracted_choice).extract_option(extracted_choice.frequency / total_frequency)
             extracted_choices.append(SVD.SuperLane(id, "Option " + str(id), base_lanes[0].object_type, extracted_elements.elements, "1", extracted_choice.frequency, []))
             id += 1
 

@@ -7,7 +7,7 @@ from enum import Enum
 DEFAULT_CHEVRON_LENGTH = 30.
 DEFAULT_CHEVRON_HEIGHT = 15.
 
-class MODE(Enum):
+class Mode(Enum):
     LANE_FREQUENCY = 1
     ACTIVITY_FREQUENCY = 2
     NO_FREQUENCY = 3
@@ -15,7 +15,7 @@ class MODE(Enum):
 
 current_annotations = []
 
-def visualize_super_variant(super_variant, suppression_char = "*", mode = MODE.ACTIVITY_FREQUENCY):
+def visualize_super_variant(super_variant, suppression_char = "*", mode = Mode.ACTIVITY_FREQUENCY):
     '''
     Visualizes a Super Variant using sequentially aligned chevrons.
     :param super_variant: The Super Variant that should be visualized
@@ -38,7 +38,7 @@ def visualize_super_variant(super_variant, suppression_char = "*", mode = MODE.A
         ax.set_ylim(-2, height + 2)
         plt.axis('off')
 
-        if(mode == MODE.LANE_FREQUENCY):
+        if(mode == Mode.LANE_FREQUENCY):
 
             annotate = ax.annotate("", (0, 0), xytext = (0, 10), textcoords = 'offset points', color = 'w', ha = 'center', fontsize = 8, fontweight = 'bold', 
                                                     bbox = dict(boxstyle='round, pad = .5', fc = (.1, .1, .1, .8), ec = (0., 0, 0), lw = 0, zorder = 50))
@@ -95,7 +95,7 @@ def is_inside(circle_xy, rad, xy):
 
 
 
-def visualize_variant(variant, mode = MODE.NO_FREQUENCY):
+def visualize_variant(variant, mode = Mode.NO_FREQUENCY):
     '''
     Visualizes a variant using sequentially aligned chevrons.
     :param variant: The variant that should be visualized
@@ -335,7 +335,7 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
         label = label[: cut_off_point - 2] + "..."
     sizing_factor = 1
 
-    if(frequency and mode == MODE.ACTIVITY_FREQUENCY):
+    if(frequency and mode == Mode.ACTIVITY_FREQUENCY):
         label += "\n " + str(round(element.frequency * 100, 2)) + "%"
         heigth_offset += 3 * chevron_length/DEFAULT_CHEVRON_LENGTH
 
@@ -395,7 +395,7 @@ def __common_activity_chevron(ax, lane, element, index, lane_properties, current
         label = label[: cut_off_point - 2] + "..."
     sizing_factor = 1
 
-    if(frequency and mode == MODE.ACTIVITY_FREQUENCY):
+    if(frequency and mode == Mode.ACTIVITY_FREQUENCY):
         label += "\n " + str(round(element.frequency * 100, 2)) + "%"
         height_offset += 3 * chevron_length/DEFAULT_CHEVRON_LENGTH
 
@@ -507,7 +507,7 @@ def __choice_structure_chevron(ax, lane, element, index, lane_properties, intera
 
         ax = __visualize_lane_elements(ax, choice, element.choices[i].elements, copy.deepcopy(choice_properties), interaction_points, ((vertical_position + margin_height * choice_properties[choice]["Height"]) / sub_default_chevron_height), horizontal_start_position, mode, fontsize * (sub_default_chevron_length / DEFAULT_CHEVRON_LENGTH), cut_off_point, chevron_length = sub_default_chevron_length, chevron_height = sub_default_chevron_height, offset = offset + index, frequency = True, original_lane = original_lane, original_lane_properties = original_lane_properties)
         
-        if(mode == MODE.LANE_FREQUENCY):
+        if(mode == Mode.LANE_FREQUENCY):
             frequency = choice_properties[choice]["Frequency"]/lane_properties[lane]["Frequency"]
             frequency = str(round(frequency * 100, 2)) + "%"
             ax.plot(horizontal_start_position + 0.8 * chevron_length/DEFAULT_CHEVRON_LENGTH, vertical_position + choice_properties[choice]["Height"] * chevron_height * height_factor - 0.8 * chevron_length/DEFAULT_CHEVRON_LENGTH, 'kv', zorder = 25, markersize = 8 * chevron_length/DEFAULT_CHEVRON_LENGTH)
