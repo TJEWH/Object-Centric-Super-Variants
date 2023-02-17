@@ -198,6 +198,27 @@ class SummarizedVariant:
             if (lane.lane_id == id):
                 return lane
         return None
+
+    def remove_gaps(self):
+        '''
+        Removes unnecessary gaps from the Super Variant for improved visualization.
+        :param self: The summarized variant
+        :type self: SummarizedVariant
+        '''
+        indices_with_no_chevrons = []
+        for lane in self.lanes:
+            indices_with_no_chevrons.append(lane.get_gaps())
+
+        result = indices_with_no_chevrons[0]
+        for k in range(1, len(indices_with_no_chevrons)):
+                result = list(set(result) & set(indices_with_no_chevrons[k]))
+        
+        if(result == []):
+            return 
+        else:
+            #TODO remove gaps and update positions
+            return
+
  
 class SuperVariant(SummarizedVariant):
     '''The generalized data structure of the summarization of object-centric variants and Super Variants'''
@@ -263,6 +284,54 @@ class SuperLane:
             else:
                 length += (element.index_end - element.index_start) + 1
         return length
+
+
+    def get_gaps(self):
+        '''
+        Returns a list of all horizontal_indices that are not occupied by an activity.
+         :param self: The summarizing Super Lane
+        :type self: SuperLane
+         :return: The list of found indices
+        :rtype: list
+        '''
+        indices_with_no_chevrons = []
+
+        if(type(self.elements[0]) == InteractionConstruct or type(self.elements[0]) == CommonConstruct):
+            for j in range(0, self.elements[0].index):
+                indices_with_no_chevrons.append(j)
+        elif(type(self.elements[0]) == ChoiceConstruct or type(self.elements[0]) == OptionalConstruct):
+            for j in range(0, self.elements[0].index_start):
+                indices_with_no_chevrons.append(j)
+
+        for i in range(1, len(self.elements)):
+            if(type(self.elements[i]) == InteractionConstruct or type(self.elements[i]) == CommonConstruct):
+                if(type(self.elements[i-1]) == InteractionConstruct or type(self.elements[i-1]) == CommonConstruct):
+                    for j in range(self.elements[i-1].index + 1, self.elements[i].index):
+                        indices_with_no_chevrons.append(j)
+                elif(type(self.elements[i-1]) == ChoiceConstruct or type(self.elements[i-1]) == OptionalConstruct):
+                    for j in range(self.elements[i-1].index_end + 1, self.elements[i].index):
+                        indices_with_no_chevrons.append(j)
+
+            elif(type(self.elements[i]) == ChoiceConstruct or type(self.elements[i]) == OptionalConstruct):
+                if(type(self.elements[i-1]) == InteractionConstruct or type(self.elements[i-1]) == CommonConstruct):
+                    for j in range(self.elements[i-1].index + 1, self.elements[i].index_start):
+                        indices_with_no_chevrons.append(j)
+                elif(type(self.elements[i-1]) == ChoiceConstruct or type(self.elements[i-1]) == OptionalConstruct):
+                    for j in range(self.elements[i-1].index_end + 1, self.elements[i].index_start):
+                        indices_with_no_chevrons.append(j)
+
+                intermediate_results = []
+                for option in self.elements[i].choices:
+                    intermediate_results.append(option.get_gaps())
+
+                final_intermediate_result = intermediate_results[0]
+                for k in range(1, len(intermediate_results)):
+                    final_intermediate_result = list(set(final_intermediate_result) & set(intermediate_results[k]))
+                indices_with_no_chevrons.extend(indices_with_no_chevrons)
+
+        return indices_with_no_chevrons
+
+
 
     def get_interaction_points(self, interactions, lane_id):
         '''

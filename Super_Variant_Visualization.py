@@ -12,7 +12,6 @@ class Mode(Enum):
     ACTIVITY_FREQUENCY = 2
     NO_FREQUENCY = 3
 
-
 current_annotations = []
 
 def visualize_super_variant(super_variant, suppression_char = "*", mode = Mode.ACTIVITY_FREQUENCY):
@@ -23,7 +22,7 @@ def visualize_super_variant(super_variant, suppression_char = "*", mode = Mode.A
     :param suppression_char: The character used to suppress cardinalities greater 1
     :type suppression_char: str
     :param mode: One of the available modes for displaying frequencies
-    :type mode: MODE
+    :type mode: Mode
     '''
     if(len(super_variant.lanes) > 20):
         print("Summarization too large, cannot be visualized.")
@@ -50,18 +49,12 @@ def visualize_super_variant(super_variant, suppression_char = "*", mode = Mode.A
                     
                     event_position = (round(event.xdata), round(event.ydata))
                     positions = [(round(position[0][0]),round(position[0][1])) for position in current_annotations]
-                    for i in range(len(positions)):
-                        is_contained = False
-                        index = 0
-                        if is_inside(positions[i], 1, event_position):
-                            is_contained = True
-                            index = i
-                            break
 
-                        if(is_contained):
-                            annotate.xy = current_annotations[index][0]
-                            annotate.set_text(current_annotations[index][1])
-                            annotate.set_fontsize(current_annotations[index][2])
+                    for i in range(len(positions)):
+                        if is_inside(positions[i], 1.5, event_position):
+                            annotate.xy = current_annotations[i][0]
+                            annotate.set_text(current_annotations[i][1])
+                            annotate.set_fontsize(current_annotations[i][2])
                             annotate.set_visible(True)
                             fig.canvas.draw_idle()
 
@@ -101,7 +94,7 @@ def visualize_variant(variant, mode = Mode.NO_FREQUENCY):
     :param variant: The variant that should be visualized
     :type variant: ExtractedVariant
     :param mode: One of the available modes for displaying frequencies
-    :type mode: MODE
+    :type mode: mode
     '''
     if(len(variant.lanes) > 20):
         print("Summarization too large, cannot be visualized.")
@@ -135,7 +128,7 @@ def arrange_super_variant(super_variant, ax, vertical_start_position, horizontal
     :param suppression_char: The character used to suppress cardinalities greater 1
     :type suppression_char: str
     :param mode: One of the available modes for displaying frequencies
-    :type mode: MODE
+    :type mode: mode
     :param fontsize_title: The fontsize of the title
     :type fontsize_title: float
     :param fontsize_activities: The fontsize of the activity labels
@@ -234,7 +227,7 @@ def __visualize_lane_elements(ax, lane, elements, lane_properties, interaction_p
     :param horizontal_start_position: The x-value of the lower-left corner of the first activity chevron
     :type horizontal_start_position: float
     :param mode: One of the available modes for displaying frequencies
-    :type mode: MODE
+    :type mode: mode
     :param fontsize: The fontsize of the activity labels
     :type fontsize: float
     :param cut_off_point: The maximal length an activity label can have
@@ -300,7 +293,7 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
     :param original_lane_properties: The properties of the high-level Super Lane
     :type original_lane_properties: dict
     :param mode: One of the available modes for displaying frequencies
-    :type mode: MODE
+    :type mode: mode
     :param cut_off_point: The maximal length an activity label can have
     :type cut_off_point: int
     :param overall_line_style: The line style of the chevron outline
@@ -320,7 +313,15 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
         print("Interaction not found.")
 
     else:
-        interacting_lanes = interaction_point.interaction_lanes
+        all_interaction_points = IED.get_interaction_points(interaction_points, original_lane, element.position)
+        if(len(all_interaction_points) == 1):
+            interacting_lanes = interaction_point.interaction_lanes
+        else:
+            interacting_lanes = all_interaction_points[0].interaction_lanes
+            for i in range(1, len(all_interaction_points)):
+               interacting_lanes.extend(all_interaction_points[i].interaction_lanes)
+
+            interacting_lanes = list(set(interacting_lanes))
 
     number_sub_chevrons = len(interacting_lanes)
     length_sub_chevron = (1 / number_sub_chevrons)
@@ -374,7 +375,7 @@ def __common_activity_chevron(ax, lane, element, index, lane_properties, current
     :param fontsize: The fontsize for the activity label
     :type fontsize: int
     :param mode: One of the available modes for displaying frequencies
-    :type mode: MODE
+    :type mode: mode
     :param cut_off_point: The maximal length an activity label can have
     :type cut_off_point: int
     :param overall_line_style: The line style of the chevron outline
