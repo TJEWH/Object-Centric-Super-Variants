@@ -14,7 +14,7 @@ import Inter_Variant_Summarization as IEVS
 import Inter_Variant_Generation as IEVG
 import Super_Variant_Hierarchy as SVH
 
-MODE = 5
+MODE = 4
 filename = "EventLogs/BPI2017-Top10.jsonocel"
 parameters = {"execution_extraction": "leading_type",
               "leading_type": "application"}
