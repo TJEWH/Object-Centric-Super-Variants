@@ -51,7 +51,7 @@ def visualize_super_variant(super_variant, suppression_char = "*", mode = Mode.A
                     positions = [(round(position[0][0]),round(position[0][1])) for position in current_annotations]
 
                     for i in range(len(positions)):
-                        if is_inside(positions[i], 1.5, event_position):
+                        if is_inside(positions[i], 2, event_position):
                             annotate.xy = current_annotations[i][0]
                             annotate.set_text(current_annotations[i][1])
                             annotate.set_fontsize(current_annotations[i][2])
