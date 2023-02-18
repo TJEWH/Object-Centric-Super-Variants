@@ -174,10 +174,6 @@ def __re_align_lanes(lanes, mappings, print_result, intra = True):
 
     updated_interaction_points = []
 
-    is_fixed = dict()
-    for lane in aligned_lanes:
-        is_fixed[lane.lane_id] = dict()
-
     # Align the lanes such that the interaction points have the same horizontal index
     for i in range(len(mappings.keys())):
 
@@ -222,51 +218,37 @@ def __re_align_lanes(lanes, mappings, print_result, intra = True):
                 if(offset == 0 or (not ALIGN and not intra)):
                     interacting_lanes.append(lane.lane_id)
                     exact_positions.append(current_position)
-                    is_fixed[lane.lane_id][str(current_position)] = True
 
                 else:
 
                     updated_positions = dict()
 
-                    #allow_shift = (str(current_position) in is_fixed[lane.lane_id].keys())
-                    allow_shift = True
                     for key in updated_mappings.keys():
-                        if(lane.lane_id in updated_mappings[key].keys() and updated_mappings[key][lane.lane_id].get_base_index() >= current_position.get_base_index()):
-                            if(str(updated_mappings[key][lane.lane_id]) in is_fixed[lane.lane_id].keys()):
-                                allow_shift = False
-                                if(print_result):
-                                    print("Cannot align this lane for the current interaction points as it interferes with an other already aligned interaction point.")
-                                break
-                                
-                            else:
-                                updated_positions[str(updated_mappings[key][lane.lane_id])] = updated_mappings[key][lane.lane_id]
+                        if(lane.lane_id in updated_mappings[key].keys()):
+                            updated_positions[str(updated_mappings[key][lane.lane_id])] = updated_mappings[key][lane.lane_id]
 
-                    if(allow_shift):
-                        updated_positions, new_lane = copy.deepcopy(lane).shift_lane_exact(current_position, offset, copy.deepcopy(updated_positions), current_position)
-                        interacting_lanes.append(lane.lane_id)
-                        exact_positions.append(updated_positions[str(current_position)])
-                        is_fixed[lane.lane_id][str(updated_positions[str(current_position)])] = True
+
+                    updated_positions, new_lane = copy.deepcopy(lane).shift_lane_exact(current_position, offset, copy.deepcopy(updated_positions), current_position)
+                    interacting_lanes.append(lane.lane_id)
+                    exact_positions.append(updated_positions[str(current_position)])
                         
-                        if(print_result):
-                            print("We have shifted lane " + new_lane.lane_name + " by " + str(offset) + " starting from the element at the position " + str(current_position) + ".")
+                    if(print_result):
+                        print("We have shifted lane " + new_lane.lane_name + " by " + str(offset) + " starting from the element at the position " + str(current_position) + ".")
 
-                        # Update all values in the dictionary accordingly
-                        for key in updated_mappings.keys():
-                            if(new_lane.lane_id in updated_mappings[key].keys() and updated_mappings[key][new_lane.lane_id].get_base_index() >= current_position.get_base_index()):
-                                updated_mappings[key][new_lane.lane_id] = copy.deepcopy(updated_positions[str(updated_mappings[key][new_lane.lane_id])])
+                    # Update all values in the dictionary accordingly
+                    for key in updated_mappings.keys():
+                        if(new_lane.lane_id in updated_mappings[key].keys()):
+                            updated_mappings[key][new_lane.lane_id] = copy.deepcopy(updated_positions[str(updated_mappings[key][new_lane.lane_id])])
 
-                        for interaction_point in updated_interaction_points:
-                            for i in range(len(interaction_point.interaction_lanes)):
-                                if(i in range(len(interaction_point.exact_positions))):
-                                    if (interaction_point.interaction_lanes[i] == lane.lane_id and str(interaction_point.exact_positions[i]) in updated_positions.keys()):
-                                        interaction_point.exact_positions[i] = updated_positions[str(interaction_point.exact_positions[i])]
+                    for interaction_point in updated_interaction_points:
+                        for i in range(len(interaction_point.interaction_lanes)):
+                            if(i in range(len(interaction_point.exact_positions))):
+                                if (interaction_point.interaction_lanes[i] == lane.lane_id and str(interaction_point.exact_positions[i]) in updated_positions.keys()):
+                                    interaction_point.exact_positions[i] = updated_positions[str(interaction_point.exact_positions[i])]
                         
-                        shifted_lanes.append(new_lane)
-                    else:
-                        interacting_lanes.append(lane.lane_id)
-                        exact_positions.append(current_position)
+                    shifted_lanes.append(new_lane)
 
-                        
+      
         del updated_mappings[earliest_interaction_point[0]]
         updated_interaction_points.append(IED.InteractionPoint(activity_label, interacting_lanes, types, index, exact_positions))
         
