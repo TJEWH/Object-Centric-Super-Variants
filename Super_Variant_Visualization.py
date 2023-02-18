@@ -6,6 +6,7 @@ from enum import Enum
 
 DEFAULT_CHEVRON_LENGTH = 30.
 DEFAULT_CHEVRON_HEIGHT = 15.
+OUTLINE_INTERACTIONS = False
 
 class Mode(Enum):
     LANE_FREQUENCY = 1
@@ -336,6 +337,11 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
 
     ax.text(index * chevron_length + length_offset + current_horizontal_position, current_vertical_position * chevron_height + 0.5 * chevron_height * lane_properties[lane]["Height"] - heigth_offset, label, zorder = 15, fontsize = fontsize * sizing_factor)
 
+    if(OUTLINE_INTERACTIONS):
+        line_width = 0.25
+    else:
+        line_width = 0
+
     sub_height = 1 / len(interacting_lanes)
     current_percentage = 0
     for interacting_lanes_list in interacting_lanes:
@@ -346,16 +352,8 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
 
         for i in range(len(interacting_lanes_list)):
             color = original_lane_properties[interacting_lanes_list[i]]["Color"]
-            ax.add_patch(patches.PathPatch(__partial_chevron_at_position(current_horizontal_position + index * chevron_length + i * length_sub_chevron * chevron_length, current_vertical_position * chevron_height, length_sub_chevron * chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height, current_percentage, current_percentage + sub_height), facecolor = color, lw = 0, ls = overall_line_style, zorder = 10))
+            ax.add_patch(patches.PathPatch(__partial_chevron_at_position(current_horizontal_position + index * chevron_length + i * length_sub_chevron * chevron_length, current_vertical_position * chevron_height, length_sub_chevron * chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height, current_percentage, current_percentage + sub_height), facecolor = color, lw = line_width, ls = overall_line_style, zorder = 10))
         
-        if(current_percentage > 0.5):
-            line_offset = - (current_percentage - 0.5) * 2.5
-
-        else:
-            line_offset = current_percentage * 2.5
-        
-        #TODO make visible
-        ax.add_patch(patches.PathPatch(__line_at_position(current_horizontal_position  + index * chevron_length + line_offset, current_vertical_position * chevron_height + current_percentage * chevron_length/DEFAULT_CHEVRON_LENGTH, chevron_length/DEFAULT_CHEVRON_LENGTH), lw = 0.5 * fontsize / 9, ls = overall_line_style, zorder = 25))
         current_percentage += sub_height
 
     ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length, current_vertical_position * chevron_height, chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height), facecolor = "None", lw = 1.3 * fontsize / 9, ls = overall_line_style, zorder = 12))
