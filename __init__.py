@@ -84,7 +84,7 @@ elif(MODE == 7):
     SVV.visualize_super_variant(super_variant, mode = SVV.Mode.LANE_FREQUENCY)
 
 elif(MODE == 8):
-    super_variant, cost = IEVS.join_super_variants(summarizations[3], summarizations[6], False, False)
-    super_variant, cost = IEVS.join_super_variants(super_variant, summarizations[7], True, False)
+    super_variant, cost = IEVS.join_super_variants(summarizations[9], summarizations[5], True, True)
+    #super_variant, cost = IEVS.join_super_variants(super_variant, summarizations[7], True, False)
     SVV.visualize_super_variant(super_variant, mode = SVV.Mode.NO_FREQUENCY)
 

@@ -7,6 +7,7 @@ from enum import Enum
 DEFAULT_CHEVRON_LENGTH = 30.
 DEFAULT_CHEVRON_HEIGHT = 15.
 OUTLINE_INTERACTIONS = False
+MARK_INCORRECT_INTERACTIONS = False
 
 class Mode(Enum):
     LANE_FREQUENCY = 1
@@ -306,21 +307,26 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
     if(lane_properties[lane]["IsOptional"]):
         overall_line_style = '--'
 
-
+    outline_color = "black"
     is_interacting, interaction_point = IED.is_interaction_point(interaction_points, original_lane, element.position)
     
     if(not is_interacting):
         interacting_lanes = [[original_lane]]
         print("Interaction not found.")
+        outline_color = "red"
 
     else:
         all_interaction_points = IED.get_interaction_points(interaction_points, original_lane, element.position)
         if(len(all_interaction_points) == 1):
             interacting_lanes = [interaction_point.interaction_lanes]
+            if(len(set([position.get_base_index() for position in interaction_point.exact_positions])) > 1):
+                outline_color = "red"
         else:
             interacting_lanes = [all_interaction_points[0].interaction_lanes]
             for i in range(1, len(all_interaction_points)):
-               interacting_lanes.append(all_interaction_points[i].interaction_lanes)
+                interacting_lanes.append(all_interaction_points[i].interaction_lanes)
+                if(len(set([position.get_base_index() for position in all_interaction_points[i].exact_positions])) > 1):
+                    outline_color = "red"
 
 
     label = element.activity
@@ -356,7 +362,7 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
         
         current_percentage += sub_height
 
-    ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length, current_vertical_position * chevron_height, chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height), facecolor = "None", lw = 1.3 * fontsize / 9, ls = overall_line_style, zorder = 12))
+    ax.add_patch(patches.PathPatch(__chevron_at_position(current_horizontal_position + index * chevron_length, current_vertical_position * chevron_height, chevron_length/DEFAULT_CHEVRON_LENGTH, lane_properties[lane]["Height"]  * chevron_height), facecolor = "None", lw = 1.3 * fontsize / 9, ls = overall_line_style, zorder = 12, edgecolor = outline_color))
     
     return ax
 
