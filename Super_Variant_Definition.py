@@ -145,6 +145,7 @@ class SummarizedVariant:
         mapping = dict((x, y) for x, y in list(mapping.values()))
 
         interactions_result = []
+        #new_interaction_points = []
         for interaction in self.interaction_points:
 
             # Encode references with the new lane_id and sort alphabetically
@@ -153,7 +154,9 @@ class SummarizedVariant:
             lanes_encoding = "".join(str(x) + ", " for x in interacting_lanes)
             lanes_encoding = lanes_encoding[:-2]
             encoding = f"IP[{interaction.index_in_lanes},[{lanes_encoding}]] "
+            #if(encoding not in interactions_result):
             interactions_result.append(encoding)
+                #new_interaction_points.append(interaction)
         
         interactions_result.sort() 
 
@@ -167,6 +170,7 @@ class SummarizedVariant:
         
         # Additionally sort the Super Lane itself
         self.lanes.sort(key = lambda x: x.lane_name)
+        #self.interaction_points = new_interaction_points
 
         return result
 
@@ -198,6 +202,36 @@ class SummarizedVariant:
             if (lane.lane_id == id):
                 return lane
         return None
+
+    def get_lanes_of_type(self, type_label):
+        '''
+        Finds and returns all lanes of the summarized variant with the given object type.
+        :param self: The summarized variant
+        :type self: SummarizedVariant
+        :param type_label: The label of the type
+        :type type_label: str
+        :return: The corresponding Super Lanes
+        :rtype: list of type SuperLane
+        '''
+        result = []
+        for lane in self.lanes:
+            if (lane.object_type == type_label):
+                result.append(lane)
+        return result
+
+    def get_number_of_events(self):
+        '''
+        Returns the number of events of the variant.
+        :param self: The summarized variant
+        :type self: SummarizedVariant
+        :return: The corresponding count
+        :rtype: int
+        '''
+        result = 0
+        for lane in self.lanes:
+            result += lane.get_number_of_events()
+        result += len(self.interaction_points)
+        return result
 
     def remove_gaps(self):
         '''
@@ -268,6 +302,23 @@ class SuperLane:
             result_string += str(self.elements[i]) + ","       
         result_string = result_string[:-1]
         return result_string + "]"
+
+    def get_number_of_events(self):
+        '''
+        Returns the number of events of the lane, excluding the interaction points.
+        :param self: The summarizing Super Lane
+        :type self: SuperLane
+        :return: The corresponding count
+        :rtype: int
+        '''
+        result = 0
+        for element in self.elements:
+            if (isinstance(element, CommonConstruct) and not isinstance(element, InteractionConstruct)):
+                result += 1
+            elif(isinstance(element, GeneralChoiceStructure)):
+                for option in element.choices:
+                    result += option.get_number_of_events()
+        return result
 
     def get_length(self):
         '''
@@ -704,7 +755,7 @@ class SuperLane:
             elif(type(element) == ChoiceConstruct or type(element) == OptionalConstruct):
                 intermediate_result = []
                 for i in range(len(element.choices)):
-                    for sublist in element.choices[i].get_realizations_normalized(element.start):
+                    for sublist in element.choices[i].get_realizations_normalized():
                         intermediate_result.extend([realization + sublist.elements for realization in realizations])
                 if(type(element) == OptionalConstruct):
                     intermediate_result.extend([realization + [EmptyConstruct(element.empty_frequency)] for realization in realizations])
@@ -794,7 +845,7 @@ class SuperLane:
         valid_realizations = []
 
         for realization in all_realizations:
-            is_valid = False
+
             for comparison in self.realizations:
 
                 if (len(comparison.elements) != len(realization.elements)):
@@ -816,10 +867,8 @@ class SuperLane:
                             break
 
                     if(is_equivalent):
-                        is_valid = True
+                        valid_realizations.append(realization)
                         break
-            if(is_valid):
-                valid_realizations.append(realization)
 
         return valid_realizations
 
@@ -830,8 +879,8 @@ class SuperLane:
         :type self: SuperLane
         :param elements: The list of elements
         :type elements: list of type SummarizationElement
-        :return: Whether the elements are identical
-        :rtype: bool
+        :return: Whether the elements are identical, the newly update lane
+        :rtype: bool, SuperLane
         '''
         import copy
         if (len(self.elements) != len(elements)):
@@ -841,9 +890,9 @@ class SuperLane:
             update_self = copy.deepcopy(self)
             for i in range(len(elements)):
                 if(type(elements[i]) ==  type(self.elements[i])):
-                    if(type(elements[i]) == InteractionConstruct and type(self.elements[i]) == InteractionConstruct and elements[i].activity == self.elements[i].activity):
-                        update_self.elements[i].frequency += elements[i].frequency
-                        continue
+                    if(type(elements[i]) == InteractionConstruct or type(self.elements[i]) == InteractionConstruct):
+                        return False, self
+                        
                     elif(type(elements[i]) == CommonConstruct and type(self.elements[i]) == CommonConstruct and elements[i].activity == self.elements[i].activity):
                         update_self.elements[i].frequency += elements[i].frequency
                         continue

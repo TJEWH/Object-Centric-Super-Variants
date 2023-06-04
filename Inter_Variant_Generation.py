@@ -165,7 +165,7 @@ def generate_super_variant_hierarchy_by_frequency(initial_super_variant_set, num
                 for level in cluster_result.keys():
                     print(level)
                     for super_variant in cluster_result[level][0]:
-                        print(super_variant.id)
+                        print(super_variant[0].id)
                     print("-----------")
             result.append(cluster_result)
 
@@ -342,6 +342,9 @@ def cluster_by_size(indexed_initial_set, cluster_size, distances, print_results 
 
     for i in range(number_of_clusters):
         model.addConstr(sum(x[i,elem] for elem in indexed_initial_set.keys()) >= 1)
+    
+    for i in range(number_of_clusters):
+        model.addConstr(sum(x[i,elem] for elem in indexed_initial_set.keys()) <= cluster_size)
     
     model.setObjective(sum( (sum(sum(x[i,elem1]*x[i,elem2]*distances[elem1,elem2] for elem2 in indexed_initial_set.keys()) for elem1 in indexed_initial_set.keys()) / cluster_size) for i in range(number_of_clusters)))
     model.modelSense = gurobipy.GRB.MINIMIZE

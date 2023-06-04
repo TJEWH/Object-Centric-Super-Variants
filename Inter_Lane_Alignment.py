@@ -105,7 +105,7 @@ def __split_interaction_mappings(mappings):
             new_positions = dict()
             for item in combinations[i]:
                 new_positions[item[0]] = item[1]
-            new_mappings[(interaction[0], str(interaction[1]) + " " + str(i))] = new_positions
+            new_mappings[(interaction, str(interaction[1]) + " " + str(i))] = new_positions
 
     #return __combine_interactions(new_mappings)
     return new_mappings
@@ -190,8 +190,11 @@ def __re_align_lanes(lanes, mappings, print_result, intra = True):
                 print(str(key) + ": " + str(earliest_interaction_point[1][key]))
         
         types = set([l.object_type for l in relevant_lanes])
-        element = relevant_lanes[0].get_element(updated_mappings[earliest_interaction_point[0]][relevant_lanes[0].lane_id])
-        activity_label = element.activity
+        try:
+            element = relevant_lanes[0].get_element(updated_mappings[earliest_interaction_point[0]][relevant_lanes[0].lane_id])
+            activity_label = element.activity
+        except:
+            activity_label = "NaN"
 
         all_positions = list(earliest_interaction_point[1].values())
 

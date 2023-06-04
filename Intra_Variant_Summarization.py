@@ -191,4 +191,5 @@ def get_partitions(candidate):
     partitions = []
     for n, partition in enumerate(__partition(list(candidate)), 1):
         partitions.append(partition)
+    partitions.reverse()
     return partitions

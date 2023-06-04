@@ -121,10 +121,10 @@ def __inter_lane_summarization(lanes, interactions, print_results, current_lane 
                 else: 
                     identifier = i
 
-                if((identifier, str([str(position) for position in interaction_points[i].exact_positions]), str(interaction_points[i].interaction_lanes)) in new_interaction_points_mapping.keys()):
-                    new_interaction_points_mapping[(identifier, str([str(position) for position in interaction_points[i].exact_positions]), str(interaction_points[i].interaction_lanes))].append(IED.BasePosition(current_lane, current_horizontal_index))
+                if((identifier, interaction_points[i].activity_name, str([str(position) for position in interaction_points[i].exact_positions]), str(interaction_points[i].interaction_lanes)) in new_interaction_points_mapping.keys()):
+                    new_interaction_points_mapping[(identifier, interaction_points[i].activity_name, str([str(position) for position in interaction_points[i].exact_positions]), str(interaction_points[i].interaction_lanes))].append(IED.BasePosition(current_lane, current_horizontal_index))
                 else:
-                    new_interaction_points_mapping[(identifier, str([str(position) for position in interaction_points[i].exact_positions]), str(interaction_points[i].interaction_lanes))] = [IED.BasePosition(current_lane, current_horizontal_index)]
+                    new_interaction_points_mapping[(identifier, interaction_points[i].activity_name, str([str(position) for position in interaction_points[i].exact_positions]), str(interaction_points[i].interaction_lanes))] = [IED.BasePosition(current_lane, current_horizontal_index)]
 
             elements.append(SVD.InteractionConstruct(common_element[0], element_frequency, IED.BasePosition(current_lane, current_horizontal_index), current_horizontal_index))
 
@@ -227,10 +227,10 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
                             identifier = 0
                         else:
                             identifier = elements[0]
-                        if((identifier, str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes)) in new_mapping.keys()):
-                            new_mapping[(identifier, str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))].append(IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)))
+                        if((identifier, interaction_point.activity_name, str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes)) in new_mapping.keys()):
+                            new_mapping[(identifier, interaction_point.activity_name, str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))].append(IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)))
                         else:
-                            new_mapping[(identifier, str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))] = [IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position))]
+                            new_mapping[(identifier, interaction_point.activity_name, str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))] = [IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position))]
                     choice.append(SVD.InteractionConstruct(elements[1][i].activity, base_lanes[elements[0]].frequency / total_frequency, IED.RecursiveLanePosition(current_lane, IED.BasePosition(current_choice, position)), position))
                     length = 1
                 else:
@@ -250,10 +250,10 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
                                         identifier = 0
                                     else:
                                         identifier = elements[0]
-                                    if((identifier, str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes)) in new_mapping.keys()):
-                                        new_mapping[(identifier, str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))].append(new_position)
+                                    if((identifier, interaction_point.activity_name, str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes)) in new_mapping.keys()):
+                                        new_mapping[(identifier, interaction_point.activity_name, str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))].append(new_position)
                                     else:
-                                        new_mapping[(identifier, str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))] = [new_position]
+                                        new_mapping[(identifier, interaction_point.activity_name, str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))] = [new_position]
                                     break
 
                         length = max(length, normalized_lane.get_length())
@@ -410,7 +410,7 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
                     else: 
                         identifier = elements[0]
                     
-                    current_mappings[(identifier, str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))] = start_index + i
+                    current_mappings[(identifier, interaction_point.activity_name, str([str(position) for position in interaction_point.exact_positions]), str(interaction_point.interaction_lanes))] = start_index + i
                     contains_interaction = True
                 choice.append(SVD.InteractionConstruct(elements[1][i].activity, elements[1][i].frequency, IED.BasePosition(current_lane, position), position))
             else:
@@ -509,12 +509,12 @@ def __get_longest_common_subsequence(lanes, intra = False, interactions = None):
     :return: The Longest Common Subsequence and the corresponding positions in the lanes, the length of the longest_common_subsequence, the number of common interactions in the subsequence
     :rtype: list, int, int
     '''
-    base_element = lanes[0][1].elements[lanes[0][2]-1]
 
     if any([lane[2] == 0 for lane in lanes]):
         return [], 0, 0
 
     else:
+        base_element = lanes[0][1].elements[lanes[0][2]-1]
         intra_valid = False
         if (all((type(lane[1].elements[lane[2]-1]) == type(base_element) and lane[1].elements[lane[2]-1].activity == base_element.activity) for lane in lanes)):
             intra_valid = True

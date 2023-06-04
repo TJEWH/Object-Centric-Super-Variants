@@ -117,8 +117,12 @@ def optional_super_lane(summarization, lane, first):
     '''
 
     new_lane, new_interaction_points_mapping = new_super_lane(summarization, lane, first)
+    if first:
+        id = tuple(lane.lane_id) + tuple()+("N",)
+    else:
+        id = tuple()+("N",) + tuple(lane.lane_id)
 
-    return SVD.OptionalSuperLane(tuple(lane.lane_id), lane.object_type + " i", new_lane.object_type, new_lane.elements, new_lane.cardinality, new_lane.frequency, new_lane.realizations), new_interaction_points_mapping
+    return SVD.OptionalSuperLane(id, lane.object_type + " i", new_lane.object_type, new_lane.elements, new_lane.cardinality, new_lane.frequency, new_lane.realizations), new_interaction_points_mapping
 
 
 def new_super_lane(summarization, lane, first, start_index = 0, outer_position = None, option = 0):
@@ -167,9 +171,9 @@ def new_super_lane(summarization, lane, first, start_index = 0, outer_position =
                 current_interaction_points = IED.get_interaction_points(summarization.interaction_points, lane.lane_id, elem.position)
                 for current_interaction_point in current_interaction_points:
                     if(first):
-                        new_interaction_points_mapping[(0, str([str(position) for position in current_interaction_point.exact_positions]), str(current_interaction_point.interaction_lanes))] = [position]
+                        new_interaction_points_mapping[(0,current_interaction_point.activity_name, str([str(position) for position in current_interaction_point.exact_positions]), str(current_interaction_point.interaction_lanes))] = [position]
                     else:
-                        new_interaction_points_mapping[(1, str([str(position) for position in current_interaction_point.exact_positions]), str(current_interaction_point.interaction_lanes))] = [position]
+                        new_interaction_points_mapping[(1,current_interaction_point.activity_name, str([str(position) for position in current_interaction_point.exact_positions]), str(current_interaction_point.interaction_lanes))] = [position]
 
             current_horizontal_index += 1
                 
@@ -191,7 +195,18 @@ def new_super_lane(summarization, lane, first, start_index = 0, outer_position =
                     new_interaction_points_mapping[mapping] = new_choice_mapping[mapping]
 
                 new_choices.append(new_choice)
-                length = max(length, len(new_choice))
+                if(isinstance(new_choice.elements[0], SVD.CommonConstruct) or isinstance(new_choice.elements[0], SVD.InteractionConstruct)):
+                    start_position = new_choice.elements[0].position.get_base_index()
+                else:
+                    start_position = new_choice.elements[0].position_end.get_base_index()
+
+                if(isinstance(new_choice.elements[-1], SVD.CommonConstruct) or isinstance(new_choice.elements[-1], SVD.InteractionConstruct)):
+                    end_position = new_choice.elements[-1].position.get_base_index()
+                else:
+                    end_position = new_choice.elements[-1].position_end.get_base_index()
+
+
+                length = max(length, end_position - start_position + 1)
 
             if(isinstance(elem, SVD.ChoiceConstruct)):
                 elements.append(SVD.ChoiceConstruct(new_choices, IED.BasePosition(option, current_horizontal_index), IED.BasePosition(option, current_horizontal_index + length-1), current_horizontal_index, current_horizontal_index + length-1))
@@ -204,7 +219,7 @@ def new_super_lane(summarization, lane, first, start_index = 0, outer_position =
 
 
 
-def join_super_lanes(summarization1, summarization2, lane1, lane2, allow_nested_structures, print_result = True):
+def join_super_lanes(summarization1, summarization2, lane1, lane2, allow_nested_structures, print_result = False):
     '''
     Summarizes two lanes of two Super Variants.
     :param summarization1: The Super Variant corresponding to the first lane
@@ -509,8 +524,8 @@ def levenshtein_distance(lane1, lane2):
     :rtype: int
     '''
     import math
-    realizations1 = lane1.get_valid_realizations()
-    realizations2 = lane2.get_valid_realizations()
+    realizations1 = lane1.realizations
+    realizations2 = lane2.realizations
     minimum = math.inf
 
     if(len(realizations1) >= len(realizations2)):
