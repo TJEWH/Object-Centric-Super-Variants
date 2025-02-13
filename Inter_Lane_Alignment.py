@@ -1,13 +1,9 @@
+from __init__ import BRANCH
 import Super_Variant_Definition as SVD
 import Input_Extraction_Definition as IED
 
-branch_setting = {"main": {"align": False, "repeat": None},
-                  "eval": {"align": False, "repeat": None},
-                  "expl": {"align": True, "repeat": True},
-                  "publ": {"align": True, "repeat": True}}
-
-ALIGN = branch_setting["eval"]["align"]
-REPEAT_ALIGNMENT = branch_setting["eval"]["repeat"]
+ALIGN = BRANCH["alignment"]["align"]
+REPEAT_ALIGNMENT = BRANCH["alignment"]["repeat"]
 
 
 def join_interaction_mappings(interaction_mappings):
