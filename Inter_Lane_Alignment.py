@@ -1,9 +1,13 @@
 import Super_Variant_Definition as SVD
 import Input_Extraction_Definition as IED
 
-ALIGN = True
-REPEAT_ALIGNMENT = True  # example, not main
-MODE_B = True
+branch_setting = {"main": {"align": False, "repeat": None},
+                  "eval": {"align": False, "repeat": None},
+                  "expl": {"align": True, "repeat": True},
+                  "publ": {"align": True, "repeat": True}}
+
+ALIGN = branch_setting["eval"]["align"]
+REPEAT_ALIGNMENT = branch_setting["eval"]["repeat"]
 
 
 def join_interaction_mappings(interaction_mappings):
@@ -154,7 +158,7 @@ def __combine_interactions(mappings):
     return new_mappings
 
 
-def __re_align_lanes(lanes, mappings, print_result, intra=True):
+def __re_align_lanes(lanes, mappings, print_result, intra=True, repeat=REPEAT_ALIGNMENT):
     """
     Given the summarized Super Lanes and the mappings from original interaction points to new indices, the lanes are aligned according to the interaction points.
     :param lanes: The summarized lanes of the Super Variant
@@ -171,6 +175,7 @@ def __re_align_lanes(lanes, mappings, print_result, intra=True):
     # updated_mappings, aligned_lanes = create_duplicate_interactions(copy.deepcopy(mappings), copy.deepcopy(lanes))
 
     updated_mappings, aligned_lanes = copy.deepcopy(mappings), copy.deepcopy(lanes)
+    changes_made = False
     updated_interaction_points = []
 
     fixed_positions = dict()
@@ -207,6 +212,7 @@ def __re_align_lanes(lanes, mappings, print_result, intra=True):
             index = position.get_base_index()
             interacting_lanes = list(earliest_interaction_point[1].keys())
             exact_positions = list(earliest_interaction_point[1].values())
+            shifted_lanes = []
 
             for lane in relevant_lanes:
                 fixed_positions[lane.lane_id].append(str(earliest_interaction_point[1][lane.lane_id]))
@@ -260,6 +266,7 @@ def __re_align_lanes(lanes, mappings, print_result, intra=True):
                         if print_result:
                             print("We have shifted lane " + new_lane.lane_name + " by " + str(
                                 offset) + " starting from the element at the position " + str(current_position) + ".")
+                        changes_made = True
 
                         # Update all values in the dictionary accordingly
                         for key in updated_mappings.keys():
