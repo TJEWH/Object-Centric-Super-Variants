@@ -17,7 +17,7 @@ import Super_Variant_Visualization as SVV
 import Input_Extraction_Definition as IED
 
 
-filename = "EventLogs/test_log.jsonocel"
+filename = "../EventLogs/test_log.jsonocel"
 ocel = ocel_import_factory.apply(file_path = filename)
 
 '''
