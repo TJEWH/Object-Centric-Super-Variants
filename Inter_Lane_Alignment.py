@@ -2,6 +2,8 @@ import Super_Variant_Definition as SVD
 import Input_Extraction_Definition as IED
 
 ALIGN = True
+REPEAT_ALIGNMENT = True  # example, not main
+MODE_B = True
 
 
 def join_interaction_mappings(interaction_mappings):
@@ -284,8 +286,14 @@ def __re_align_lanes(lanes, mappings, print_result, intra=True):
                         shifted_lanes.append(lane)
 
         del updated_mappings[earliest_interaction_point[0]]
-        updated_interaction_points.append(
-            IED.InteractionPoint(activity_label, interacting_lanes, types, index, exact_positions))
+        is_contained = False
+        for interaction_point in updated_interaction_points:
+            is_contained = (is_contained or
+                            (interaction_point == IED.InteractionPoint(activity_label, interacting_lanes, types, index,
+                                                                       exact_positions)))
+        if not is_contained:
+            updated_interaction_points.append(
+                IED.InteractionPoint(activity_label, interacting_lanes, types, index, exact_positions))
 
         new_aligned_lanes = copy.deepcopy(aligned_lanes)
         for j in range(len(aligned_lanes)):
@@ -298,6 +306,13 @@ def __re_align_lanes(lanes, mappings, print_result, intra=True):
     final_lanes = []
     for lane in aligned_lanes:
         final_lanes.append(copy.deepcopy(lane).shift_activities_up())
+
+    if repeat and changes_made:
+        new_mappings = dict()
+        for i in range(len(updated_interaction_points)):
+            new_mappings[i] = dict(zip(updated_interaction_points[i].interaction_lanes, updated_interaction_points[i].exact_positions))
+
+        return __re_align_lanes(copy.deepcopy(final_lanes), copy.deepcopy(new_mappings), print_result, intra, repeat)
 
     return final_lanes, updated_interaction_points
 

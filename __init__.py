@@ -4,6 +4,12 @@ from ocpa.visualization.log.variants import factory as variants_visualization_fa
 from ocpa.algo.util.filtering.log import case_filtering
 from ocpa.objects.log.exporter.ocel import factory as ocel_export_factory
 
+''' Ensure version compatibility
+from .Intra_Variant_Generation import (complete_intra_variant_summarization_from_process as
+                                       complete_intra_variant_summarization)
+from .Intra_Variant_Generation import (get_unique_summarizations_from_process as
+                                       get_unique_summarizations)'''
+
 import Input_Extraction_Definition as IED
 import Super_Variant_Definition as SVD
 import Super_Variant_Visualization as SVV
@@ -21,7 +27,7 @@ parameters = {"execution_extraction": "leading_type",
               "leading_type": "application"}
 ocel = ocel_import_factory.apply(file_path=filename, parameters=parameters)
 
-all_summarizations, per_variant_dict, per_encoding_dict = IAVG.complete_intra_variant_summarization(ocel)
+all_summarizations, per_variant_dict, per_encoding_dict = IAVG.complete_intra_variant_summarization_from_process(ocel)
 summarizations = SS.intra_variant_summarization_selection(all_summarizations, per_variant_dict, per_encoding_dict)
 
 #variant_layout = variants_visualization_factory.apply(ocel)
