@@ -1,3 +1,4 @@
+from __init__ import BRANCH
 import Input_Extraction_Definition as IED
 import Intra_Variant_Summarization as IAVS
 import time
@@ -66,15 +67,22 @@ def get_unique_summarizations_from_process(process, print_results=False, get_tim
     if get_time:
         times = []
 
-    for i in tqdm(range(len(process.variants))):
+    if BRANCH == "publ":
+        _range, limit = range(10), 6
+    else:
+        _range, limit = range(len(process.variants)), 4
+
+    for i in tqdm(_range):
         print(' \n' + "Summarizing variant " + str(i) + " of the process...")
         if get_time:
             time_before_intra = time.perf_counter()
         extracted_variant = IED.extract_lanes(variant_layout[process.variants[i]], process.variant_frequencies[i])
 
-        #  if max([len(extracted_variant.get_lanes_of_type(type)) for type in list(extracted_variant.object_types)]) <= 3:
-        #  if i != 15:  # main branch condition
-        if max([len(interaction_point.interaction_lanes) for interaction_point in list(extracted_variant.interaction_points)]) <= 4:  # eval branch condition
+        termination_condition = (i != 15) if BRANCH == "main" else (
+                max([len(interaction_point.interaction_lanes)
+                     for interaction_point in list(extracted_variant.interaction_points)]) <= limit)
+
+        if termination_condition:
             extracted_summarizations = IAVS.within_variant_summarization(extracted_variant, print_results)
             if get_time:
                 time_after_intra = time.perf_counter()
@@ -125,11 +133,16 @@ def get_unique_summarizations_from_variants(process, variants, print_results=Fal
     all_unique_summarizations_set = []
     all_summarizations = []
 
-    for i in tqdm(range(len(variants))):
+    if BRANCH == "publ":
+        _range, limit = range(10), 6
+    else:
+        _range, limit = range(len(variants)), 3
+
+    for i in tqdm(_range):
         print(' \n' + "Summarizing variant " + str(i) + " of the process...")
         extracted_variant = IED.extract_lanes(variant_layout[variants[i][0]], variants[i][1])
         if (max([len(extracted_variant.get_lanes_of_type(_type))
-                for _type in list(extracted_variant.object_types)]) <= 3):
+                for _type in list(extracted_variant.object_types)]) <= limit):
             extracted_summarizations = IAVS.within_variant_summarization(extracted_variant, print_results)
 
             for summarization in extracted_summarizations:
