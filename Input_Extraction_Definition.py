@@ -73,6 +73,10 @@ class VariantLane:
                                                   [])])
         return super_lane
 
+    def normalize(self):
+        self.horizontal_indices = range(len(self.activities))
+        return self
+
 
 class InteractionPoint:
     """The data structure of an Interaction Point"""

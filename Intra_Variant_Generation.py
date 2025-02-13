@@ -26,7 +26,7 @@ def complete_intra_variant_summarization_from_process(process, print_results=Fal
         return all_summarizations, summarizations_per_variant, summarization_dictionary
 
 
-def complete_intra_variant_summarization_from_variants(process, variants, print_results = False):
+def complete_intra_variant_summarization_from_variants(process, variants, print_results=False):
     """
     Given an Object-Centric Event Log, the Intra-Variant Summarizations are generated and sorted by variant.
     :param process: The object-centric event-log in ocel format
@@ -38,7 +38,7 @@ def complete_intra_variant_summarization_from_variants(process, variants, print_
     :return: A list of all unique_summarizations, a dictionary mapping variant to its summarizations and a dictionary mapping a unique summarization to its SummarizedVariant instances
     :rtype: list, dict, dict
     """
-    universe, summarization_dictionary = get_unique_summarizations_from_variants(process, print_results)
+    universe, summarization_dictionary = get_unique_summarizations_from_variants(process, variants, print_results)
     all_summarizations, summarizations_per_variant = __determine_subsets(universe, summarization_dictionary)
     return all_summarizations, summarizations_per_variant, summarization_dictionary
 
