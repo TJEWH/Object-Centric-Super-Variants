@@ -396,11 +396,11 @@ def cluster_by_frequency(indexed_initial_set, number_of_clusters, distribution_t
         ideal_cluster_frequency = [accumulated_frequency / number_of_clusters] * number_of_clusters
     elif distribution_type == Distribution.NORMAL:
         import scipy.stats as st
-        stepsize = 3 / number_of_clusters
+        step_size = 3 / number_of_clusters
         ideal_cluster_frequency = []
         for i in range(number_of_clusters):
-            ideal_cluster_frequency.append((((st.norm.cdf(i + 1 * stepsize) - 0.5) * 2) - (
-                    (st.norm.cdf(i * stepsize) - 0.5) * 2)) * accumulated_frequency)
+            ideal_cluster_frequency.append((((st.norm.cdf(i + 1 * step_size) - 0.5) * 2) - (
+                    (st.norm.cdf(i * step_size) - 0.5) * 2)) * accumulated_frequency)
 
     import gurobipy
     model = gurobipy.Model("ClusteringByFrequency")

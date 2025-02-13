@@ -72,9 +72,9 @@ def get_unique_summarizations_from_process(process, print_results=False, get_tim
             time_before_intra = time.perf_counter()
         extracted_variant = IED.extract_lanes(variant_layout[process.variants[i]], process.variant_frequencies[i])
 
-        #if(max([len(extracted_variant.get_lanes_of_type(type)) for type in list(extracted_variant.object_types)]) <= 3):
-        #if(max([len(interaction_point.interaction_lanes) for interaction_point in list(extracted_variant.interaction_points)]) <= 4):
-        if i != 15:
+        #  if max([len(extracted_variant.get_lanes_of_type(type)) for type in list(extracted_variant.object_types)]) <= 3:
+        #  if i != 15:  # main branch condition
+        if max([len(interaction_point.interaction_lanes) for interaction_point in list(extracted_variant.interaction_points)]) <= 4:  # eval branch condition
             extracted_summarizations = IAVS.within_variant_summarization(extracted_variant, print_results)
             if get_time:
                 time_after_intra = time.perf_counter()

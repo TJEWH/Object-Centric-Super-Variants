@@ -34,6 +34,8 @@ summarizations = SS.intra_variant_summarization_selection(all_summarizations, pe
 #extracted_variant = IED.extract_lanes(variant_layout[ocel.variants[5]], ocel.variant_frequencies[5])
 #SVV.visualize_variant(extracted_variant)
 
+
+# Commented out on eval
 IEVG.NESTED_STRUCTURES = True
 if MODE == 1:
     initial_super_variants = IEVG.classify_initial_super_variants_by_activity(
