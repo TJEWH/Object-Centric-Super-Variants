@@ -25,7 +25,6 @@ def get_preliminary_interaction_points(mappings, lanes):
     :return: The list of preliminary interactions of the un-aligned lanes
     :rtype: list of type InteractionPoint
     """
-
     interaction_points = []
     for mapping in mappings.keys():
         types = set([lane.object_type for lane in lanes if lane.lane_id in mappings[mapping].keys()])

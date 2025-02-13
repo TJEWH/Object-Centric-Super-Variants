@@ -3,6 +3,7 @@ import Super_Variant_Visualization as SVV
 from enum import Enum
 import copy
 import math
+import time
 
 
 class Distribution(Enum):

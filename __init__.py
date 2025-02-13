@@ -24,11 +24,8 @@ ocel = ocel_import_factory.apply(file_path=filename, parameters=parameters)
 all_summarizations, per_variant_dict, per_encoding_dict = IAVG.complete_intra_variant_summarization(ocel)
 summarizations = SS.intra_variant_summarization_selection(all_summarizations, per_variant_dict, per_encoding_dict)
 
-#filename = "EventLogs/order_process.jsonocel"
-#ocel = ocel_import_factory.apply(file_path = filename)
-
-#variant_layouting = variants_visualization_factory.apply(ocel)
-#extracted_variant = IED.extract_lanes(variant_layouting[ocel.variants[5]], ocel.variant_frequencies[5])
+#variant_layout = variants_visualization_factory.apply(ocel)
+#extracted_variant = IED.extract_lanes(variant_layout[ocel.variants[5]], ocel.variant_frequencies[5])
 #SVV.visualize_variant(extracted_variant)
 
 IEVG.NESTED_STRUCTURES = True
@@ -38,8 +35,8 @@ if MODE == 1:
          summarizations[9]], "Refuse offer")
     initial_super_variants = [initial_super_variants[0]] + IEVG.classify_initial_super_variants_by_activity(
         initial_super_variants[1], "Accept offer")
-    hierarchies, final_super_variants = IEVG.generate_super_variant_hierarchy_by_classification(initial_super_variants,
-                                                                                                1, 3, base=3)
+    hierarchies, final_super_variants = IEVG.generate_super_variant_hierarchy_by_classification(
+        initial_super_variants, 1, 3, base=3)
 
     for hierarchy in hierarchies:
         SVH.explore_hierarchy_bottom_up(hierarchy)
@@ -112,5 +109,6 @@ elif MODE == 7:
 
 elif MODE == 8:
     super_variant, cost = IEVS.join_super_variants(summarizations[9], summarizations[5], True, True)
-    #super_variant, cost = IEVS.join_super_variants(super_variant, summarizations[7], True, False)
+    # super_variant, cost = IEVS.join_super_variants(super_variant, summarizations[7], True, False)
+
     SVV.visualize_super_variant(super_variant, mode=SVV.Mode.NO_FREQUENCY)
