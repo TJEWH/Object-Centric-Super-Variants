@@ -74,45 +74,63 @@ def inter_variant_summarization(summarization1, summarization2, mapping, allow_n
         if pair[0] is None:
             if print_result:
                 print("Lane " + str(pair[1]) + " of the Super Variant 2 is made optional.")
+
             lane2 = [lane for lane in summarization2.lanes if lane.lane_id == pair[1]][0]
             super_lane, mapping = optional_super_lane(summarization2, lane2, False)
+
             if print_result:
                 print("The resulting Super Lane is the following: " + str(super_lane))
+
             intermediate_lanes.append(super_lane)
             intermediate_mappings.append((super_lane.lane_id, mapping))
 
         elif pair[1] is None:
             if print_result:
                 print("Lane " + str(pair[0]) + " of the Super Variant 1 is made optional.")
+
             lane1 = [lane for lane in summarization1.lanes if lane.lane_id == pair[0]][0]
             super_lane, mapping = optional_super_lane(summarization1, lane1, True)
+
             if print_result:
                 print("The resulting Super Lane is the following: " + str(super_lane))
+
             intermediate_lanes.append(super_lane)
             intermediate_mappings.append((super_lane.lane_id, mapping))
 
         else:
             if print_result:
-                print("Lane " + str(pair[0]) + " of the Super Variant 1 and lane " + str(
-                    pair[1]) + " of Super Variant 2 are merged.")
+                print("Lane " + str(pair[0]) + " of the Super Variant 1 and lane " +
+                      str(pair[1]) + " of Super Variant 2 are merged.")
+
             lane1 = [lane for lane in summarization1.lanes if lane.lane_id == pair[0]][0]
             lane2 = [lane for lane in summarization2.lanes if lane.lane_id == pair[1]][0]
+            super_lane, mapping = join_super_lanes(
+                summarization1,
+                summarization2,
+                lane1, lane2,
+                allow_nested_structures, print_result)
 
-            super_lane, mapping = join_super_lanes(summarization1, summarization2, lane1, lane2,
-                                                   allow_nested_structures, print_result)
             if print_result:
                 print("The resulting Super Lane is the following: " + str(super_lane))
+
             intermediate_lanes.append(super_lane)
             intermediate_mappings.append((super_lane.lane_id, mapping))
 
-    result_lanes, result_interaction_points = ILA.__re_align_lanes(copy.deepcopy(intermediate_lanes),
-                                                                   ILA.join_interaction_mappings(intermediate_mappings),
-                                                                   print_result, False)
+    result_lanes, result_interaction_points = ILA.__re_align_lanes(
+        copy.deepcopy(intermediate_lanes),
+        ILA.join_interaction_mappings(intermediate_mappings),
+        print_result,
+        False)
+
     new_id = list(summarization1.id + summarization2.id)
     new_id.sort()
-    super_variant = SVD.SuperVariant(tuple(new_id), copy.deepcopy(result_lanes),
-                                     summarization1.object_types.union(summarization2.object_types),
-                                     result_interaction_points, summarization1.frequency + summarization2.frequency)
+    super_variant = SVD.SuperVariant(
+        tuple(new_id),
+        copy.deepcopy(result_lanes),
+        summarization1.object_types.union(summarization2.object_types),
+        result_interaction_points,
+        summarization1.frequency + summarization2.frequency)
+
     if print_result:
         print(super_variant)
 
@@ -139,9 +157,16 @@ def optional_super_lane(summarization, lane, first):
     else:
         _id = tuple() + ("N",) + tuple(lane.lane_id)
 
-    return SVD.OptionalSuperLane(_id, lane.object_type + " i", new_lane.object_type, new_lane.elements,
-                                 new_lane.cardinality, new_lane.frequency,
-                                 new_lane.realizations), new_interaction_points_mapping
+    return (
+        SVD.OptionalSuperLane(
+            _id,
+            lane.object_type + " i",
+            new_lane.object_type,
+            new_lane.elements,
+            new_lane.cardinality,
+            new_lane.frequency,
+            new_lane.realizations),
+        new_interaction_points_mapping)
 
 
 def new_super_lane(summarization, lane, first, start_index=0, outer_position=None, option=0):
@@ -203,7 +228,6 @@ def new_super_lane(summarization, lane, first, start_index=0, outer_position=Non
                                                         str([str(position) for position in
                                                              current_interaction_point.exact_positions]),
                                                         str(current_interaction_point.interaction_lanes))] = [position]
-
             current_horizontal_index += 1
 
         else:
@@ -214,12 +238,19 @@ def new_super_lane(summarization, lane, first, start_index=0, outer_position=Non
                 index = current_horizontal_index
 
             if outer_position:
-                new_outer_position = outer_position.add_level(IED.BasePosition(i, current_horizontal_index))
+                new_outer_position = outer_position.add_level(
+                    IED.BasePosition(i, current_horizontal_index))
             else:
-                new_outer_position = IED.RecursiveLanePosition(option, IED.BasePosition(i, current_horizontal_index))
+                new_outer_position = IED.RecursiveLanePosition(
+                    option, IED.BasePosition(i, current_horizontal_index))
 
-                new_choice, new_choice_mapping = new_super_lane(summarization, elem.choices[i], first, index,
-                                                                new_outer_position, i)
+                new_choice, new_choice_mapping = new_super_lane(
+                    summarization,
+                    elem.choices[i],
+                    first,
+                    index,
+                    new_outer_position,
+                    i)
 
                 for mapping in new_choice_mapping.keys():
                     new_interaction_points_mapping[mapping] = new_choice_mapping[mapping]
@@ -240,19 +271,35 @@ def new_super_lane(summarization, lane, first, start_index=0, outer_position=Non
                 length = max(length, end_position - start_position + 1)
 
             if isinstance(elem, SVD.ChoiceConstruct):
-                elements.append(SVD.ChoiceConstruct(new_choices, IED.BasePosition(option, current_horizontal_index),
-                                                    IED.BasePosition(option, current_horizontal_index + length - 1),
-                                                    current_horizontal_index, current_horizontal_index + length - 1))
+                elements.append(
+                    SVD.ChoiceConstruct(
+                        new_choices,
+                        IED.BasePosition(option, current_horizontal_index),
+                        IED.BasePosition(option, current_horizontal_index + length - 1),
+                        current_horizontal_index,
+                        current_horizontal_index + length - 1))
             else:
-                elements.append(SVD.OptionalConstruct(new_choices, IED.BasePosition(option, current_horizontal_index),
-                                                      IED.BasePosition(option, current_horizontal_index + length - 1),
-                                                      current_horizontal_index, current_horizontal_index + length - 1,
-                                                      elem.empty_frequency))
+                elements.append(
+                    SVD.OptionalConstruct(
+                        new_choices,
+                        IED.BasePosition(option, current_horizontal_index),
+                        IED.BasePosition(option, current_horizontal_index + length - 1),
+                        current_horizontal_index,
+                        current_horizontal_index + length - 1,
+                        elem.empty_frequency))
 
             current_horizontal_index += length
 
-    return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality, lane_frequency,
-                         realizations), new_interaction_points_mapping
+    return (
+        SVD.SuperLane(
+            lane_id,
+            lane_name,
+            object_type,
+            elements,
+            cardinality,
+            lane_frequency,
+            realizations),
+        new_interaction_points_mapping)
 
 
 def join_super_lanes(summarization1, summarization2, lane1, lane2, allow_nested_structures, print_result=False):
@@ -291,7 +338,16 @@ def join_super_lanes(summarization1, summarization2, lane1, lane2, allow_nested_
     elements, mappings = ILS.__inter_lane_summarization([lane1, lane2], [summarization1.interaction_points,
                                                                          summarization2.interaction_points],
                                                         print_result, nested=allow_nested_structures)
-    return SVD.SuperLane(lane_id, lane_name, object_type, elements, cardinality, frequency, realizations), mappings
+    return (
+        SVD.SuperLane(
+            lane_id,
+            lane_name,
+            object_type,
+            elements,
+            cardinality,
+            frequency,
+            realizations),
+        mappings)
 
 
 def decide_matching(summarization1, summarization2, remaining_lanes1, remaining_lanes2, propagate=True,
@@ -319,6 +375,7 @@ def decide_matching(summarization1, summarization2, remaining_lanes1, remaining_
     if len(remaining_lanes1) == 0:
         if print_result:
             print("Empty. The rest is optional.")
+
         result = []
         cost = 0
         for lane in remaining_lanes2:
@@ -332,6 +389,7 @@ def decide_matching(summarization1, summarization2, remaining_lanes1, remaining_
     elif len(remaining_lanes2) == 0:
         if print_result:
             print("Empty. The rest is optional.")
+
         result = []
         cost = 0
         for lane in remaining_lanes1:
@@ -348,11 +406,11 @@ def decide_matching(summarization1, summarization2, remaining_lanes1, remaining_
 
         # Fallback case: no corresponding matching
         if len(matching_candidates_2) == 0:
-
             if print_result:
                 print("Lane " + str(
                     current_matching_candidate_1.lane_id) + "of Super Variant 1 has no matching partner and is "
                                                             "optional.")
+
             matching = [(current_matching_candidate_1.lane_id, None)]
             cost = len(current_matching_candidate_1.elements)
             new_remaining_lanes2 = remaining_lanes2
@@ -376,6 +434,7 @@ def decide_matching(summarization1, summarization2, remaining_lanes1, remaining_
                     print("Evaluating the decision of matching lane " + str(
                         current_matching_candidate_1.lane_id) + " of Super Variant 1 with the lane " + str(
                         candidate_2.lane_id) + " of Super Variant 2.")
+
                 intermediate_matching = [(current_matching_candidate_1.lane_id, candidate_2.lane_id)]
                 intermediate_cost = levenshtein_distance(current_matching_candidate_1, candidate_2)
 
@@ -651,7 +710,6 @@ def find_best_matching(nodes, arcs):
     x = {}
     for key in arcs.keys():
         x[key] = model.addVar(name="x_%s, %s" % (key[0], key[1]), vtype=gurobipy.GRB.BINARY)
-
     model.update()
 
     for i in range(len(nodes[0])):
@@ -673,11 +731,11 @@ def find_best_matching(nodes, arcs):
     model.setObjective(sum(x[key] * arcs[key] for key in x.keys()))
     model.modelSense = gurobipy.GRB.MINIMIZE
     model.optimize()
-
     cost = 0
 
     print('\n Objective value: %g\n' % model.ObjVal)
     print('\n Variable values: \n')
+
     for key in arcs.keys():
         print(str(key) + ": " + str(x[key].X))
         if x[key].X == 1.0 and key[1] != "None":

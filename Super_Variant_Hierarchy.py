@@ -336,14 +336,18 @@ def visualize_single_summarization_step(super_variant_1, super_variant_2, new_su
         if event.inaxes == ax1:
             if super_variant_1[1] is not None and super_variant_1[2] is not None:
                 visualize_single_summarization_step(
-                    super_variant_1[1], super_variant_1[2], super_variant_1[0])
+                    super_variant_1[1],
+                    super_variant_1[2],
+                    super_variant_1[0])
             else:
                 SVV.visualize_super_variant(super_variant_1[0], mode=MODE)
 
         elif event.inaxes == ax2:
             if super_variant_2[1] is not None and super_variant_2[2] is not None:
                 visualize_single_summarization_step(
-                    super_variant_2[1], super_variant_2[2], super_variant_2[0])
+                    super_variant_2[1],
+                    super_variant_2[2],
+                    super_variant_2[0])
             else:
                 SVV.visualize_super_variant(super_variant_2[0], mode=MODE)
 

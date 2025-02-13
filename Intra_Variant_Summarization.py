@@ -116,8 +116,13 @@ def __branch_on_candidates(variant, remaining_candidates, init_summarization, le
         result = []
         for candidate in get_partitions(remaining_candidates[0]):
             current_summarization["Candidate"] = candidate
-            subtree_result = __branch_on_candidates(variant, remaining_candidates[1:], (current_summarization),
-                                                    level + 1, print_results)
+            subtree_result = __branch_on_candidates(
+                variant,
+                remaining_candidates[1:],
+                current_summarization,
+                level + 1,
+                print_results)
+
             if subtree_result is not None:
                 result.extend(subtree_result)
         if print_results:
@@ -145,7 +150,12 @@ def within_variant_summarization(variant, print_results=False):
     # Traverse tree of candidates
     for partition in first_choice:
         init_summary["Candidate"] = partition
-        subtree_result = __branch_on_candidates(variant, all_candidates[1:], init_summary, 1, print_results)
+        subtree_result = __branch_on_candidates(
+            variant,
+            all_candidates[1:],
+            init_summary,
+            1,
+            print_results)
         if subtree_result is not None:
             all_summarizations.extend(subtree_result)
 
@@ -153,11 +163,17 @@ def within_variant_summarization(variant, print_results=False):
     result = []
     for summarization in all_summarizations:
 
-        result_lanes, result_interaction_points = ILA.__re_align_lanes(summarization["Lanes"],
-                                                                       ILA.join_interaction_mappings(
-                                                                           summarization["Mappings"]), print_results)
+        result_lanes, result_interaction_points = ILA.__re_align_lanes(
+            summarization["Lanes"],
+            ILA.join_interaction_mappings(summarization["Mappings"]),
+            print_results)
+
         result.append(
-            SVD.SummarizedVariant(result_lanes, variant.object_types, result_interaction_points, variant.frequency))
+            SVD.SummarizedVariant(
+                result_lanes,
+                variant.object_types,
+                result_interaction_points,
+                variant.frequency))
         result[-1].encode_lexicographically()
 
         if print_results:

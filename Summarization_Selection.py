@@ -22,6 +22,7 @@ def __solve_hitting_set_problem(T, S):
     model.setObjective(sum(x[elem[1][0]] for elem in T))
     model.modelSense = gurobipy.GRB.MINIMIZE
     model.optimize()
+
     print('\n Objective value: %g\n' % model.ObjVal)
     print('\n Variable values: \n')
     solution = []
@@ -64,7 +65,9 @@ def intra_variant_summarization_selection(all_summarizations, summarizations_per
         for summarization in result[key][1]:
             frequency += summarization.frequency
 
-        initial_set_of_super_variants.append(result[key][1][0].to_super_variant(tuple(result[key][0])))
+        initial_set_of_super_variants.append(
+            result[key][1][0].to_super_variant(
+                tuple(result[key][0])))
         initial_set_of_super_variants[-1].frequency = frequency
 
     return initial_set_of_super_variants

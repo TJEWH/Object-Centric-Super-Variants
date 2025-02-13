@@ -107,7 +107,9 @@ class RecursiveLanePosition(LanePosition):
         self.position = position
 
     def __eq__(self, other):
-        return type(self) is type(other) and (self.lane_id == other.lane_id) and (self.position == other.position)
+        return (type(self) is type(other) and
+                (self.lane_id == other.lane_id) and
+                (self.position == other.position))
 
     def __str__(self):
         return "R(" + str(self.lane_id) + ", " + str(self.position) + ")"
@@ -177,7 +179,9 @@ class BasePosition(LanePosition):
         self.position = position
 
     def __eq__(self, other):
-        return type(self) is type(other) and (self.lane_id == other.lane_id) and (self.position == other.position)
+        return (type(self) is type(other) and
+                (self.lane_id == other.lane_id) and
+                (self.position == other.position))
 
     def __str__(self):
         return "B(" + str(self.lane_id) + ", " + str(self.position) + ")"
@@ -274,8 +278,12 @@ class ExtractedVariant:
         return None
 
     def to_super_variant(self, _id):
-        return SVD.SuperVariant(_id, [lane.to_super_lane(self.interaction_points) for lane in self.lanes],
-                                self.object_types, self.interaction_points, self.frequency)
+        return SVD.SuperVariant(
+            _id,
+            [lane.to_super_lane(self.interaction_points) for lane in self.lanes],
+            self.object_types,
+            self.interaction_points,
+            self.frequency)
 
 
 def extract_lanes(variant, frequency):
@@ -288,11 +296,9 @@ def extract_lanes(variant, frequency):
     :return: The extracted variant
     :rtype: ExtractedVariant
     """
-
+    extracted_lanes = []
     objects = variant[1]
     events = sorted(variant[0], key=lambda x: (x[1][0]))
-
-    extracted_lanes = []
 
     for i in range(len(objects)):
         lane = []
@@ -310,9 +316,14 @@ def extract_lanes(variant, frequency):
             types = []
             for j in range(len(events[i][1][1])):
                 types.append(objects[events[i][1][1][j]][0])
+
             extracted_interactions.append(
-                InteractionPoint(events[i][0], events[i][1][1], set(types), events[i][1][0][0],
-                                 [BasePosition(0, events[i][1][0][0]) for event in events[i][1][1]]))
+                InteractionPoint(
+                    events[i][0],
+                    events[i][1][1],
+                    set(types),
+                    events[i][1][0][0],
+                    [BasePosition(0, events[i][1][0][0]) for event in events[i][1][1]]))
 
     extracted_types = set([_object[0] for _object in objects.values()])
     extracted_variant = ExtractedVariant(extracted_lanes, extracted_types, extracted_interactions, frequency)

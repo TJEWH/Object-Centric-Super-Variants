@@ -109,7 +109,7 @@ def __split_interaction_mappings(mappings):
                 new_positions[item[0]] = item[1]
             new_mappings[(interaction, str(interaction[1]) + " " + str(i))] = new_positions
 
-    #return __combine_interactions(new_mappings)
+    # return __combine_interactions(new_mappings)
     return new_mappings
 
 
@@ -130,12 +130,12 @@ def __combine_interactions(mappings):
 
         for other_interaction in mappings.keys():
             if other_interaction != interaction:
-
                 for lane in mappings[interaction]:
                     if lane in mappings[other_interaction].keys():
                         if mappings[other_interaction][lane] == mappings[interaction][lane]:
                             share_elements[other_interaction] = mappings[other_interaction]
                             break
+
         if len(share_elements) == 1:
             new_mappings[interaction] = mappings[interaction]
             added_keys.append(interaction)
@@ -167,7 +167,6 @@ def __re_align_lanes(lanes, mappings, print_result, intra=True):
     """
     # Initialize variables and return values
     import copy
-    import math
     # updated_mappings, aligned_lanes = create_duplicate_interactions(copy.deepcopy(mappings), copy.deepcopy(lanes))
 
     updated_mappings, aligned_lanes = copy.deepcopy(mappings), copy.deepcopy(lanes)
@@ -241,7 +240,6 @@ def __re_align_lanes(lanes, mappings, print_result, intra=True):
                                 lane.lane_id]
 
                     old_positions = copy.deepcopy(updated_positions)
-
                     updated_positions, new_lane = copy.deepcopy(lane).shift_lane_exact(current_position, offset,
                                                                                        copy.deepcopy(updated_positions),
                                                                                        current_position)
@@ -345,7 +343,7 @@ def create_duplicate_interaction(mappings, lanes):
         # Determine the element that requires duplication and create a modified copy of the lane with that element
         # being optional
         earliest_interaction_point = min(duplicate[0].items(),
-                                         key=lambda x: min([position.get_base_index() for position in x[1].values()]))
+                                         key=lambda x: min([_position.get_base_index() for _position in x[1].values()]))
         del duplicate[0][earliest_interaction_point[0]]
         for lane in lanes:
             if lane.lane_id == duplicate[1]:
@@ -366,15 +364,12 @@ def create_duplicate_interaction(mappings, lanes):
             # Default position is directly with the original element
             suitable_position = copy.deepcopy(new_element).position_end.apply_shift(1)
             watchlist = list(current_interaction_point[1].keys())
-            observed_interactions = dict()
 
             # For every other interaction in that lane, check whether its position is after the lower_bound 
             for key in mappings.keys():
                 if key != earliest_interaction_point[0] and key != current_interaction_point[0]:
                     if (duplicate[1] in mappings[key].keys() and new_lane.greater_than(suitable_position,
                                                                                        mappings[key][duplicate[1]])):
-
-                        #observed_interactions[key] = 
 
                         # For the counterparts of such an interaction position in the relevant lanes, check whether
                         # they are happening before or after the current investigated interaction

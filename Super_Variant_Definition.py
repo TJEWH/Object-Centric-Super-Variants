@@ -91,16 +91,15 @@ class SummarizedVariant:
         import copy
         # Stores the mapping from original lane_id to the new lane_id based on the enumeration of the encoded lanes
         mapping = {}
+        encoded_result = []
 
         # The lanes are sorted by their type and encoded in this alphabetical order
         total_order_objects = [str(_object) for _object in list(self.object_types)]
         total_order_objects.sort()
 
-        encoded_result = []
         for _object in total_order_objects:
-
             # Determine all lanes for this object type
-            object_lanes = [l for l in self.lanes if l.object_type == _object]
+            object_lanes = [lane for lane in self.lanes if lane.object_type == _object]
 
             # Determine the maximal number of digits for the new lane_id
             power_of_ten = len(str(len(object_lanes)))
@@ -254,11 +253,8 @@ class SuperVariant(SummarizedVariant):
     id = 0
 
     def __init__(self, _id, lanes, object_types, interaction_points, frequency):
+        super().__init__(lanes, object_types, interaction_points, frequency)
         self.id = _id
-        self.lanes = lanes
-        self.object_types = object_types
-        self.interaction_points = interaction_points
-        self.frequency = frequency
 
     def __str__(self):
         result_string = "Super Variant " + str(self.id) + "\nLanes: \n"
@@ -1216,6 +1212,7 @@ class SuperLane:
 
                 new_end = max(all_end_indices)
                 length_difference = new_end - self.elements[i].index_end
+
                 self.elements[i].index_end = new_end
                 self.elements[i].position_end.apply_shift(length_difference)
 
@@ -1244,10 +1241,11 @@ class SuperLane:
 
             for j in range(len(self.elements[-1].choices)):
                 if up_to:
-                    self.elements[-1].choices[j] = self.elements[-1].choices[j].shift_activities_up(up_to)
+                    self.elements[-1].choices[j] = (
+                        self.elements[-1].choices[j].shift_activities_up(up_to))
                 else:
-                    self.elements[-1].choices[j] = self.elements[-1].choices[j].shift_activities_up(
-                        self.elements[-1].index_end)
+                    self.elements[-1].choices[j] = (
+                        self.elements[-1].choices[j].shift_activities_up(self.elements[-1].index_end))
 
             all_start_indices = []
             all_end_indices = []
@@ -1319,6 +1317,7 @@ class SuperLane:
 
                 self.elements[index - 1].index_start = min(all_start_indices)
                 self.elements[index - 1].index_end = max(all_end_indices)
+
                 self.elements[index - 1].position_start.apply_shift(
                     self.elements[index - 1].index_start - start_index_before_shift)
                 self.elements[index - 1].position_end.apply_shift(
@@ -1415,12 +1414,24 @@ class CommonConstruct(SummarizationElement):
         :rtype: OptionalConstruct
         """
         self.frequency -= empty_frequency
-        option = SuperLane(0, "option 0", lane.object_type, [self], 1, self.frequency * lane.frequency, [])
-        return OptionalConstruct([option], self.position, self.position, self.index, self.index, empty_frequency)
+        option = SuperLane(
+            0,
+            "option 0",
+            lane.object_type,
+            [self],
+            1,
+            self.frequency * lane.frequency,
+            [])
+        return OptionalConstruct(
+            [option],
+            self.position,
+            self.position,
+            self.index,
+            self.index,
+            empty_frequency)
 
 
 class InteractionConstruct(CommonConstruct):
-
     def __str__(self):
         return "(Pos " + str(self.position) + ": Interaction " + str(self.activity) + ")"
 
@@ -1431,7 +1442,7 @@ class InteractionConstruct(CommonConstruct):
 
 
 class GeneralChoiceStructure(SummarizationElement):
-    """The data structure of an choices of activity sequences in a summarized variant"""
+    """The data structure of a choices of activity sequences in a summarized variant"""
     choices = []
     position_start = None
     position_end = None
@@ -1484,11 +1495,7 @@ class OptionalConstruct(GeneralChoiceStructure):
     empty_frequency = 1
 
     def __init__(self, choices, start, end, index_start, index_end, empty_frequency):
-        self.choices = choices
-        self.position_start = start
-        self.position_end = end
-        self.index_start = index_start
-        self.index_end = index_end
+        super().__init__(choices, start, end, index_start, index_end)
         self.empty_frequency = empty_frequency
 
     def __str__(self):
