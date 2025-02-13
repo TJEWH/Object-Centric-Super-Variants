@@ -1128,8 +1128,14 @@ class SuperLane:
         for elem in self.elements:
             if isinstance(elem, CommonConstruct):
                 new_elements.append(elem)
-        return SuperLane(self.lane_id, self.lane_name, self.object_type, new_elements, self.cardinality, self.frequency,
-                         [])
+        return SuperLane(
+            self.lane_id,
+            self.lane_name,
+            self.object_type,
+            new_elements,
+            self.cardinality,
+            self.frequency,
+            [])
 
     def make_optional(self, position, empty_frequency):
         """

@@ -124,7 +124,7 @@ def visualize_variant(variant, id, mode=Mode.NO_FREQUENCY):
         ax, width, height = arrange_super_variant(
             super_variant, ax, 
             0, 0, "*", mode, 
-            9, 9, 13)
+            9, 9, 13)  # in publ 13->30
         ax.set_aspect('equal')
         ax.set_xlim(-20, width + 2)
         ax.set_ylim(-2, height + 2)
