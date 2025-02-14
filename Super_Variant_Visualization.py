@@ -419,7 +419,7 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
     if OUTLINE_INTERACTIONS:
         line_width = 0.25
     else:
-        line_width = 0
+        line_width = 0.1
 
     sub_height = 1 / len(interacting_lanes)
     current_percentage = 0
