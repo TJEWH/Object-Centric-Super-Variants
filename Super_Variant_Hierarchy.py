@@ -85,17 +85,10 @@ def visualize_super_variant_layer(super_variants, current_layer, current_start_i
             ax[i].axis('off')
 
             if TOOLTIPS:
-                current_annotations.append(
-                    ax[i].annotate(
-                        "See Super Variant " + str(visible_super_variants[i].id) + " in Detail",
-                        (0, 0),
-                        xytext=(0, 10),
-                        textcoords='offset points',
-                        color='w',
-                        ha='center',
-                        fontsize=8,
-                        fontweight='bold',
-                        bbox=dict(boxstyle='round, pad = .5', fc=(.1, .1, .1, .8), ec=(0., 0, 0), lw=0, zorder=50)))
+                append_annotation(
+                    current_annotations,
+                    ax[i],
+                    "See Super Variant " + str(visible_super_variants[i].id) + " in Detail")
                 ax[i].figure.texts.append(ax[i].texts.pop())
 
         ax = tuple(ax)
@@ -118,8 +111,8 @@ def visualize_super_variant_layer(super_variants, current_layer, current_start_i
             for i in range(number_of_plots):
                 annotate = current_annotations[i]
                 annotation_visibility = annotate.get_visible()
-                if event.inaxes == ax[i]:
 
+                if event.inaxes == ax[i]:
                     event_position = (round(event.xdata), round(event.ydata))
                     annotate.xy = event_position
                     annotate.set_visible(True)
@@ -194,149 +187,25 @@ def visualize_single_summarization_step(super_variant_1, super_variant_2, new_su
     ax2 = fig.add_subplot(gs[1, 1])
     ax3 = fig.add_subplot(gs[0, :])
 
-    length1 = super_variant_1[0].get_length()
-    ax1, width1, height1 = SVV.arrange_super_variant(
-        super_variant_1[0], ax1,
-        0, 0, "*", mode, 7, 7,
-        int(9 * 13 / length1))
-
-    ax1.set_aspect('equal')
-    ax1.set_xlim(-15, width1 + 2)
-    ax1.set_ylim(-2, height1 + 2)
-    ax1.axis('off')
-
-    if TOOLTIPS:
-        if super_variant_1[1] is not None and super_variant_1[2] is not None:
-            current_annotations.append(
-                ax1.annotate(
-                    "See Details on this Super Variants Summarization",
-                    (0, 0),
-                    xytext=(0, 10),
-                    textcoords='offset points',
-                    color='w',
-                    ha='center',
-                    fontsize=8,
-                    fontweight='bold',
-                    bbox=dict(boxstyle='round, pad = .5', fc=(.1, .1, .1, .8), ec=(0., 0, 0), lw=0, zorder=50)))
-        else:
-            current_annotations.append(
-                ax1.annotate(
-                    "See Super Variant " + str(super_variant_1[0].id) + " in Detail",
-                    (0, 0),
-                    xytext=(0, 10),
-                    textcoords='offset points',
-                    color='w',
-                    ha='center',
-                    fontsize=8,
-                    fontweight='bold',
-                    bbox=dict(boxstyle='round, pad = .5', fc=(.1, .1, .1, .8), ec=(0., 0, 0), lw=0, zorder=50)))
-
-        ax1.figure.texts.append(ax1.texts.pop())
-
-    length2 = super_variant_2[0].get_length()
-    ax2, width2, height2 = SVV.arrange_super_variant(
-        super_variant_2[0], ax2,
-        0, 0, "*", mode, 7, 7,
-        int(9 * 13 / length2))
-
-    ax2.set_aspect('equal')
-    ax2.set_xlim(-15, width2 + 2)
-    ax2.set_ylim(-2, height2 + 2)
-    ax2.axis('off')
-
-    if TOOLTIPS:
-        if super_variant_2[1] is not None and super_variant_2[2] is not None:
-            current_annotations.append(
-                ax2.annotate(
-                    "See Details on this Super Variants Summarization",
-                    (0, 0),
-                    xytext=(0, 10),
-                    textcoords='offset points',
-                    color='w',
-                    ha='center',
-                    fontsize=8,
-                    fontweight='bold',
-                    bbox=dict(boxstyle='round, pad = .5', fc=(.1, .1, .1, .8), ec=(0., 0, 0), lw=0, zorder=50)))
-        else:
-            current_annotations.append(
-                ax2.annotate(
-                    "See Super Variant " + str(super_variant_2[0].id) + " in Detail",
-                    (0, 0),
-                    xytext=(0, 10),
-                    textcoords='offset points',
-                    color='w',
-                    ha='center',
-                    fontsize=8,
-                    fontweight='bold',
-                    bbox=dict(boxstyle='round, pad = .5', fc=(.1, .1, .1, .8), ec=(0., 0, 0), lw=0, zorder=50)))
-
-        ax2.figure.texts.append(ax2.texts.pop())
-
-    ax3, width3, height3 = SVV.arrange_super_variant(
-        new_super_variant, ax3,
-        0, 0, "*", mode,
-        9, 9, 13)
-
-    ax3.set_aspect('equal')
-    ax3.set_xlim(-15, width3 + 2)
-    ax3.set_ylim(-2, height3 + 2)
-    ax3.axis('off')
-
-    if TOOLTIPS:
-        current_annotations.append(
-            ax3.annotate(
-                "See Super Variant " + str(new_super_variant.id) + " in Detail",
-                (0, 0),
-                xytext=(0, 10),
-                textcoords='offset points',
-                color='w',
-                ha='center',
-                fontsize=8,
-                fontweight='bold',
-                bbox=dict(boxstyle='round, pad = .5', fc=(.1, .1, .1, .8), ec=(0., 0, 0), lw=0, zorder=50)))
-
-        ax3.figure.texts.append(ax3.texts.pop())
+    plot_axis(super_variant_1, ax1, mode, current_annotations, super_variant_2)
+    plot_axis(super_variant_2, ax2, mode, current_annotations, super_variant_2)
+    plot_axis(new_super_variant, ax3, mode, current_annotations)
 
     def hover_info(event):
+        for i, ax in enumerate([ax1, ax2, ax3]):
+            annotate = current_annotations[i]
+            annotation_visibility = annotate.get_visible()
 
-        annotate = current_annotations[0]
-        annotation_visibility = annotate.get_visible()
-
-        if event.inaxes == ax1:
-            event_position = (round(event.xdata), round(event.ydata))
-            annotate.xy = event_position
-            annotate.set_visible(True)
-            fig.canvas.draw_idle()
-        elif annotation_visibility:
-            annotate.set_visible(False)
-            fig.canvas.draw_idle()
-
-        annotate = current_annotations[1]
-        annotation_visibility = annotate.get_visible()
-
-        if event.inaxes == ax2:
-            event_position = (round(event.xdata), round(event.ydata))
-            annotate.xy = event_position
-            annotate.set_visible(True)
-            fig.canvas.draw_idle()
-        elif annotation_visibility:
-            annotate.set_visible(False)
-            fig.canvas.draw_idle()
-
-        annotate = current_annotations[2]
-        annotation_visibility = annotate.get_visible()
-
-        if event.inaxes == ax3:
-            event_position = (round(event.xdata), round(event.ydata))
-            annotate.xy = event_position
-            annotate.set_visible(True)
-            fig.canvas.draw_idle()
-        elif annotation_visibility:
-            annotate.set_visible(False)
-            fig.canvas.draw_idle()
+            if event.inaxes == ax:
+                event_position = (round(event.xdata), round(event.ydata))
+                annotate.xy = event_position
+                annotate.set_visible(True)
+                fig.canvas.draw_idle()
+            elif annotation_visibility:
+                annotate.set_visible(False)
+                fig.canvas.draw_idle()
 
     def click(event):
-
         if event.inaxes == ax1:
             if super_variant_1[1] is not None and super_variant_1[2] is not None:
                 visualize_single_summarization_step(
@@ -370,3 +239,44 @@ def visualize_single_summarization_step(super_variant_1, super_variant_2, new_su
 
     fig.savefig("SuperVariantsCompositions/SuperVariant_" + str(new_super_variant.id) + "_from" + str(
         super_variant_1[0].id) + "_and_" + str(super_variant_2[0].id) + ".svg")
+
+
+def append_annotation(current_annotations, ax, message):
+    current_annotations.append(
+        ax.annotate(
+            message,
+            (0, 0),
+            xytext=(0, 10),
+            textcoords='offset points',
+            color='w',
+            ha='center',
+            fontsize=8,
+            fontweight='bold',
+            bbox=dict(boxstyle='round, pad = .5', fc=(.1, .1, .1, .8), ec=(0., 0, 0), lw=0, zorder=50)))
+
+
+def plot_axis(super_variant, ax, mode, current_annotations=None, sv_2=None):
+    length = super_variant[0].get_length()
+    cut_off_point = int(9 * 13 / length) if current_annotations else 13
+
+    ax, width, height = SVV.arrange_super_variant(
+        super_variant[0], ax,
+        0, 0,
+        "*", mode, 7, 7,
+        cut_off_point)
+
+    ax.set_aspect('equal')
+    ax.set_xlim(-15, width + 2)
+    ax.set_ylim(-2, height + 2)
+    ax.axis('off')
+
+    if TOOLTIPS:
+        message = "See Super Variant " + str(super_variant[0].id) + " in Detail"
+        if sv_2:
+            if sv_2[1] is not None and sv_2[2] is not None:
+                message = "See Details on this Super Variants Summarization"
+            append_annotation(current_annotations, ax, message)
+            ax.figure.texts.append(ax.texts.pop())
+        else:
+            append_annotation(current_annotations, ax, message)
+            ax.figure.texts.append(ax.texts.pop())
