@@ -162,10 +162,12 @@ def arrange_super_variant(super_variant, ax, vertical_start_position, horizontal
     :rtype: axes, float, float
     """
     import copy
-    all_colors = [(1, 0.71, 0.44), (0.56, 0.81, 0.56), (0.38, 0.57, 0.8), (1, 0.87, 143), (0.56, 0.89, 0.97)]
+    all_colors = [(1, 0.71, 0.44), (0.56, 0.81, 0.56), (0.38, 0.57, 0.8), (1, 0.87, 0.56), (0.56, 0.89, 0.97),
+                  (0.98, 0.8, 0.8), (0.9, 0.97, 0.85), (0.38, 0.57, 0.8), (1, 0.87, 0.56), (0.56, 0.89, 0.97)]
     objects = list(super_variant.object_types)
     objects.sort()
     number_of_object_types = len(objects)
+    # TODO crashes code when objects type > max colors
     type_colors = all_colors[:number_of_object_types]
     color_assignment_types = dict(zip(objects, type_colors))
 
@@ -173,6 +175,7 @@ def arrange_super_variant(super_variant, ax, vertical_start_position, horizontal
     maximal_lane_length = 1
     for _type in super_variant.object_types:
         type_lanes = [lane for lane in super_variant.lanes if lane.object_type == _type]
+        # print("SV", super_variant)
         color = color_assignment_types[_type]
         offset = 0.09
         scale = 0.9
