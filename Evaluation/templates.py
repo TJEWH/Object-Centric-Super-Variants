@@ -17,11 +17,12 @@ def build_triad_hierarchy(initial_super_variants):
 
 def print_hierarchy_costs(hierarchies):
     # Printing the accumulated summarization costs
-    for i in range(len(hierarchies)):
+    for i, h_list in enumerate(hierarchies):
         accumulated_cost = 0
 
-        for level in hierarchies[i].keys():
-            accumulated_cost += hierarchies[i][level][1]
+        for hierarchy in h_list:
+            for level in hierarchy.keys():
+                accumulated_cost += hierarchy[level][1]
 
         print("Cost for hierarchy " + str(i) + ": " + str(accumulated_cost))
 
