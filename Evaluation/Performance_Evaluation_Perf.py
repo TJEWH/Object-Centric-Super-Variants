@@ -7,6 +7,7 @@ import Inter_Variant_Generation as IEVG
 import Inter_Variant_Summarization as IEVS
 import Intra_Variant_Summarization as IAVS
 import Input_Extraction_Definition as IED
+from config import BRANCH
 
 from enum import Enum
 import time
@@ -24,57 +25,87 @@ class Setting(Enum):
     ALL_SINGLE_INTRA = 2
 
 
-CURRENT_SETTING = None
+filename = BRANCH["file_eval"] if ["file_eval"] in BRANCH else BRANCH["file"]
+file_base = filename.split("/")[-1].split(".")[0]
+export_path = "Evaluation/PerformanceResults"
+
+
+if BRANCH == "eval":
+    CURRENT_SETTING = None
+elif BRANCH == "publ":
+    CURRENT_SETTING = Setting.ALL_SINGLE_INTRA
+else:
+    CURRENT_SETTING = Setting.ALL_SINGLE_INTER
+
+# Load data
+ocel = ocel_import_factory.apply(file_path=filename)
 
 
 # Experiment 1: Various Intra-Variant Summarizations
 if CURRENT_SETTING == Setting.ALL_SINGLE_INTRA:
-
-    # Load data
-    filename = "EventLogs/PerformanceAnalysis/BPI2017-Filtered_80.jsonocel"
-    ocel = ocel_import_factory.apply(file_path = filename)
-    variant_layouting = variants_visualization_factory.apply(ocel)
+    variant_layout = variants_visualization_factory.apply(ocel)
 
     # Measure times for all intra-variant summarizations
     time_before_intra = time.perf_counter()
-    all_summarizations, per_variant_dict, per_encoding_dict, times = IAVG.complete_intra_variant_summarization_from_process(ocel, get_time = True)
+    all_summarizations, per_variant_dict, per_encoding_dict, times = (
+        IAVG.complete_intra_variant_summarization_from_process(ocel, get_time=True))
     time_after_intra = time.perf_counter()
 
-    # Store and print results and statistics on the input
-    data = []
-    for i in range(len(times)):
-        print("Writing data for variant: " + str(i))
-        number_events = len(variant_layouting[ocel.variants[i]][0])
-        number_application = len([value for value in list(variant_layouting[ocel.variants[i]][1].values()) if value[0] == 'application'])
-        number_offer = len([value for value in list(variant_layouting[ocel.variants[i]][1].values()) if value[0] == 'offer'])
-        extracted_variant = IED.extract_lanes(variant_layouting[ocel.variants[i]], 0)
-        candidates = IAVS.get_candidates(extracted_variant.lanes, extracted_variant.interaction_points)
-        maximal_merging_size = max(len(l) for l in candidates)
-        if(len(extracted_variant.lanes) <= 4):
-            extracted_summarizations = IAVS.within_variant_summarization(extracted_variant, False)
-            data.append([i, times[i], number_events, number_application, number_offer, maximal_merging_size, len(extracted_summarizations)])
-        else:
-            data.append([i, times[i], number_events, number_application, number_offer, maximal_merging_size, 0])
+    # 1.1
+    if BRANCH == "eval":
+        # Store and print results and statistics on the input
+        data = []
+        for i in range(len(times)):
+            print("Writing data for variant: " + str(i))
+            number_events = len(variant_layout[ocel.variants[i]][0])
+            number_application = len([value for value in list(variant_layout[ocel.variants[i]][1].values()) if value[0] == 'application'])
+            number_offer = len([value for value in list(variant_layout[ocel.variants[i]][1].values()) if value[0] == 'offer'])
+            extracted_variant = IED.extract_lanes(variant_layout[ocel.variants[i]], 0)
+            candidates = IAVS.get_candidates(extracted_variant.lanes, extracted_variant.interaction_points)
+            maximal_merging_size = max(len(l) for l in candidates)
+            if len(extracted_variant.lanes) <= 4:
+                extracted_summarizations = IAVS.within_variant_summarization(extracted_variant, False)
+                data.append([i, times[i], number_events, number_application, number_offer, maximal_merging_size, len(extracted_summarizations)])
+            else:
+                data.append([i, times[i], number_events, number_application, number_offer, maximal_merging_size, 0])
 
-    print("Total time for the Intra-Variant-Summarizations: " + str(time_after_intra - time_before_intra))
+        print("Total time for the Intra-Variant-Summarizations: " + str(time_after_intra - time_before_intra))
 
-    # Write results into files
-    header = ['Variant', 'Total Time', 'Number of Events', 'Number of Application', 'Number of Offer', 'Size of Maximal Merging Candidate', 'Number of Summarizations']
+        # Write results into files
+        header = ['Variant', 'Total Time', 'Number of Events', 'Number of Application', 'Number of Offer', 'Size of Maximal Merging Candidate', 'Number of Summarizations']
 
-    with open('PerformanceResults/BPI2017_80_Intra_Statistics.csv', 'w', encoding='UTF8', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(header)
-        writer.writerows(data)
+        with open(f'{export_path}/{file_base}_Intra_Statistics.csv', 'w', encoding='UTF8', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(header)
+            writer.writerows(data)
+
+    # 1.2
+    elif BRANCH == "publ":
+        time_before_hitting = time.perf_counter()
+        selected_summarizations = IASS.intra_variant_summarization_selection(all_summarizations, per_variant_dict,
+                                                                             per_encoding_dict)
+        time_after_hitting = time.perf_counter()
+        print(time_after_hitting - time_before_hitting)
+
+        with open(f'{export_path}/{file_base}_HittingSet.csv', 'w', encoding='UTF8', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['Total Time Hitting Set'])
+            writer.writerows([str(time_after_hitting - time_before_hitting)])
 
 # Experiment 2: Various Inter-Lane Summarizations
-if(CURRENT_SETTING == Setting.ALL_SINGLE_INTER):
-
-    SAMPLE_SIZE = 10
-    NUMBER_REPETITIONS = 5
-
-    # Load data
-    filename = "EventLogs/PerformanceAnalysis/BPI2017-Filtered_80.jsonocel"
-    ocel = ocel_import_factory.apply(file_path = filename)
+if CURRENT_SETTING == Setting.ALL_SINGLE_INTER:
+    if BRANCH == "eval":
+        SAMPLE_SIZE = 10
+        NUMBER_REPETITIONS = 5
+        SV_RANGE = [2, 4, 8]
+    elif BRANCH == "publ":
+        SAMPLE_SIZE = 8
+        NUMBER_REPETITIONS = 10
+        SV_RANGE = [2, 4, 8, 16, 32]
+    else:
+        SAMPLE_SIZE = 10
+        NUMBER_REPETITIONS = 5
+        SV_RANGE = [2, 4, 8]
     
     # Initial Super Variant Generation and Selection
     all_summarizations, per_variant_dict, per_encoding_dict = IAVG.complete_intra_variant_summarization_from_process(ocel)
@@ -92,8 +123,7 @@ if(CURRENT_SETTING == Setting.ALL_SINGLE_INTER):
         sample_nnested = sample_nested
 
         # Summarize super variants with increasing range of variants
-        for number in [2,4,8]:
-
+        for number in SV_RANGE:
             print("Starting iteration for sets of " + str(number))
             print("-------------------------------")
             print("Nested")
@@ -104,26 +134,47 @@ if(CURRENT_SETTING == Setting.ALL_SINGLE_INTER):
             # Store some statistics on the input super variants
             super_variant_statistics = dict()
             for i in range(len(sample)):
-                super_variant_statistics[i] = [sample[i].get_number_of_events(), len(sample[i].get_lanes_of_type('application')), len(sample[i].get_lanes_of_type('offer')), max(len(sample[i].get_lanes_of_type('application')), len(sample[i].get_lanes_of_type('offer')))]
+                if BRANCH == "eval":
+                    super_variant_statistics[i] = [sample[i].get_number_of_events(),
+                                                   len(sample[i].get_lanes_of_type('application')),
+                                                   len(sample[i].get_lanes_of_type('offer')),
+                                                   max(len(sample[i].get_lanes_of_type('application')),
+                                                       len(sample[i].get_lanes_of_type('offer')))]
+                elif BRANCH == "publ":
+                    super_variant_statistics[i] = [sample[i].get_number_of_events(),
+                                                   len(sample[i].lanes),
+                                                   len(sample[i].get_lanes_of_type('material'))]
 
             # Match and summarize all pairs of super variants as well as store times and results
             IEVG.NESTED_STRUCTURES = True
             time_before_inter = time.perf_counter()
             times_within_inter = dict()
             results_nested = []
-            for i in range(len(sample)-1):
-                for j in range(i+1, len(sample)):
+
+            for i in range(len(sample) - 1):
+                for j in range(i + 1, len(sample)):
                     print(str(i) + "|" + str(j))
 
                     time_before_mapping = time.perf_counter()
-                    mapping12, cost12 = IEVS.decide_matching(copy.deepcopy(sample[i]), copy.deepcopy(sample[j]), copy.deepcopy(sample[i].lanes), copy.deepcopy(sample[j].lanes))
-                    mapping21, cost21 = IEVS.decide_matching(copy.deepcopy(sample[j]), copy.deepcopy(sample[i]), copy.deepcopy(sample[j].lanes), copy.deepcopy(sample[i].lanes))
+                    mapping12, cost12 = IEVS.decide_matching(
+                        copy.deepcopy(sample[i]),
+                        copy.deepcopy(sample[j]),
+                        copy.deepcopy(sample[i].lanes),
+                        copy.deepcopy(sample[j].lanes))
+                    mapping21, cost21 = IEVS.decide_matching(
+                        copy.deepcopy(sample[j]),
+                        copy.deepcopy(sample[i]),
+                        copy.deepcopy(sample[j].lanes),
+                        copy.deepcopy(sample[i].lanes))
                     time_after_mapping = time.perf_counter()
 
-                    if(cost21 < cost12):
+                    if cost21 < cost12:
                         try:
                             time_before_join = time.perf_counter()
-                            super_variant, c = IEVS.inter_variant_summarization(copy.deepcopy(sample[j]), copy.deepcopy(sample[i]), mapping21, True, False), cost21
+                            super_variant, c = IEVS.inter_variant_summarization(
+                                copy.deepcopy(sample[j]),
+                                copy.deepcopy(sample[i]),
+                                mapping21, True, False), cost21
                             results_nested.append(super_variant)
                             time_after_join = time.perf_counter()
                             cost = cost21
@@ -135,26 +186,46 @@ if(CURRENT_SETTING == Setting.ALL_SINGLE_INTER):
                     else:
                         try:
                             time_before_join = time.perf_counter()
-                            super_variant, c = IEVS.inter_variant_summarization(copy.deepcopy(sample[i]), copy.deepcopy(sample[j]), mapping12, True, False), cost12
+                            super_variant, c = IEVS.inter_variant_summarization(
+                                copy.deepcopy(sample[i]),
+                                copy.deepcopy(sample[j]),
+                                mapping12, True, False), cost12
                             results_nested.append(super_variant)
                             time_after_join = time.perf_counter()
                             cost = cost12
                         except:
+                            time_before_mapping = 0
+                            time_after_mapping = 0
                             time_before_join = 0
                             time_after_join = 0
                             cost = "NaN"
 
-                    times_within_inter[(i,j)] = (time_after_join - time_before_join, time_after_mapping - time_before_mapping, cost)
+                    times_within_inter[(i, j)] = (
+                        time_after_join - time_before_join,
+                        time_after_mapping - time_before_mapping,
+                        cost)
 
             time_after_inter = time.perf_counter()
 
             print("Total time for the Inter-Variant-Summarizations with nested operators: " + str(time_after_inter - time_before_inter))
             
             # Store measured times
-            for i in range(len(sample)-1):
+            for i in range(len(sample) - 1):
                 for j in range(i+1, len(sample)):
-                    print("Time for summarizing variants " + str(i) +" and " + str(j) + ": " + str(times_within_inter[(i,j)][1] - times_within_inter[(i,j)][0]))
-                    data_nested.append([i, j, times_within_inter[(i,j)][0] + times_within_inter[(i,j)][1], times_within_inter[(i,j)][0], times_within_inter[(i,j)][1], super_variant_statistics[i][0] + super_variant_statistics[j][0], (super_variant_statistics[i][1] + super_variant_statistics[j][1]) / 2, (super_variant_statistics[i][3] + super_variant_statistics[j][3]) / 2, max(super_variant_statistics[i][3], super_variant_statistics[j][3]), times_within_inter[(i,j)][2], int(super_variant_statistics[i][3] != super_variant_statistics[j][3]), number])
+                    print("Time for summarizing variants " + str(i) + " and " + str(j) + ": " + str(times_within_inter[(i, j)][1] - times_within_inter[(i, j)][0]))
+                    data_nested.append(
+                        [i, j,
+                         times_within_inter[(i, j)][0] + times_within_inter[(i, j)][1],
+                         times_within_inter[(i, j)][0],
+                         times_within_inter[(i, j)][1],
+                         super_variant_statistics[i][0] + super_variant_statistics[j][0],
+                         (super_variant_statistics[i][1] + super_variant_statistics[j][1]) / 2,
+                         (super_variant_statistics[i][3] + super_variant_statistics[j][3]) / 2,
+                         max(super_variant_statistics[i][3],
+                             super_variant_statistics[j][3]),
+                         times_within_inter[(i, j)][2],
+                         int(super_variant_statistics[i][3] != super_variant_statistics[j][3]),
+                         number])
 
             # Update Input
             sample_nested = results_nested
@@ -168,26 +239,46 @@ if(CURRENT_SETTING == Setting.ALL_SINGLE_INTER):
             # Store some statistics on the input super variants
             super_variant_statistics = dict()
             for i in range(len(sample)):
-                super_variant_statistics[i] = [sample[i].get_number_of_events(), len(sample[i].get_lanes_of_type('application')), len(sample[i].get_lanes_of_type('offer')), max(len(sample[i].get_lanes_of_type('application')), len(sample[i].get_lanes_of_type('offer')))]
+                if BRANCH == "eval":
+                    super_variant_statistics[i] = [sample[i].get_number_of_events(),
+                                                   len(sample[i].get_lanes_of_type('application')),
+                                                   len(sample[i].get_lanes_of_type('offer')),
+                                                   max(len(sample[i].get_lanes_of_type('application')),
+                                                       len(sample[i].get_lanes_of_type('offer')))]
+                elif BRANCH == "publ":
+                    super_variant_statistics[i] = [sample[i].get_number_of_events(),
+                                                   len(sample[i].lanes),
+                                                   len(sample[i].get_lanes_of_type('material'))]
 
             # Match and summarize all pairs of super variants as well as store times and results
             IEVG.NESTED_STRUCTURES = False
             time_before_inter = time.perf_counter()
             times_within_inter = dict()
             results_nnested = []
-            for i in range(len(sample)-1):
+            for i in range(len(sample) - 1):
                 for j in range(i+1, len(sample)):
                     print(str(i) + "|" + str(j))
 
                     time_before_mapping = time.perf_counter()
-                    mapping12, cost12 = IEVS.decide_matching(copy.deepcopy(sample[i]), copy.deepcopy(sample[j]), copy.deepcopy(sample[i].lanes), copy.deepcopy(sample[j].lanes))
-                    mapping21, cost21 = IEVS.decide_matching(copy.deepcopy(sample[j]), copy.deepcopy(sample[i]), copy.deepcopy(sample[j].lanes), copy.deepcopy(sample[i].lanes))
+                    mapping12, cost12 = IEVS.decide_matching(
+                        copy.deepcopy(sample[i]),
+                        copy.deepcopy(sample[j]),
+                        copy.deepcopy(sample[i].lanes),
+                        copy.deepcopy(sample[j].lanes))
+                    mapping21, cost21 = IEVS.decide_matching(
+                        copy.deepcopy(sample[j]),
+                        copy.deepcopy(sample[i]),
+                        copy.deepcopy(sample[j].lanes),
+                        copy.deepcopy(sample[i].lanes))
                     time_after_mapping = time.perf_counter()
 
-                    if(cost21 < cost12):
+                    if cost21 < cost12:
                         try:
                             time_before_join = time.perf_counter()
-                            super_variant, c = IEVS.inter_variant_summarization(copy.deepcopy(sample[j]), copy.deepcopy(sample[i]), mapping21, True, False), cost21
+                            super_variant, c = IEVS.inter_variant_summarization(
+                                copy.deepcopy(sample[j]),
+                                copy.deepcopy(sample[i]),
+                                mapping21, True, False), cost21
                             results_nnested.append(super_variant)
                             time_after_join = time.perf_counter()
                             cost = cost21
@@ -199,7 +290,10 @@ if(CURRENT_SETTING == Setting.ALL_SINGLE_INTER):
                     else:
                         try:
                             time_before_join = time.perf_counter()
-                            super_variant, c = IEVS.inter_variant_summarization(copy.deepcopy(sample[i]), copy.deepcopy(sample[j]), mapping12, True, False), cost12
+                            super_variant, c = IEVS.inter_variant_summarization(
+                                copy.deepcopy(sample[i]),
+                                copy.deepcopy(sample[j]),
+                                mapping12, True, False), cost12
                             results_nnested.append(super_variant)
                             time_after_join = time.perf_counter()
                             cost = cost12
@@ -208,47 +302,60 @@ if(CURRENT_SETTING == Setting.ALL_SINGLE_INTER):
                             time_after_join = 0
                             cost = "NaN"
 
-                    times_within_inter[(i,j)] = (time_after_join - time_before_join, time_after_mapping - time_before_mapping, cost)
+                    times_within_inter[(i, j)] = (
+                        time_after_join - time_before_join,
+                        time_after_mapping - time_before_mapping,
+                        cost)
 
             time_after_inter = time.perf_counter()
 
             print("Total time for the Inter-Variant-Summarizations without nested operators: " + str(time_after_inter - time_before_inter))
             
             # Store measured times
-            for i in range(len(sample)-1):
-                for j in range(i+1, len(sample)):
-                    print("Time for summarizing variants " + str(i) +" and " + str(j) + ": " + str(times_within_inter[(i,j)][1] - times_within_inter[(i,j)][0]))
-                    data_nnested.append([i, j, times_within_inter[(i,j)][0] + times_within_inter[(i,j)][1], times_within_inter[(i,j)][0], times_within_inter[(i,j)][1], super_variant_statistics[i][0] + super_variant_statistics[j][0], (super_variant_statistics[i][1] + super_variant_statistics[j][1]) / 2, (super_variant_statistics[i][3] + super_variant_statistics[j][3]) / 2, max(super_variant_statistics[i][3], super_variant_statistics[j][3]), times_within_inter[(i,j)][2], int(super_variant_statistics[i][3] != super_variant_statistics[j][3]), number])
+            for i in range(len(sample) - 1):
+                for j in range(i + 1, len(sample)):
+                    print("Time for summarizing variants " + str(i) + " and " + str(j) + ": " +
+                          str(times_within_inter[(i, j)][1] - times_within_inter[(i, j)][0]))
+                    data_nnested.append([
+                        i, j,
+                        times_within_inter[(i, j)][0] + times_within_inter[(i, j)][1],
+                        times_within_inter[(i, j)][0],
+                        times_within_inter[(i, j)][1],
+                        super_variant_statistics[i][0] + super_variant_statistics[j][0],
+                        (super_variant_statistics[i][1] + super_variant_statistics[j][1]) / 2,
+                        (super_variant_statistics[i][3] + super_variant_statistics[j][3]) / 2,
+                        max(super_variant_statistics[i][3], super_variant_statistics[j][3]),
+                        times_within_inter[(i,j)][2],
+                        int(super_variant_statistics[i][3] != super_variant_statistics[j][3]), number])
 
             # Update Input
             sample_nnested = results_nnested
 
     # Write results into files
-    header = ['Variant i', 'Variant j', 'Total Time', 'Summarization Time', 'Mapping Time', 'Number of Events', 'Average Number of Application', 'Average Number of Offer', 'Largest Type Object Set', 'Cost', 'Lane Optionality', 'n']
+    header = ['Variant i', 'Variant j', 'Total Time', 'Summarization Time', 'Mapping Time', 'Number of Events',
+              'Average Number of Application', 'Average Number of Offer', 'Largest Type Object Set', 'Cost',
+              'Lane Optionality', 'n']
 
-    with open('PerformanceResults/BPI2017_80_Random_10_Inter_Statistics_Nested_E.csv', 'w', encoding='UTF8', newline='') as f:
+    with open(f'{export_path}/{file_base}_Random_10_Inter_Statistics_Nested_E.csv', 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(header)
         writer.writerows(data_nested)
 
-    with open('PerformanceResults/BPI2017_80_Random_10_Inter_Statistics_NNested_E.csv', 'w', encoding='UTF8', newline='') as f:
+    with open(f'{export_path}/{file_base}_Random_10_Inter_Statistics_NNested_E.csv', 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(header)
         writer.writerows(data_nnested)
 
- # Experiment 3: Super Variant Hierarchy Construction
+# Experiment 3: Super Variant Hierarchy Construction
 else:
     NUMBER_REPETITIONS = 5
-
-    # Load data
-    filename = "EventLogs/PerformanceAnalysis/BPI2017-Filtered_80.jsonocel"
-    ocel = ocel_import_factory.apply(file_path = filename)
+    INPUT_RANGE = [4, 8, 16, 32] if BRANCH == "eval" else [16, 32]
 
     # Initial Super Variant Generation and Selection
     all_summarizations, per_variant_dict, per_encoding_dict = IAVG.complete_intra_variant_summarization_from_process(ocel)
     selected_summarizations = IASS.intra_variant_summarization_selection(all_summarizations, per_variant_dict, per_encoding_dict)
 
-    for size in [4,8,16,32]:
+    for size in INPUT_RANGE:
         print("Input size: " + str(size))
         print("---------------------------------------")
 
@@ -265,29 +372,29 @@ else:
             # Construct hierarchy
             try:
                 time_before_hierarchy = time.perf_counter()
-                hierarchies, times = IEVG.generate_super_variant_hierarchy_by_cost([(super_variant, None, None) for super_variant in sample], math.inf, 0, 2, measure_times = True, times = dict())
+                hierarchies, times = IEVG.generate_super_variant_hierarchy_by_cost([
+                    (super_variant, None, None) for super_variant in sample],
+                    math.inf, 0, 2, measure_times=True, times=dict())
                 time_after_hierarchy = time.perf_counter()
 
-                print("Total time for the Super Variant Hierarchy Generation: " + str(time_after_hierarchy - time_before_hierarchy))
+                print("Total time for the Super Variant Hierarchy Generation: " +
+                      str(time_after_hierarchy - time_before_hierarchy))
                         
                 # Store measured times
                 for level in times.keys():
-                    print("Total time for level " + str(level) +": " + str(times[level][0]))
+                    print("Total time for level " + str(level) + ": " + str(times[level][0]))
                     data.append([level] + times[level])
 
             except:
                 print("Hierarchy construction not successful")
 
-
         # Write into file
-        header = ['Level', 'Total Time', 'Mapping Time', 'Clustering Time', 'Summarization Time', 'Size', 'Number of Summarizations', 'Average Number of Offers']
+        header = ['Level', 'Total Time', 'Mapping Time', 'Clustering Time', 'Summarization Time', 'Size',
+                  'Number of Summarizations', 'Average Number of Offers']
 
-        with open('Evaluation/PerformanceResults/BPI2017_80_Random_' + str(size) + '_hierarchy_f.csv', 'w', encoding='UTF8', newline='') as f:
+        file_out = file_base + '_Random_' + str(size) + '_hierarchy_f.csv'
+
+        with open(f"{export_path}/{file_out}", 'w', encoding='UTF8', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(header)
             writer.writerows(data)
-
- 
-
-    
-        

@@ -19,11 +19,13 @@ __branching = {
     "eval": {
         "mode": 9,
         "file": __test_logs[1],
+        "file_eval": __test_logs[0],
         "alignment": {"align": False, "repeat": None},
     },
     "publ": {
         "mode": 9,
         "file": __test_logs[2],
+        "file_eval": __test_logs[1],
         "alignment": {"align": True, "repeat": True},
     },
 }
