@@ -1,9 +1,5 @@
-from ocpa.objects.log.importer.csv import factory as ocel_import_factory
 from ocpa.objects.log.importer.ocel import factory as ocel_import_factory
 from ocpa.visualization.log.variants import factory as variants_visualization_factory
-from ocpa.algo.util.filtering.log import case_filtering
-from ocpa.objects.log.exporter.ocel import factory as ocel_export_factory
-from ocpa.algo.util.filtering.log import variant_filtering
 
 import Input_Extraction_Definition as IED
 import Super_Variant_Definition as SVD
@@ -14,38 +10,13 @@ import Intra_Variant_Generation as IAVG
 import Inter_Variant_Summarization as IEVS
 import Inter_Variant_Generation as IEVG
 import Super_Variant_Hierarchy as SVH
+from config import BRANCH
 
 ''' Ensure version compatibility
 from .Intra_Variant_Generation import (complete_intra_variant_summarization_from_process as
                                        complete_intra_variant_summarization)
 from .Intra_Variant_Generation import (get_unique_summarizations_from_process as
                                        get_unique_summarizations)'''
-
-branching = {
-    "main": {
-        "mode": 8,
-        "file": "EventLogs/BPI2017-Top10.jsonocel",
-        "parameters": {"execution_extraction": "leading_type"},
-        "alignment": {"align": False, "repeat": None},
-    },
-    "expl": {
-        "mode": None,
-        "file": "EventLogs/test_log.jsonocel",
-        "alignment": {"align": True, "repeat": True},
-    },
-    "eval": {
-        "mode": 9,
-        "file": "EventLogs/test_log.jsonocel",
-        "alignment": {"align": False, "repeat": None},
-    },
-    "publ": {
-        "mode": 9,
-        "file": "EventLogs/Presentation_Example.jsonocel",
-        "alignment": {"align": True, "repeat": True},
-    },
-}
-
-BRANCH = branching["publ"]
 
 
 MODE = BRANCH["mode"]

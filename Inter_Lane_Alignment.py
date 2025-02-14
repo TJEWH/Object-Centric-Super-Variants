@@ -1,4 +1,4 @@
-from __init__ import BRANCH
+from config import BRANCH
 import Super_Variant_Definition as SVD
 import Input_Extraction_Definition as IED
 

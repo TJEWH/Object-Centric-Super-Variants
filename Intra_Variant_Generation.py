@@ -1,7 +1,8 @@
-from __init__ import BRANCH
+import time
+
+from config import BRANCH
 import Input_Extraction_Definition as IED
 import Intra_Variant_Summarization as IAVS
-import time
 
 
 def complete_intra_variant_summarization_from_process(process, print_results=False, get_time=False):
