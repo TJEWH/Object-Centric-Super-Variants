@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 
 MODE = SVV.Mode.LANE_FREQUENCY
-TOOLTIPS = True
+TOOLTIPS = False
 
 
 def explore_hierarchy_bottom_up(super_variants):
@@ -187,8 +187,8 @@ def visualize_single_summarization_step(super_variant_1, super_variant_2, new_su
     ax2 = fig.add_subplot(gs[1, 1])
     ax3 = fig.add_subplot(gs[0, :])
 
-    plot_axis(super_variant_1, ax1, mode, current_annotations, super_variant_2)
-    plot_axis(super_variant_2, ax2, mode, current_annotations, super_variant_2)
+    plot_axis(super_variant_1[0], ax1, mode, current_annotations, super_variant_2)
+    plot_axis(super_variant_2[0], ax2, mode, current_annotations, super_variant_2)
     plot_axis(new_super_variant, ax3, mode, current_annotations)
 
     def hover_info(event):
@@ -256,13 +256,12 @@ def append_annotation(current_annotations, ax, message):
 
 
 def plot_axis(super_variant, ax, mode, current_annotations=None, sv_2=None):
-    length = super_variant[0].get_length()
+    length = super_variant.get_length()
     cut_off_point = int(9 * 13 / length) if current_annotations else 13
 
     ax, width, height = SVV.arrange_super_variant(
-        super_variant[0], ax,
-        0, 0,
-        "*", mode, 7, 7,
+        super_variant,
+        ax, 0, 0, "*", mode, 7, 7,
         cut_off_point)
 
     ax.set_aspect('equal')
@@ -271,12 +270,12 @@ def plot_axis(super_variant, ax, mode, current_annotations=None, sv_2=None):
     ax.axis('off')
 
     if TOOLTIPS:
-        message = "See Super Variant " + str(super_variant[0].id) + " in Detail"
+        message = "See Super Variant " + str(super_variant.id) + " in Detail"
         if sv_2:
             if sv_2[1] is not None and sv_2[2] is not None:
                 message = "See Details on this Super Variants Summarization"
             append_annotation(current_annotations, ax, message)
-            ax.figure.texts.append(ax.texts.pop())
+            ax.figure.texts.append(message)
         else:
             append_annotation(current_annotations, ax, message)
-            ax.figure.texts.append(ax.texts.pop())
+            ax.figure.texts.append(message)
