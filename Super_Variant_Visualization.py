@@ -86,7 +86,7 @@ def visualize_super_variant(super_variant, suppression_char="*", mode=Mode.ACTIV
         manager = plt.get_current_fig_manager()
         # manager.pyplot_show()
         plt.show()
-        fig.savefig("SingleSuperVariants/SuperVariant_" + str(super_variant.id) + ".svg")
+        fig.savefig("Visualizations/SingleSuperVariants/SuperVariant_" + str(super_variant.id) + ".svg")
 
 
 def is_inside(circle_xy, rad, xy):

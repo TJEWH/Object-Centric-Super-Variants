@@ -159,7 +159,7 @@ def visualize_super_variant_layer(super_variants, current_layer, current_start_i
     # manager.pyplot_show()
     plt.show()
 
-    fig.savefig("SuperVariantsLayer/Layer_" + str(current_layer) + "_" + str(start_index) + "_to_" + str(
+    fig.savefig("Visualizations/SuperVariantsLayer/Layer_" + str(current_layer) + "_" + str(start_index) + "_to_" + str(
         (current_start_index + 2) % maximal_index) + ".svg")
 
 
@@ -237,7 +237,7 @@ def visualize_single_summarization_step(super_variant_1, super_variant_2, new_su
     # manager.pyplot_show()
     plt.show()
 
-    fig.savefig("SuperVariantsCompositions/SuperVariant_" + str(new_super_variant.id) + "_from" + str(
+    fig.savefig("Visualizations/SuperVariantsCompositions/SuperVariant_" + str(new_super_variant.id) + "_from" + str(
         super_variant_1[0].id) + "_and_" + str(super_variant_2[0].id) + ".svg")
 
 
