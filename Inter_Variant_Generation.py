@@ -1,9 +1,10 @@
-import Inter_Variant_Summarization as IVS
-import Super_Variant_Visualization as SVV
-from enum import Enum
 import copy
 import math
 import time
+from enum import Enum
+
+import Inter_Variant_Summarization as IEVS
+import Super_Variant_Visualization as SVV
 
 
 class Distribution(Enum):
@@ -255,7 +256,7 @@ def generate_super_variant_hierarchy_by_cost(initial_super_variant_set, max_numb
         for i in indexed_initial_set.keys():
             for j in indexed_initial_set.keys():
                 if j > i:
-                    mapping, cost = IVS.decide_matching(
+                    mapping, cost = IEVS.decide_matching(
                         indexed_initial_set[i][0],
                         indexed_initial_set[j][0],
                         copy.deepcopy(indexed_initial_set[i][0].lanes),
@@ -285,7 +286,7 @@ def generate_super_variant_hierarchy_by_cost(initial_super_variant_set, max_numb
             super_variant1 = indexed_initial_set[cluster[0]]
             for i in range(1, len(cluster)):
                 super_variant2 = indexed_initial_set[cluster[i]]
-                super_variant, cost = IVS.join_super_variants(
+                super_variant, cost = IEVS.join_super_variants(
                     super_variant1[0],
                     super_variant2[0],
                     NESTED_STRUCTURES,

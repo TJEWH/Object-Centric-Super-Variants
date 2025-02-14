@@ -34,8 +34,11 @@ def get_preliminary_interaction_points(mappings, lanes):
         element = [lane for lane in lanes if lane.lane_id == first_key][0].get_element(mappings[mapping][first_key])
         activity_label = element.activity
 
-        interaction_point = IED.InteractionPoint(activity_label, list(mappings[mapping].keys()), types, None,
-                                                 list(mappings[mapping].values()))
+        interaction_point = IED.InteractionPoint(
+            activity_label, list(mappings[mapping].keys()),
+            types,
+            None,
+            list(mappings[mapping].values()))
         interaction_points.append(interaction_point)
 
     return interaction_points

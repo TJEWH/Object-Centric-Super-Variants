@@ -2,9 +2,8 @@ from ocpa.objects.log.importer.ocel import factory as ocel_import_factory
 from ocpa.visualization.log.variants import factory as variants_visualization_factory
 
 import Intra_Variant_Generation as IAVG
-import Summarization_Selection as SS
+import Summarization_Selection as IASS
 import Inter_Variant_Generation as IEVG
-
 import Inter_Variant_Summarization as IEVS
 import Intra_Variant_Summarization as IAVS
 import Input_Extraction_Definition as IED
@@ -19,10 +18,8 @@ import math
 
 # Always take maximal generalization
 class Setting(Enum):
-
     # For all pairs of the randomly sampled 10 variants
     ALL_SINGLE_INTER = 1
-
     # For all single variants 
     ALL_SINGLE_INTRA = 2
 
@@ -31,7 +28,7 @@ CURRENT_SETTING = None
 
 
 # Experiment 1: Various Intra-Variant Summarizations
-if(CURRENT_SETTING == Setting.ALL_SINGLE_INTRA):
+if CURRENT_SETTING == Setting.ALL_SINGLE_INTRA:
 
     # Load data
     filename = "EventLogs/PerformanceAnalysis/BPI2017-Filtered_80.jsonocel"
@@ -81,7 +78,7 @@ if(CURRENT_SETTING == Setting.ALL_SINGLE_INTER):
     
     # Initial Super Variant Generation and Selection
     all_summarizations, per_variant_dict, per_encoding_dict = IAVG.complete_intra_variant_summarization_from_process(ocel)
-    selected_summarizations = SS.intra_variant_summarization_selection(all_summarizations, per_variant_dict, per_encoding_dict)
+    selected_summarizations = IASS.intra_variant_summarization_selection(all_summarizations, per_variant_dict, per_encoding_dict)
 
     data_nested = []
     data_nnested = []
@@ -241,7 +238,6 @@ if(CURRENT_SETTING == Setting.ALL_SINGLE_INTER):
 
  # Experiment 3: Super Variant Hierarchy Construction
 else:
-
     NUMBER_REPETITIONS = 5
 
     # Load data
@@ -250,7 +246,7 @@ else:
 
     # Initial Super Variant Generation and Selection
     all_summarizations, per_variant_dict, per_encoding_dict = IAVG.complete_intra_variant_summarization_from_process(ocel)
-    selected_summarizations = SS.intra_variant_summarization_selection(all_summarizations, per_variant_dict, per_encoding_dict)
+    selected_summarizations = IASS.intra_variant_summarization_selection(all_summarizations, per_variant_dict, per_encoding_dict)
 
     for size in [4,8,16,32]:
         print("Input size: " + str(size))
@@ -269,7 +265,7 @@ else:
             # Construct hierarchy
             try:
                 time_before_hierarchy = time.perf_counter()
-                hierarchies, times = IEVG.generate_super_variant_hierarchy_by_cost([(super_variant, None, None) for super_variant in sample], math.inf, 0, 2, meassure_times = True, times = dict())
+                hierarchies, times = IEVG.generate_super_variant_hierarchy_by_cost([(super_variant, None, None) for super_variant in sample], math.inf, 0, 2, measure_times = True, times = dict())
                 time_after_hierarchy = time.perf_counter()
 
                 print("Total time for the Super Variant Hierarchy Generation: " + str(time_after_hierarchy - time_before_hierarchy))
@@ -286,7 +282,7 @@ else:
         # Write into file
         header = ['Level', 'Total Time', 'Mapping Time', 'Clustering Time', 'Summarization Time', 'Size', 'Number of Summarizations', 'Average Number of Offers']
 
-        with open('PerformanceResults/BPI2017_80_Random_' + str(size) + '_hierarchy_f.csv', 'w', encoding='UTF8', newline='') as f:
+        with open('Evaluation/PerformanceResults/BPI2017_80_Random_' + str(size) + '_hierarchy_f.csv', 'w', encoding='UTF8', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(header)
             writer.writerows(data)

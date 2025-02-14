@@ -132,7 +132,7 @@ def __inter_lane_summarization(lanes, interactions, print_results, current_lane=
                 interaction_points.extend(interaction_point_list)
 
             for i in range(len(interaction_points)):
-                identifier = 0 if intra else identifier = i
+                identifier = 0 if intra else i
 
                 if ((identifier, interaction_points[i].activity_name,
                      str([str(position) for position in interaction_points[i].exact_positions]),
@@ -267,7 +267,6 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
         choice = []
 
         for i in range(len(elements[1])):
-
             if (isinstance(elements[1][i], SVD.InteractionConstruct) or
                     isinstance(elements[1][i], SVD.GeneralChoiceStructure)):
 
@@ -278,10 +277,7 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
                         elements[1][i].position)
 
                     for interaction_point in interaction_points:
-                        if intra:
-                            identifier = 0
-                        else:
-                            identifier = elements[0]
+                        identifier = 0 if intra else elements[0]
 
                         if ((identifier, interaction_point.activity_name,
                              str([str(position) for position in interaction_point.exact_positions]),
