@@ -1,3 +1,5 @@
+'''import matplotlib
+matplotlib.use('TkAgg')'''
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import Super_Variant_Definition as SVD
@@ -82,8 +84,7 @@ def visualize_super_variant(super_variant, suppression_char="*", mode=Mode.ACTIV
             fig.canvas.mpl_connect('motion_notify_event', hover_tooltip)
 
         manager = plt.get_current_fig_manager()
-        manager.window.showMaximized()
-        
+        # manager.pyplot_show()
         plt.show()
         fig.savefig("SingleSuperVariants/SuperVariant_" + str(super_variant.id) + ".svg")
 
@@ -131,7 +132,7 @@ def visualize_variant(variant, id, mode=Mode.NO_FREQUENCY):
         plt.axis('off')
 
         manager = plt.get_current_fig_manager()
-        manager.window.showMaximized()
+        # manager.pyplot_show()
         plt.show()
 
 
