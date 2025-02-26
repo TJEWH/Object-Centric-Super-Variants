@@ -37,7 +37,7 @@ def manual_alignment_l(lane,positions):
     return lane
 
 VISUALIZE_INTERMEDIATE_RESULTS = False
-MODE = 4
+MODE = 1
 ILA.ALIGN = False
 
 def custom_alignment(positions, super_variant):
@@ -178,9 +178,9 @@ if(MODE == 4):
     hierarchies, final_super_variants = IEVG.generate_super_variant_hierarchy(initial_super_variants, base = 2)
 
 
-    #positions = [[3,4,5,[6,6,[[6]]],7],[4,5,[6,6,[[6]]],7],[[6,6,[[6]]],7],[1,2,3,[6,6,[[6]]],7],[0],[0,1,2]]
-    #interactions = [[0,0],[4,4],[1,1],[5,5],[3,3],[2,2],[6,6,6,6],[7,7,7,7]]
-    #SVV.visualize_super_variant(manual_alignment(hierarchies[0][2][0][0][0],positions,interactions))
+    positions = [[3,4,5,[6,6,[[6]]],7],[4,5,[6,6,[[6]]],7],[[6,6,[[6]]],7],[1,2,3,[6,6,[[6]]],7],[0],[0,1,2]]
+    interactions = [[0,0],[4,4],[1,1],[5,5],[3,3],[2,2],[6,6,6,6],[7,7,7,7]]
+    SVV.visualize_super_variant(manual_alignment(hierarchies[0][2][0][0][0],positions,interactions))
 
     #positions = [[5,6,7,8],[6,7,8],[0,[1,1,[[1],[1]]]],[8],[3,4,5,8],[0,[1,1,[[1],[1]]],2],[2,3,4]]
     #interactions = [[0,0],[6,6],[2,2],[3,3],[1,1],[1,1],[7,7],[5,5],[4,4],[8,8,8,8]]
@@ -228,7 +228,7 @@ if(MODE == 4):
     #interactions = [[0,0],[0,0],[3,3],[5,5],[1,1],[1,1],[2,2],[4,4],[6,6],[7,7],[8,8,8,8]]
     #VV.visualize_super_variant(manual_alignment(hierarchies[0][0][0][2][0],positions,interactions))
 
-
+    """
     for i in range(len(hierarchies[0][2][0][1][0].interaction_points)):
         print((hierarchies[0][2][0][1][0].interaction_points)[i])
     #for i in range(10):
@@ -245,7 +245,7 @@ if(MODE == 4):
     interactions = [[0,0],[6,6],[2,2],[3,3],[1,1],[7,7],[5,5],[4,4],[8,8],[7,7],[9,9],[9,9],[11,11,11,11],[12,12,12,12]]
     super_variant = manual_alignment(hierarchies[0][2][0][1][0],positions,interactions)
     #super_variant.interaction_points.append(IED.InteractionPoint('Create Invoice Receipt',lanes,('invoice receipt','goods receipt'),10,[IED.]))
-    SVV.visualize_super_variant(super_variant)
+    #SVV.visualize_super_variant(super_variant)
 
 
 
@@ -264,6 +264,7 @@ if(MODE == 4):
 
         #print("Cost for hierarchy " + str(i) + ": " + str(accumulated_cost))
 
+    """
 
 
                 

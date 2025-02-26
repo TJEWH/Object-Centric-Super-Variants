@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import Super_Variant_Definition as SVD
@@ -68,9 +70,9 @@ def visualize_super_variant(super_variant, suppression_char = "*", mode = Mode.A
             fig.canvas.mpl_connect('motion_notify_event', hover_tooltip)
 
         manager = plt.get_current_fig_manager()
-        manager.window.showMaximized()
+        # manager.window.showMaximized()
         plt.show()
-        fig.savefig("SingleSuperVariants/SuperVariant_" + str(super_variant.id) + ".svg")
+        fig.savefig("Visualizations/SingleSuperVariants/SuperVariant_" + str(super_variant.id) + ".svg")
 
 
 def is_inside(circle_xy, rad, xy):
@@ -115,7 +117,7 @@ def visualize_variant(variant, id, mode = Mode.NO_FREQUENCY):
         plt.axis('off')
 
         manager = plt.get_current_fig_manager()
-        manager.window.showMaximized()
+        # manager.window.showMaximized()
         plt.show()
 
 
@@ -349,7 +351,7 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
     if(OUTLINE_INTERACTIONS):
         line_width = 0.25
     else:
-        line_width = 0
+        line_width = 0.01
 
     sub_height = 1 / len(interacting_lanes)
     current_percentage = 0

@@ -1,9 +1,11 @@
 import Super_Variant_Visualization as SVV
-import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 MODE = SVV.Mode.LANE_FREQUENCY
-TOOLTIPS = True
+TOOLTIPS = False
+
 
 def explore_hierarchy_bottom_up(super_variants):
     '''
@@ -149,10 +151,10 @@ def visualize_super_variant_layer(super_variants, current_layer, current_start_i
     fig.canvas.mpl_connect('key_press_event', go_left_right)
 
     manager = plt.get_current_fig_manager()
-    manager.window.showMaximized()
+    # manager.window.showMaximized()
     plt.show()
 
-    fig.savefig("SuperVariantsLayer/Layer_" + str(current_layer) + "_" + str(start_index) + "_to_" + str((current_start_index + 2) % maximal_index) + ".svg")
+    fig.savefig("Visualizations/SuperVariantsLayer/Layer_" + str(current_layer) + "_" + str(start_index) + "_to_" + str((current_start_index + 2) % maximal_index) + ".svg")
 
 
 def visualize_single_summarization_step(super_variant_1, super_variant_2, new_super_variant):
@@ -297,7 +299,7 @@ def visualize_single_summarization_step(super_variant_1, super_variant_2, new_su
     fig.canvas.mpl_connect('button_press_event', click)
 
     manager = plt.get_current_fig_manager()
-    manager.window.showMaximized()
+    # manager.window.showMaximized()
     plt.show()
 
-    fig.savefig("SuperVariantsCompositions/SuperVariant_" + str(new_super_variant.id) + "_from" + str(super_variant_1[0].id) + "_and_" + str(super_variant_2[0].id) + ".svg")
+    fig.savefig("Visualizations/SuperVariantsCompositions/SuperVariant_" + str(new_super_variant.id) + "_from" + str(super_variant_1[0].id) + "_and_" + str(super_variant_2[0].id) + ".svg")
