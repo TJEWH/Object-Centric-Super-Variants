@@ -9,6 +9,7 @@ def __solve_hitting_set_problem(T, S):
     :rtype: list
     """
     import gurobipy
+    gurobipy.setParam('OutputFlag', 0)
     model = gurobipy.Model("hittingSet")
     x = {}
     for elem in T:

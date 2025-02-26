@@ -404,6 +404,7 @@ def cluster_by_frequency(indexed_initial_set, number_of_clusters, distribution_t
                     (st.norm.cdf(i * step_size) - 0.5) * 2)) * accumulated_frequency)
 
     import gurobipy
+    gurobipy.setParam('OutputFlag', 0)
     model = gurobipy.Model("ClusteringByFrequency")
     x = {}
     for i in range(number_of_clusters):
@@ -471,6 +472,7 @@ def cluster_by_size(indexed_initial_set, cluster_size, distances, print_results=
     number_of_clusters = math.ceil(len(indexed_initial_set) / cluster_size)
 
     import gurobipy
+    gurobipy.setParam('OutputFlag', 0)
     model = gurobipy.Model("ClusteringBySize")
 
     x = {}

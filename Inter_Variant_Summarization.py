@@ -705,6 +705,7 @@ def find_best_matching(nodes, arcs):
     :rtype: list
     """
     import gurobipy
+    gurobipy.setParam('OutputFlag', 0)
     model = gurobipy.Model("limitedMatching")
 
     x = {}
