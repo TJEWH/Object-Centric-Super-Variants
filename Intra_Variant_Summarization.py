@@ -1,7 +1,6 @@
 import Super_Variant_Definition as SVD
 import Inter_Lane_Summarization as ILS
 import Inter_Lane_Alignment as ILA
-import Super_Variant_Visualization as SVV
 
 
 def get_candidates(lanes, interactions):

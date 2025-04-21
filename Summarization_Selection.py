@@ -1,3 +1,6 @@
+import logging
+
+
 def __solve_hitting_set_problem(T, S):
     """
     Solves the Hitting Set Problem for a universe T and subsets S in an IP.
@@ -24,14 +27,14 @@ def __solve_hitting_set_problem(T, S):
     model.modelSense = gurobipy.GRB.MINIMIZE
     model.optimize()
 
-    print('\n Objective value: %g\n' % model.ObjVal)
-    print('\n Variable values: \n')
+    logging.debug('\n Objective value: %g\n' % model.ObjVal)
+    logging.debug('\n Variable values: \n')
     solution = []
     for elem in T:
-        print(str(elem[0]) + ": " + str(x[elem[1][0]].X))
+        logging.debug(str(elem[0]) + ": " + str(x[elem[1][0]].X))
         if x[elem[1][0]].X == 1.0:
             solution.append(elem)
-    print("-----------------------------")
+    logging.debug("-----------------------------")
     return solution
 
 
@@ -54,9 +57,10 @@ def intra_variant_summarization_selection(all_summarizations, summarizations_per
         if [elem for elem in solution if elem[1][0] == key]:
             result[key] = summarizations_per_encoding[key]
 
-    print(
+    logging.debug(
         str(len(result)) + "/" + str(len(summarizations_per_encoding)) +
-        "unique summarizations have been selected for the Between-Lane Summarization.")
+        "unique summarizations have been selected for the Between-Lane Summarization."
+    )
 
     initial_set_of_super_variants = []
 

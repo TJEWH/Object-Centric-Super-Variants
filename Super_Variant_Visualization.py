@@ -1,5 +1,7 @@
 '''import matplotlib
 matplotlib.use('TkAgg')'''
+import logging
+
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import Super_Variant_Definition as SVD
@@ -33,7 +35,7 @@ def visualize_super_variant(super_variant, suppression_char="*", mode=Mode.ACTIV
     :type mode: Mode
     """
     if len(super_variant.lanes) > 20:
-        print("Summarization too large, cannot be visualized.")
+        logging.error("Summarization too large, cannot be visualized.")
         return
 
     else:
@@ -118,7 +120,7 @@ def visualize_variant(variant, id, mode=Mode.NO_FREQUENCY):
     :type mode: mode
     """
     if len(variant.lanes) > 20:
-        print("Summarization too large, cannot be visualized.")
+        logging.debug("Summarization too large, cannot be visualized.")
         return
 
     else:
@@ -177,7 +179,7 @@ def arrange_super_variant(super_variant, ax, vertical_start_position, horizontal
     maximal_lane_length = 1
     for _type in super_variant.object_types:
         type_lanes = [lane for lane in super_variant.lanes if lane.object_type == _type]
-        # print("SV", super_variant)
+
         color = color_assignment_types[_type]
         offset = 0.09
         scale = 0.9
@@ -381,7 +383,7 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
 
     if not is_interacting:
         interacting_lanes = [[original_lane]]
-        print("Interaction not found.")
+        logging.error("Interaction not found.")
         if MARK_INCORRECT_INTERACTIONS:
             outline_color = "red"
 
