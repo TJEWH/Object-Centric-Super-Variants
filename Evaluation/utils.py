@@ -1,3 +1,5 @@
+import logging
+
 from ocpa.visualization.log.variants import factory as variants_visualization_factory
 
 import Inter_Variant_Generation as IEVG
@@ -28,7 +30,7 @@ def print_hierarchy_costs(hierarchies):
             for level in hierarchy.keys():
                 accumulated_cost += hierarchy[level][1]
 
-        print("Cost for hierarchy " + str(i) + ": " + str(accumulated_cost))
+        logging.info("Cost for hierarchy " + str(i) + ": " + str(accumulated_cost))
 
 
 def print_hierarchy_costs_alt(hierarchies):
@@ -36,7 +38,7 @@ def print_hierarchy_costs_alt(hierarchies):
     for h_list in hierarchies.values()[0]:
 
         for hierarchy in h_list.values():
-            print("Cost for hierarchy " + str(hierarchy[0][0][0].id) + ": " + str(hierarchy[1]))
+            logging.info("Cost for hierarchy " + str(hierarchy[0][0][0].id) + ": " + str(hierarchy[1]))
 
 
 def manual_alignment(super_variant, positions, interactions):
@@ -108,4 +110,4 @@ def visualize_intra_summarizations(intra_variant_summarizations, all_summarizati
 
     except:
         for x in intra_variant_summarizations:
-            print(x)
+            logging.error(x)

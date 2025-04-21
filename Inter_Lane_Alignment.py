@@ -1,5 +1,6 @@
+import logging
+
 from config import BRANCH
-import Super_Variant_Definition as SVD
 import Input_Extraction_Definition as IED
 
 ALIGN = BRANCH["alignment"]["align"]
@@ -157,15 +158,13 @@ def __combine_interactions(mappings):
     return new_mappings
 
 
-def __re_align_lanes(lanes, mappings, print_result, intra=True, repeat=REPEAT_ALIGNMENT):
+def __re_align_lanes(lanes, mappings, intra=True, repeat=REPEAT_ALIGNMENT):
     """
     Given the summarized Super Lanes and the mappings from original interaction points to new indices, the lanes are aligned according to the interaction points.
     :param lanes: The summarized lanes of the Super Variant
     :type lanes: list of type SuperLane
     :param mappings: The mappings of original interaction points to new indices in the summarized lanes for each lane
     :type mappings: dict
-    :param print_result: Whether the print commands should be executed
-    :type print_result: bool
     :return: The Super Lanes with updated horizontal indices and a list of the corresponding interaction points
     :rtype: list of type SuperLane, list of type InteractionPoint
     """
@@ -189,10 +188,9 @@ def __re_align_lanes(lanes, mappings, print_result, intra=True, repeat=REPEAT_AL
         relevant_lanes = [copy.deepcopy(lane) for lane in aligned_lanes if
                           lane.lane_id in list(earliest_interaction_point[1].keys())]
 
-        if print_result:
-            print("We have an interaction at the following positions in the interacting lanes:")
-            for key in earliest_interaction_point[1].keys():
-                print(str(key) + ": " + str(earliest_interaction_point[1][key]))
+        logging.debug("We have an interaction at the following positions in the interacting lanes:")
+        for key in earliest_interaction_point[1].keys():
+            logging.debug(str(key) + ": " + str(earliest_interaction_point[1][key]))
 
         types = set([lane.object_type for lane in relevant_lanes])
         try:
@@ -205,10 +203,10 @@ def __re_align_lanes(lanes, mappings, print_result, intra=True, repeat=REPEAT_AL
         all_positions = list(earliest_interaction_point[1].values())
 
         if len(set([value.get_base_index() for value in all_positions])) == 1:
-            if print_result:
-                print("No alignment required.")
+            logging.debug("No alignment required.")
             position = all_positions[0]
             index = position.get_base_index()
+
             interacting_lanes = list(earliest_interaction_point[1].keys())
             exact_positions = list(earliest_interaction_point[1].values())
             shifted_lanes = []
@@ -262,9 +260,8 @@ def __re_align_lanes(lanes, mappings, print_result, intra=True, repeat=REPEAT_AL
                         exact_positions.append(updated_positions[str(current_position)])
                         fixed_positions[lane.lane_id].append(str(updated_positions[str(current_position)]))
 
-                        if print_result:
-                            print("We have shifted lane " + new_lane.lane_name + " by " + str(
-                                offset) + " starting from the element at the position " + str(current_position) + ".")
+                        logging.info("We have shifted lane " + new_lane.lane_name + " by " + str(offset) +
+                                     " starting from the element at the position " + str(current_position) + ".")
                         changes_made = True
 
                         # Update all values in the dictionary accordingly
@@ -283,10 +280,8 @@ def __re_align_lanes(lanes, mappings, print_result, intra=True, repeat=REPEAT_AL
 
                         shifted_lanes.append(new_lane)
                     else:
-                        if print_result:
-                            print(
-                                "The lane " + new_lane.lane_name + "could not be shifted without influencing an "
-                                                                   "already aligned interaction point.")
+                        logging.warning("The lane " + new_lane.lane_name +
+                                        "could not be shifted without influencing an already aligned interaction point.")
 
                         exact_positions.append(current_position)
                         shifted_lanes.append(lane)
@@ -316,9 +311,15 @@ def __re_align_lanes(lanes, mappings, print_result, intra=True, repeat=REPEAT_AL
     if repeat and changes_made:
         new_mappings = dict()
         for i in range(len(updated_interaction_points)):
-            new_mappings[i] = dict(zip(updated_interaction_points[i].interaction_lanes, updated_interaction_points[i].exact_positions))
+            new_mappings[i] = dict(zip(updated_interaction_points[i].interaction_lanes,
+                                       updated_interaction_points[i].exact_positions))
 
-        return __re_align_lanes(copy.deepcopy(final_lanes), copy.deepcopy(new_mappings), print_result, intra, repeat)
+        return __re_align_lanes(
+            lanes=copy.deepcopy(final_lanes),
+            mappings=copy.deepcopy(new_mappings),
+            intra=intra,
+            repeat=repeat
+        )
 
     return final_lanes, updated_interaction_points
 
@@ -408,7 +409,7 @@ def create_duplicate_interaction(mappings, lanes):
                                     watchlist = [_id for _id in watchlist if _id != lane_id]
 
                                 else:
-                                    print("Update suitable position")
+                                    logging.debug("Update suitable position")
                                     #TODO
                                     #if(mappings[key][key2][1] < current_interaction_point[1][key2][1]):
                                     #lower_bound = max(mappings[key][duplicate[1]][1] + 1, lower_bound)

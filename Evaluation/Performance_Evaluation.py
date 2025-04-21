@@ -1,3 +1,5 @@
+import logging
+
 from ocpa.objects.log.importer.ocel import factory as ocel_import_factory
 from ocpa.visualization.log.variants import factory as variants_visualization_factory
 
@@ -53,10 +55,10 @@ if CURRENT_SETTING == Setting.ALL_SINGLE_INTRA:
 
     # 1.1
     if BRANCH == "eval":
-        # Store and print results and statistics on the input
+        # Store and logg results and statistics on the input
         data = []
         for i in range(len(times)):
-            print("Writing data for variant: " + str(i))
+            logging.debug("Writing data for variant: " + str(i))
             number_events = len(variant_layout[ocel.variants[i]][0])
             number_application = len([value for value in list(variant_layout[ocel.variants[i]][1].values()) if value[0] == 'application'])
             number_offer = len([value for value in list(variant_layout[ocel.variants[i]][1].values()) if value[0] == 'offer'])
@@ -64,12 +66,12 @@ if CURRENT_SETTING == Setting.ALL_SINGLE_INTRA:
             candidates = IAVS.get_candidates(extracted_variant.lanes, extracted_variant.interaction_points)
             maximal_merging_size = max(len(l) for l in candidates)
             if len(extracted_variant.lanes) <= 4:
-                extracted_summarizations = IAVS.within_variant_summarization(extracted_variant, False)
+                extracted_summarizations = IAVS.within_variant_summarization(extracted_variant)
                 data.append([i, times[i], number_events, number_application, number_offer, maximal_merging_size, len(extracted_summarizations)])
             else:
                 data.append([i, times[i], number_events, number_application, number_offer, maximal_merging_size, 0])
 
-        print("Total time for the Intra-Variant-Summarizations: " + str(time_after_intra - time_before_intra))
+        logging.info("Total time for the Intra-Variant-Summarizations: " + str(time_after_intra - time_before_intra))
 
         # Write results into files
         header = ['Variant', 'Total Time', 'Number of Events', 'Number of Application', 'Number of Offer', 'Size of Maximal Merging Candidate', 'Number of Summarizations']
@@ -85,7 +87,7 @@ if CURRENT_SETTING == Setting.ALL_SINGLE_INTRA:
         selected_summarizations = IASS.intra_variant_summarization_selection(all_summarizations, per_variant_dict,
                                                                              per_encoding_dict)
         time_after_hitting = time.perf_counter()
-        print(time_after_hitting - time_before_hitting)
+        logging.debug("Time for hitting set generation: " + str(time_after_hitting - time_before_hitting))
 
         with open(f'{export_path}/{file_base}_HittingSet.csv', 'w', encoding='UTF8', newline='') as f:
             writer = csv.writer(f)
@@ -118,15 +120,16 @@ if CURRENT_SETTING == Setting.ALL_SINGLE_INTER:
     for iteration in range(NUMBER_REPETITIONS):
 
         # Sample initial set of super variants (the same for both modes)
-        super_variants = [summarization for summarization in selected_summarizations if len(summarization.get_lanes_of_type('offer')) < 4]
+        super_variants = [summarization for summarization in selected_summarizations
+                          if len(summarization.get_lanes_of_type('offer')) < 4]
         sample_nested = random.sample(super_variants, SAMPLE_SIZE)
         sample_nnested = sample_nested
 
         # Summarize super variants with increasing range of variants
         for number in SV_RANGE:
-            print("Starting iteration for sets of " + str(number))
-            print("-------------------------------")
-            print("Nested")
+            logging.debug("Starting iteration for sets of " + str(number))
+            logging.debug("-------------------------------")
+            logging.debug("Nested")
 
             # Sample first super variants to ensure the same sample for both modes
             sample = sample_nested[:SAMPLE_SIZE]
@@ -153,7 +156,7 @@ if CURRENT_SETTING == Setting.ALL_SINGLE_INTER:
 
             for i in range(len(sample) - 1):
                 for j in range(i + 1, len(sample)):
-                    print(str(i) + "|" + str(j))
+                    logging.debug(str(i) + "|" + str(j))
 
                     time_before_mapping = time.perf_counter()
                     mapping12, cost12 = IEVS.decide_matching(
@@ -174,7 +177,9 @@ if CURRENT_SETTING == Setting.ALL_SINGLE_INTER:
                             super_variant, c = IEVS.inter_variant_summarization(
                                 copy.deepcopy(sample[j]),
                                 copy.deepcopy(sample[i]),
-                                mapping21, True, False), cost21
+                                mapping21,
+                                True
+                            ), cost21
                             results_nested.append(super_variant)
                             time_after_join = time.perf_counter()
                             cost = cost21
@@ -189,7 +194,9 @@ if CURRENT_SETTING == Setting.ALL_SINGLE_INTER:
                             super_variant, c = IEVS.inter_variant_summarization(
                                 copy.deepcopy(sample[i]),
                                 copy.deepcopy(sample[j]),
-                                mapping12, True, False), cost12
+                                mapping12,
+                                True
+                            ), cost12
                             results_nested.append(super_variant)
                             time_after_join = time.perf_counter()
                             cost = cost12
@@ -207,12 +214,12 @@ if CURRENT_SETTING == Setting.ALL_SINGLE_INTER:
 
             time_after_inter = time.perf_counter()
 
-            print("Total time for the Inter-Variant-Summarizations with nested operators: " + str(time_after_inter - time_before_inter))
+            logging.info("Total time for the Inter-Variant-Summarizations with nested operators: " + str(time_after_inter - time_before_inter))
             
             # Store measured times
             for i in range(len(sample) - 1):
                 for j in range(i+1, len(sample)):
-                    print("Time for summarizing variants " + str(i) + " and " + str(j) + ": " + str(times_within_inter[(i, j)][1] - times_within_inter[(i, j)][0]))
+                    logging.debug("Time for summarizing variants " + str(i) + " and " + str(j) + ": " + str(times_within_inter[(i, j)][1] - times_within_inter[(i, j)][0]))
                     data_nested.append(
                         [i, j,
                          times_within_inter[(i, j)][0] + times_within_inter[(i, j)][1],
@@ -230,8 +237,8 @@ if CURRENT_SETTING == Setting.ALL_SINGLE_INTER:
             # Update Input
             sample_nested = results_nested
 
-            print("-------------------------------")
-            print("Not nested")
+            logging.debug("-------------------------------")
+            logging.debug("Not nested")
 
             # Sample first super variants to ensure the same sample for both modes
             sample = sample_nnested[:SAMPLE_SIZE]
@@ -257,7 +264,7 @@ if CURRENT_SETTING == Setting.ALL_SINGLE_INTER:
             results_nnested = []
             for i in range(len(sample) - 1):
                 for j in range(i+1, len(sample)):
-                    print(str(i) + "|" + str(j))
+                    logging.debug(str(i) + "|" + str(j))
 
                     time_before_mapping = time.perf_counter()
                     mapping12, cost12 = IEVS.decide_matching(
@@ -278,7 +285,8 @@ if CURRENT_SETTING == Setting.ALL_SINGLE_INTER:
                             super_variant, c = IEVS.inter_variant_summarization(
                                 copy.deepcopy(sample[j]),
                                 copy.deepcopy(sample[i]),
-                                mapping21, True, False), cost21
+                                mapping21, True
+                            ), cost21
                             results_nnested.append(super_variant)
                             time_after_join = time.perf_counter()
                             cost = cost21
@@ -293,7 +301,8 @@ if CURRENT_SETTING == Setting.ALL_SINGLE_INTER:
                             super_variant, c = IEVS.inter_variant_summarization(
                                 copy.deepcopy(sample[i]),
                                 copy.deepcopy(sample[j]),
-                                mapping12, True, False), cost12
+                                mapping12, True
+                            ), cost12
                             results_nnested.append(super_variant)
                             time_after_join = time.perf_counter()
                             cost = cost12
@@ -309,12 +318,12 @@ if CURRENT_SETTING == Setting.ALL_SINGLE_INTER:
 
             time_after_inter = time.perf_counter()
 
-            print("Total time for the Inter-Variant-Summarizations without nested operators: " + str(time_after_inter - time_before_inter))
+            logging.info("Total time for the Inter-Variant-Summarizations without nested operators: " + str(time_after_inter - time_before_inter))
             
             # Store measured times
             for i in range(len(sample) - 1):
                 for j in range(i + 1, len(sample)):
-                    print("Time for summarizing variants " + str(i) + " and " + str(j) + ": " +
+                    logging.debug("Time for summarizing variants " + str(i) + " and " + str(j) + ": " +
                           str(times_within_inter[(i, j)][1] - times_within_inter[(i, j)][0]))
                     data_nnested.append([
                         i, j,
@@ -356,8 +365,8 @@ else:
     selected_summarizations = IASS.intra_variant_summarization_selection(all_summarizations, per_variant_dict, per_encoding_dict)
 
     for size in INPUT_RANGE:
-        print("Input size: " + str(size))
-        print("---------------------------------------")
+        logging.debug("Input size: " + str(size))
+        logging.debug("---------------------------------------")
 
         data = []
         for iteration in range(NUMBER_REPETITIONS):
@@ -377,16 +386,16 @@ else:
                     math.inf, 0, 2, measure_times=True, times=dict())
                 time_after_hierarchy = time.perf_counter()
 
-                print("Total time for the Super Variant Hierarchy Generation: " +
-                      str(time_after_hierarchy - time_before_hierarchy))
+                logging.info("Total time for the Super Variant Hierarchy Generation: " +
+                             str(time_after_hierarchy - time_before_hierarchy))
                         
                 # Store measured times
                 for level in times.keys():
-                    print("Total time for level " + str(level) + ": " + str(times[level][0]))
+                    logging.debug("Total time for level " + str(level) + ": " + str(times[level][0]))
                     data.append([level] + times[level])
 
             except:
-                print("Hierarchy construction not successful")
+                logging.error("Hierarchy construction not successful")
 
         # Write into file
         header = ['Level', 'Total Time', 'Mapping Time', 'Clustering Time', 'Summarization Time', 'Size',

@@ -1,8 +1,10 @@
+import logging
+
 import Super_Variant_Definition as SVD
 import Input_Extraction_Definition as IED
 
 
-def __inter_lane_summarization(lanes, interactions, print_results, current_lane=0, offset=0, intra=False, nested=False):
+def __inter_lane_summarization(lanes, interactions, current_lane=0, offset=0, intra=False, nested=False):
     """
     Performs the summarization of the given Super Lanes using the set of defined patterns.
     :param lanes: The Super Lanes that should be summarized
@@ -11,8 +13,6 @@ def __inter_lane_summarization(lanes, interactions, print_results, current_lane=
     :type interactions: list
     :param current_lane: The lane number that is currently summarized (default 0, otherwise the number of choice this lane represents)
     :type current_lane: int
-    :param print_results: Whether the results should be output in the console
-    :type print_results: bool
     :param offset: The starting index of the horizontal positions
     :type offset: int
     :param intra: Whether the all lanes are from the same variant
@@ -84,7 +84,6 @@ def __inter_lane_summarization(lanes, interactions, print_results, current_lane=
                 interactions,
                 base_lanes,
                 current_lane,
-                print_results,
                 intra)
         else:
             interval_elements, interval_length, interval_mapping = __apply_patterns(
@@ -93,7 +92,6 @@ def __inter_lane_summarization(lanes, interactions, print_results, current_lane=
                 interactions,
                 base_lanes,
                 current_lane,
-                print_results,
                 intra)
 
         elements.extend(interval_elements)
@@ -101,8 +99,7 @@ def __inter_lane_summarization(lanes, interactions, print_results, current_lane=
         current_horizontal_index += interval_length
 
         # Add the common activity to the elements of the summarized lane
-        if print_results:
-            print("\nAdding the common activity: " + str(common_element[0]))
+        logging.debug("\nAdding the common activity: " + str(common_element[0]))
 
         # Get frequency of the event
         element_frequency = 0
@@ -116,8 +113,7 @@ def __inter_lane_summarization(lanes, interactions, print_results, current_lane=
             is_interacting_activity = is_interacting_activity or isinstance(
                 base_lanes[i].get_element(common_element[2][i][2]), SVD.InteractionConstruct)
 
-        if print_results:
-            print("This is an interaction point: " + str(is_interacting_activity))
+        logging.debug("This is an interaction point: " + str(is_interacting_activity))
 
         if is_interacting_activity:
             interaction_points = []
@@ -203,7 +199,6 @@ def __inter_lane_summarization(lanes, interactions, print_results, current_lane=
             interactions,
             base_lanes,
             current_lane,
-            print_results,
             intra)
     else:
         interval_elements, interval_length, interval_mapping = __apply_patterns(
@@ -212,7 +207,6 @@ def __inter_lane_summarization(lanes, interactions, print_results, current_lane=
             interactions,
             base_lanes,
             current_lane,
-            print_results,
             intra)
 
     elements.extend(interval_elements)
@@ -222,7 +216,7 @@ def __inter_lane_summarization(lanes, interactions, print_results, current_lane=
     return elements, new_interaction_points_mapping
 
 
-def __apply_patterns_nested(interval_subprocesses, start_index, interactions, base_lanes, current_lane, print_results,
+def __apply_patterns_nested(interval_subprocesses, start_index, interactions, base_lanes, current_lane,
                             intra=False):
     """
     Applies the defined patterns "Exclusive Choice Pattern" and "Optional Pattern" to the extracted subsequences of the initial Super Lanes between their common activities, allowing nested structures.
@@ -234,8 +228,6 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
     :type base_lanes: list of type SuperLanes
     :param current_lane: The lane to which the patterns are applied
     :type current_lane: int
-    :param print_results: Whether the print commands should be executed
-    :type print_results: bool
     :param intra: Whether the all lanes are from the same variant
     :type intra: bool
     :return: An element summarizing the extracted subprocesses for each initial Super Lane, the length of the element, the mapping from original interaction points to their positions in the element
@@ -246,11 +238,8 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
         return [], 0, dict()
 
     new_mapping = dict()
-    if print_results:
-        print("\n")
-        print("Applying a pattern to the elements: ")
-        for elements in interval_subprocesses:
-            print(elements[1])
+    logging.debug("\nApplying a pattern to the elements: ")
+    [logging.debug(elements[1]) for elements in interval_subprocesses]
 
     returned_elements = []
     end_index = start_index
@@ -430,8 +419,7 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
                     if str(new_mapping[mapping][i]) in extracted_positions_mapping.keys():
                         new_mapping[mapping][i] = extracted_positions_mapping[str(new_mapping[mapping][i])]
 
-        if print_results:
-            __print_optional_pattern(extracted_choices, is_optional)
+        __logging_optional_pattern(extracted_choices, is_optional)
 
         if isinstance(choices[0].elements[0], SVD.OptionalConstruct):
             empty_frequency = 1 - ((empty_frequency / len(interval_subprocesses)) *
@@ -451,8 +439,7 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
         return returned_elements, end_index - start_index + 1, new_mapping
 
     # Applying Optional Pattern
-    if print_results:
-        __print_optional_pattern(choices, is_optional)
+    __logging_optional_pattern(choices, is_optional)
 
     if is_optional:
         empty_frequency = empty_frequency / len(interval_subprocesses)
@@ -478,8 +465,7 @@ def __apply_patterns_nested(interval_subprocesses, start_index, interactions, ba
     return returned_elements, end_index - start_index + 1, new_mapping
 
 
-def __apply_patterns(interval_subprocesses, start_index, interactions, base_lanes, current_lane, print_results,
-                     intra=False):
+def __apply_patterns(interval_subprocesses, start_index, interactions, base_lanes, current_lane, intra=False):
     """
     Applies the defined patterns "Exclusive Choice Pattern" and "Optional Pattern" to the extracted subsequences of the initial Super Lanes between their common activities.
     :param interval_subprocesses: The extracted subprocess for each Super Lane between a pair of common activities
@@ -490,8 +476,6 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
     :type base_lanes: list of type SuperLanes
     :param current_lane: The lane to which the patterns are applied
     :type current_lane: int
-    :param print_results: Whether the print commands should be executed
-    :type print_results: bool
     :param intra: Whether the all lanes are from the same variant
     :type intra: bool
     :return: An element summarizing the extracted subprocesses for each initial Super Lane, the length of the element, the mapping from original interaction points to their positions in the element
@@ -501,11 +485,8 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
         return [], 0, dict()
 
     new_mapping = dict()
-    if print_results:
-        print("\n")
-        print("Applying a pattern to the elements: ")
-        for elements in interval_subprocesses:
-            print(elements[1])
+    logging.debug("\nApplying a pattern to the elements: ")
+    [logging.debug(elements[1]) for elements in interval_subprocesses]
 
     returned_elements = []
     end_index = start_index
@@ -618,8 +599,7 @@ def __apply_patterns(interval_subprocesses, start_index, interactions, base_lane
             choices[i][2],
             [])
 
-    if print_results:
-        __print_optional_pattern(choices, is_optional)
+    __logging_optional_pattern(choices, is_optional)
 
     # Applying Optional Pattern
     if is_optional:
@@ -720,13 +700,12 @@ def __get_longest_common_subsequence(lanes, intra=False, interactions=None):
             return maximum_result, maximum_value, maximum_interaction
 
 
-def __print_optional_pattern(choices, is_optional):
+def __logging_optional_pattern(choices, is_optional):
     # Applying Optional Pattern
     optional_str = "" if not is_optional else " optional"
 
-    # Output printing
-    print(f"\nAdding a{optional_str} choice element between the following sequences.")
+    logging.debug(f"\nAdding a{optional_str} choice element between the following sequences.")
     for choice in choices:
         for elem in choice.elements:
-            print(elem)
-        print("----------")
+            logging.debug(elem)
+        logging.debug("-" * 36)

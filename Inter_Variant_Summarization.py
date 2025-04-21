@@ -1,3 +1,5 @@
+import logging
+
 import Super_Variant_Definition as SVD
 import Inter_Lane_Summarization as ILS
 import Inter_Lane_Alignment as ILA
@@ -6,17 +8,17 @@ import Input_Extraction_Definition as IED
 MINIMUM = True
 
 
-def join_super_variants(super_variant1, super_variant2, allow_nested_structures=True, print_result=True):
+def join_super_variants(super_variant1, super_variant2, allow_nested_structures=True):
     """
-    Determines the lanes of the two Super Variants are are to be merged and performs the summarization of the Super Variants.
+    Determines the lanes of the two Super Variants are to be merged and performs the summarization of the Super Variants.
+
     :param super_variant1: A Super Variant that is to be joined with another Super Variant
     :type super_variant1: SuperVariant
     :param super_variant2: The second Super Variant that is joined
     :type super_variant2: SuperVariant
     :param allow_nested_structures: Whether the resulting Super Variant can contain nested structures
     :type allow_nested_structures: bool
-    :param print_result: Whether the results should be output in the console
-    :type print_result: bool
+
     :return: The generalizing Super Variant
     :rtype: SuperVariant
     """
@@ -25,31 +27,33 @@ def join_super_variants(super_variant1, super_variant2, allow_nested_structures=
                                         copy.deepcopy(super_variant2),
                                         copy.deepcopy(super_variant1.lanes),
                                         copy.deepcopy(super_variant2.lanes),
-                                        True, print_result)
+                                        True)
     mapping21, cost21 = decide_matching(copy.deepcopy(super_variant2),
                                         copy.deepcopy(super_variant1),
                                         copy.deepcopy(super_variant2.lanes),
                                         copy.deepcopy(super_variant1.lanes),
-                                        True, print_result)
+                                        True)
 
     if cost21 < cost12:
-        if print_result:
-            print("The estimated cost of joining these Super Variants is " + str(cost21) + ".")
+        logging.info("The estimated cost of joining these Super Variants is " + str(cost21) + ".")
 
         return inter_variant_summarization(copy.deepcopy(super_variant2),
                                            copy.deepcopy(super_variant1),
-                                           mapping21, allow_nested_structures, print_result), cost21
+                                           mapping21,
+                                           allow_nested_structures
+                                           ), cost21
 
     else:
-        if print_result:
-            print("The estimated cost of joining these Super Variants is " + str(cost12) + ".")
+        logging.info("The estimated cost of joining these Super Variants is " + str(cost12) + ".")
 
         return inter_variant_summarization(copy.deepcopy(super_variant1),
                                            copy.deepcopy(super_variant2),
-                                           mapping12, allow_nested_structures, print_result), cost12
+                                           mapping12,
+                                           allow_nested_structures
+                                           ), cost12
 
 
-def inter_variant_summarization(summarization1, summarization2, mapping, allow_nested_structures, print_result):
+def inter_variant_summarization(summarization1, summarization2, mapping, allow_nested_structures):
     """
     Summarizes two Super Variants based on a given mapping of the corresponding Super Lanes and aligns the final Super Variant correctly.
     :param summarization1: The first Super Variant of the summarization
@@ -60,8 +64,6 @@ def inter_variant_summarization(summarization1, summarization2, mapping, allow_n
     :type mapping: list
     :param allow_nested_structures: Whether the resulting Super Variant can contain nested structures
     :type allow_nested_structures: bool
-    :param print_result: Whether the results should be output in the console
-    :type print_result: bool
     :return: The summarization of the two Super Variants
     :rtype: SuperVariant
     """
@@ -72,35 +74,30 @@ def inter_variant_summarization(summarization1, summarization2, mapping, allow_n
 
     for pair in mapping:
         if pair[0] is None:
-            if print_result:
-                print("Lane " + str(pair[1]) + " of the Super Variant 2 is made optional.")
+            logging.info("Lane " + str(pair[1]) + " of the Super Variant 2 is made optional.")
 
             lane2 = [lane for lane in summarization2.lanes if lane.lane_id == pair[1]][0]
             super_lane, mapping = optional_super_lane(summarization2, lane2, False)
 
-            if print_result:
-                print("The resulting Super Lane is the following: " + str(super_lane))
+            logging.debug("The resulting Super Lane is the following: " + str(super_lane))
 
             intermediate_lanes.append(super_lane)
             intermediate_mappings.append((super_lane.lane_id, mapping))
 
         elif pair[1] is None:
-            if print_result:
-                print("Lane " + str(pair[0]) + " of the Super Variant 1 is made optional.")
+            logging.info("Lane " + str(pair[0]) + " of the Super Variant 1 is made optional.")
 
             lane1 = [lane for lane in summarization1.lanes if lane.lane_id == pair[0]][0]
             super_lane, mapping = optional_super_lane(summarization1, lane1, True)
 
-            if print_result:
-                print("The resulting Super Lane is the following: " + str(super_lane))
+            logging.debug("The resulting Super Lane is the following: " + str(super_lane))
 
             intermediate_lanes.append(super_lane)
             intermediate_mappings.append((super_lane.lane_id, mapping))
 
         else:
-            if print_result:
-                print("Lane " + str(pair[0]) + " of the Super Variant 1 and lane " +
-                      str(pair[1]) + " of Super Variant 2 are merged.")
+            logging.info("Lane " + str(pair[0]) + " of the Super Variant 1 and lane " +
+                         str(pair[1]) + " of Super Variant 2 are merged.")
 
             lane1 = [lane for lane in summarization1.lanes if lane.lane_id == pair[0]][0]
             lane2 = [lane for lane in summarization2.lanes if lane.lane_id == pair[1]][0]
@@ -108,19 +105,19 @@ def inter_variant_summarization(summarization1, summarization2, mapping, allow_n
                 summarization1,
                 summarization2,
                 lane1, lane2,
-                allow_nested_structures, print_result)
+                allow_nested_structures
+            )
 
-            if print_result:
-                print("The resulting Super Lane is the following: " + str(super_lane))
+            logging.debug("The resulting Super Lane is the following: " + str(super_lane))
 
             intermediate_lanes.append(super_lane)
             intermediate_mappings.append((super_lane.lane_id, mapping))
 
     result_lanes, result_interaction_points = ILA.__re_align_lanes(
-        copy.deepcopy(intermediate_lanes),
-        ILA.join_interaction_mappings(intermediate_mappings),
-        print_result,
-        False)
+        lanes=copy.deepcopy(intermediate_lanes),
+        mappings=ILA.join_interaction_mappings(intermediate_mappings),
+        intra=False
+    )
 
     new_id = list(summarization1.id + summarization2.id)
     new_id.sort()
@@ -131,8 +128,7 @@ def inter_variant_summarization(summarization1, summarization2, mapping, allow_n
         result_interaction_points,
         summarization1.frequency + summarization2.frequency)
 
-    if print_result:
-        print(super_variant)
+    logging.debug(super_variant)
 
     super_variant.encode_lexicographically()
     return super_variant
@@ -172,6 +168,7 @@ def optional_super_lane(summarization, lane, first):
 def new_super_lane(summarization, lane, first, start_index=0, outer_position=None, option=0):
     """
     Creates a new normalized lane from a given Super Lane and stores the new mappings to the new interaction points
+
     :param summarization: The Super Variant corresponding to the given lane
     :type summarization: SuperVariant
     :param lane: The Super Lane that is normalized
@@ -180,6 +177,7 @@ def new_super_lane(summarization, lane, first, start_index=0, outer_position=Non
     :type first: bool
     :param start_index: The horizontal start value for the normalized positions
     :type start_index: int
+
     :return: The normalized equivalence to the lane
     :rtype: SuperLane
     """
@@ -302,9 +300,10 @@ def new_super_lane(summarization, lane, first, start_index=0, outer_position=Non
         new_interaction_points_mapping)
 
 
-def join_super_lanes(summarization1, summarization2, lane1, lane2, allow_nested_structures, print_result=False):
+def join_super_lanes(summarization1, summarization2, lane1, lane2, allow_nested_structures):
     """
     Summarizes two lanes of two Super Variants.
+
     :param summarization1: The Super Variant corresponding to the first lane
     :type summarization1: SuperVariant
     :param summarization2: The Super Variant corresponding to the second lane
@@ -315,8 +314,7 @@ def join_super_lanes(summarization1, summarization2, lane1, lane2, allow_nested_
     :type lane2: SuperLane
     :param allow_nested_structures: Whether the resulting Super Variant can contain nested structures
     :type allow_nested_structures: bool
-    :param print_result: Whether the results should be output in the console
-    :type print_result: bool
+
     :return: The summarization of the two Super Lanes
     :rtype: SuperLane
     """
@@ -335,9 +333,12 @@ def join_super_lanes(summarization1, summarization2, lane1, lane2, allow_nested_
         realizations[i].lane_id = i
         realizations[i].lane_name = "realization " + str(i)
 
-    elements, mappings = ILS.__inter_lane_summarization([lane1, lane2], [summarization1.interaction_points,
-                                                                         summarization2.interaction_points],
-                                                        print_result, nested=allow_nested_structures)
+    elements, mappings = ILS.__inter_lane_summarization(
+        lanes=[lane1, lane2],
+        interactions=[summarization1.interaction_points, summarization2.interaction_points],
+        nested=allow_nested_structures
+    )
+
     return (
         SVD.SuperLane(
             lane_id,
@@ -350,10 +351,10 @@ def join_super_lanes(summarization1, summarization2, lane1, lane2, allow_nested_
         mappings)
 
 
-def decide_matching(summarization1, summarization2, remaining_lanes1, remaining_lanes2, propagate=True,
-                    print_result=True):
+def decide_matching(summarization1, summarization2, remaining_lanes1, remaining_lanes2, propagate=True):
     """
     Performs a mapping between the lanes of one Super Variant to the lanes of the other Super Variant based on the Levenshtein distance.
+
     :param summarization1: The Super Variant corresponding to the first set of lanes
     :type summarization1: SuperVariant
     :param summarization2: The Super Variant corresponding to the second set of lanes
@@ -364,8 +365,7 @@ def decide_matching(summarization1, summarization2, remaining_lanes1, remaining_
     :type remaining_lanes2: list of type SuperLane
     :param propagate: Whether the decision made should be propagated among the interacting lanes
     :type propagate: bool
-    :param print_result: Whether the results should be output in the console
-    :type print_result: bool
+
     :return: A list containing the decided mappings and the accumulated cost
     :rtype: list, int
     """
@@ -373,28 +373,24 @@ def decide_matching(summarization1, summarization2, remaining_lanes1, remaining_
 
     # Base case 1: All lanes of summarization1 are matched
     if len(remaining_lanes1) == 0:
-        if print_result:
-            print("Empty. The rest is optional.")
+        logging.debug("Empty. The rest is optional.")
 
         result = []
         cost = 0
         for lane in remaining_lanes2:
-            if print_result:
-                print("Lane " + str(lane.lane_id) + " of Super Variant 2 has no matching partner and is optional.")
+            logging.debug("Lane " + str(lane.lane_id) + " of Super Variant 2 has no matching partner and is optional.")
             result.append((None, lane.lane_id))
             cost += len(lane.elements)
         return result, cost
 
     # Base case 2: All lanes of summarization2 are matched
     elif len(remaining_lanes2) == 0:
-        if print_result:
-            print("Empty. The rest is optional.")
+        logging.debug("Empty. The rest is optional.")
 
         result = []
         cost = 0
         for lane in remaining_lanes1:
-            if print_result:
-                print("Lane " + str(lane.lane_id) + " of Super Variant 1 has no matching partner and is optional.")
+            logging.debug("Lane " + str(lane.lane_id) + " of Super Variant 1 has no matching partner and is optional.")
             result.append((lane.lane_id, None))
             cost += len(lane.elements)
         return result, cost
@@ -406,10 +402,8 @@ def decide_matching(summarization1, summarization2, remaining_lanes1, remaining_
 
         # Fallback case: no corresponding matching
         if len(matching_candidates_2) == 0:
-            if print_result:
-                print("Lane " + str(
-                    current_matching_candidate_1.lane_id) + "of Super Variant 1 has no matching partner and is "
-                                                            "optional.")
+            logging.debug("Lane " + str(current_matching_candidate_1.lane_id) +
+                          "of Super Variant 1 has no matching partner and is optional.")
 
             matching = [(current_matching_candidate_1.lane_id, None)]
             cost = len(current_matching_candidate_1.elements)
@@ -417,8 +411,8 @@ def decide_matching(summarization1, summarization2, remaining_lanes1, remaining_
             propagation_matching, propagation_cost, new_remaining_lanes1 = propagate_optionality(
                 summarization1,
                 remaining_lanes1,
-                current_matching_candidate_1,
-                print_result)
+                current_matching_candidate_1
+            )
             least_cost = propagation_cost + cost
 
         # Otherwise evaluate decision options
@@ -430,10 +424,9 @@ def decide_matching(summarization1, summarization2, remaining_lanes1, remaining_
             least_cost_new_remaining_lanes2 = []
 
             for candidate_2 in matching_candidates_2:
-                if print_result:
-                    print("Evaluating the decision of matching lane " + str(
-                        current_matching_candidate_1.lane_id) + " of Super Variant 1 with the lane " + str(
-                        candidate_2.lane_id) + " of Super Variant 2.")
+                logging.debug("Evaluating the decision of matching lane " + str(
+                              current_matching_candidate_1.lane_id) + " of Super Variant 1 with the lane " +
+                              str(candidate_2.lane_id) + " of Super Variant 2.")
 
                 intermediate_matching = [(current_matching_candidate_1.lane_id, candidate_2.lane_id)]
                 intermediate_cost = levenshtein_distance(current_matching_candidate_1, candidate_2)
@@ -449,8 +442,7 @@ def decide_matching(summarization1, summarization2, remaining_lanes1, remaining_
                                                      lane.lane_id != candidate_2.lane_id]
 
                 if propagate:
-                    if print_result:
-                        print("Propagating.")
+                    logging.debug("Propagating.")
 
                     # Determine lanes that require immediate propagation for both summarizations
                     interacting_lanes1 = []
@@ -476,12 +468,12 @@ def decide_matching(summarization1, summarization2, remaining_lanes1, remaining_
                         remaining_lanes1,
                         intermediate_remaining_lanes2_now,
                         propagation_lanes1,
-                        propagation_lanes2,
-                        print_result)
+                        propagation_lanes2
+                    )
 
                 else:
-                    if print_result:
-                        print("Not propagating.")
+                    logging.debug("Not propagating.")
+
                     intermediate_propagation_matching = []
                     intermediate_propagation_cost = 0
                     intermediate_remaining_lanes1 = remaining_lanes1
@@ -489,8 +481,8 @@ def decide_matching(summarization1, summarization2, remaining_lanes1, remaining_
 
                 # Update the best evaluated choice
                 if intermediate_propagation_cost + intermediate_cost < least_cost:
-                    if print_result:
-                        print("This is so far the most optimal decision.")
+                    logging.debug("This is so far the most optimal decision.")
+
                     least_cost = intermediate_propagation_cost + intermediate_cost
                     least_cost_matching = intermediate_matching
                     least_cost_propagation_matching = intermediate_propagation_matching
@@ -503,8 +495,7 @@ def decide_matching(summarization1, summarization2, remaining_lanes1, remaining_
             new_remaining_lanes1 = least_cost_new_remaining_lanes1
             new_remaining_lanes2 = least_cost_new_remaining_lanes2
 
-        if print_result:
-            print("------------------------------------")
+        logging.debug("-" * 36)
 
         # Continue matching
         if len(new_remaining_lanes1) == 0 and len(new_remaining_lanes2) == 0:
@@ -515,13 +506,14 @@ def decide_matching(summarization1, summarization2, remaining_lanes1, remaining_
                 summarization1,
                 summarization2,
                 new_remaining_lanes1,
-                new_remaining_lanes2,
-                print_result)
+                new_remaining_lanes2
+            )
+
         return matching + propagation_matching + following_matching, least_cost + following_cost
 
 
 def propagate_decision(summarization1, summarization2, remaining_lanes1, remaining_lanes2,
-                       current_candidates_lanes1, current_candidates_lanes2, print_result):
+                       current_candidates_lanes1, current_candidates_lanes2):
     """
     Propagates a mapping between two Super Lanes among the corresponding interacting lanes and evaluates the propagative cost.
     :param summarization1: The Super Variant corresponding to the first set of lanes
@@ -536,16 +528,14 @@ def propagate_decision(summarization1, summarization2, remaining_lanes1, remaini
     :type current_candidates_lanes1: list of type SuperLane
     :param current_candidates_lanes2: The set of Super Lanes of Super Variant 2 among which the decision is propagation
     :type current_candidates_lanes2: list of type SuperLane
-    :param print_result: Whether the results should be output in the console
-    :type print_result: bool
-    :return: A list containing the propagated mappings, the propagative cost, the list of remainining non-mapped lanes of Super Variant 1 and 2, respectively
+    :return: A list containing the propagated mappings, the propagate cost, the list of remaining non-mapped lanes of Super Variant 1 and 2, respectively
     :rtype: list, int, list, list
     """
     import copy
 
-    if print_result:
-        print("Propagating the last decision among " + str(current_candidates_lanes1) + " and " + str(
-            current_candidates_lanes2) + ".")
+    logging.debug("Propagating the last decision among " + str(current_candidates_lanes1) + " and " +
+                  str(current_candidates_lanes2) + ".")
+
     new_remaining_lanes1 = copy.deepcopy(remaining_lanes1)
     new_remaining_lanes2 = copy.deepcopy(remaining_lanes2)
 
@@ -554,7 +544,8 @@ def propagate_decision(summarization1, summarization2, remaining_lanes1, remaini
         summarization2,
         current_candidates_lanes1,
         current_candidates_lanes2,
-        False, print_result)
+        False
+    )
 
     # Remove matched lanes from lists
     for pair in matching_result:
@@ -564,8 +555,7 @@ def propagate_decision(summarization1, summarization2, remaining_lanes1, remaini
             new_remaining_lanes2 = [lane for lane in new_remaining_lanes2 if lane.lane_id != pair[1]]
 
     for pair in matching_result:
-        if print_result:
-            print("Propagating.")
+        logging.debug("Propagating.")
 
         # Determine lanes that require immediate propagation for both summarizations
         interacting_lanes1 = []
@@ -589,8 +579,8 @@ def propagate_decision(summarization1, summarization2, remaining_lanes1, remaini
             new_remaining_lanes1,
             new_remaining_lanes2,
             propagation_lanes1,
-            propagation_lanes2,
-            print_result)
+            propagation_lanes2
+        )
 
         matching_result.extend(propagation_matching)
         matching_cost += propagation_cost
@@ -600,7 +590,7 @@ def propagate_decision(summarization1, summarization2, remaining_lanes1, remaini
     return matching_result, matching_cost, new_remaining_lanes1, new_remaining_lanes2
 
 
-def propagate_optionality(summarization, remaining_lanes, current_candidate, print_result):
+def propagate_optionality(summarization, remaining_lanes, current_candidate):
     """
     Propagates the decision of making a Super Lane optional among the interacting lanes.
     :param summarization: The Super Variant among which the optimality of a Super Lane should be propagated
@@ -609,8 +599,6 @@ def propagate_optionality(summarization, remaining_lanes, current_candidate, pri
     :type remaining_lanes: list of type SuperLane
     :param current_candidate: The Super Lane that is made optional
     :type current_candidate: SuperLane
-    :param print_result: Whether the results should be output in the console
-    :type print_result: bool
     :return: A list containing the propagated mappings, the propagative cost, the list of remainining non-mapped lanes of the Super Variant
     :rtype: list, int, list
     """
@@ -633,8 +621,8 @@ def propagate_optionality(summarization, remaining_lanes, current_candidate, pri
 
     while propagation_lanes:
         current_lane = interacting_lanes.pop()
-        if print_result:
-            print("Lane " + str(current_lane.lane_id) + " of Super Variant 1 has no matching partner and is optional.")
+        logging.debug("Lane " + str(current_lane.lane_id) +
+                      " of Super Variant 1 has no matching partner and is optional.")
 
         propagation_result.append(tuple(current_lane.lane_id, None))
         propagation_cost += len(current_lane.elements)
@@ -734,14 +722,14 @@ def find_best_matching(nodes, arcs):
     model.optimize()
     cost = 0
 
-    print('\n Objective value: %g\n' % model.ObjVal)
-    print('\n Variable values: \n')
+    logging.debug('\n Objective value: %g\n' % model.ObjVal)
+    logging.debug('\n Variable values: \n')
 
     for key in arcs.keys():
-        print(str(key) + ": " + str(x[key].X))
+        logging.debug(str(key) + ": " + str(x[key].X))
         if x[key].X == 1.0 and key[1] != "None":
             cost += arcs[key]
-    print("-----------------------------")
+    logging.debug("-" * 36)
     return cost
 
 

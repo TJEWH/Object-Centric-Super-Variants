@@ -1,3 +1,4 @@
+import logging
 import time
 
 from config import BRANCH
@@ -5,53 +6,47 @@ import Input_Extraction_Definition as IED
 import Intra_Variant_Summarization as IAVS
 
 
-def complete_intra_variant_summarization_from_process(process, print_results=False, get_time=False):
+def complete_intra_variant_summarization_from_process(process, get_time=False):
     """
     Given an Object-Centric Event Log, the Intra-Variant Summarizations are generated and sorted by variant.
     :param process: The object-centric event-log in ocel format
     :type process: ocpa.objects.log.ocel.OCEL
-    :param print_results: Whether the print commands should be executed
-    :type print_results: bool
     :param get_time: Whether the runs should be timed
     :type get_time: bool
     :return: A list of all unique_summarizations, a dictionary mapping variant to its summarizations and a dictionary mapping a unique summarization to its SummarizedVariant instances
     :rtype: list, dict, dict
     """
     if get_time:
-        universe, summarization_dictionary, times = get_unique_summarizations_from_process(process, print_results, get_time)
+        universe, summarization_dictionary, times = get_unique_summarizations_from_process(process, get_time)
         all_summarizations, summarizations_per_variant = __determine_subsets(universe, summarization_dictionary)
         return all_summarizations, summarizations_per_variant, summarization_dictionary, times
 
     else:
-        universe, summarization_dictionary = get_unique_summarizations_from_process(process, print_results, get_time)
+        universe, summarization_dictionary = get_unique_summarizations_from_process(process, get_time)
         all_summarizations, summarizations_per_variant = __determine_subsets(universe, summarization_dictionary)
         return all_summarizations, summarizations_per_variant, summarization_dictionary
 
 
-def complete_intra_variant_summarization_from_variants(process, variants, print_results=False):
+def complete_intra_variant_summarization_from_variants(process, variants):
     """
     Given an Object-Centric Event Log, the Intra-Variant Summarizations are generated and sorted by variant.
     :param process: The object-centric event-log in ocel format
     :type process: ocpa.objects.log.ocel.OCEL
     :param variants: a list of variants and their frequencies as tuples
     :type variants: list
-    :param print_results: Whether the print commands should be executed
-    :type print_results: bool
     :return: A list of all unique_summarizations, a dictionary mapping variant to its summarizations and a dictionary mapping a unique summarization to its SummarizedVariant instances
     :rtype: list, dict, dict
     """
-    universe, summarization_dictionary = get_unique_summarizations_from_variants(process, variants, print_results)
+    universe, summarization_dictionary = get_unique_summarizations_from_variants(process, variants)
     all_summarizations, summarizations_per_variant = __determine_subsets(universe, summarization_dictionary)
     return all_summarizations, summarizations_per_variant, summarization_dictionary
 
 
-def get_unique_summarizations_from_process(process, print_results=False, get_time=False):
+def get_unique_summarizations_from_process(process, get_time=False):
     """
     Computes the Intra-Variant Summarizations for each variant of the given event log and determines equality among the resulting summarizations.
     :param process: The object-centric event-log in ocel format
     :type process: ocpa.objects.log.ocel.OCEL
-    :param print_results: Whether the print commands should be executed
-    :type print_results: bool
     :param get_time: Whether the runs should be timed
     :type get_time: bool
     :return: A list containing all unique summarizations and a dictionary mapping the summarizations to their SummarizedVariant instances and corresponding variants
@@ -74,7 +69,7 @@ def get_unique_summarizations_from_process(process, print_results=False, get_tim
         _range, limit = range(len(process.variants)), 4
 
     for i in tqdm(_range):
-        print(' \n' + "Summarizing variant " + str(i) + " of the process...")
+        logging.debug(' \n' + "Summarizing variant " + str(i) + " of the process...")
         if get_time:
             time_before_intra = time.perf_counter()
         extracted_variant = IED.extract_lanes(variant_layout[process.variants[i]], process.variant_frequencies[i])
@@ -84,7 +79,7 @@ def get_unique_summarizations_from_process(process, print_results=False, get_tim
                      for interaction_point in list(extracted_variant.interaction_points)]) <= limit)
 
         if termination_condition:
-            extracted_summarizations = IAVS.within_variant_summarization(extracted_variant, print_results)
+            extracted_summarizations = IAVS.within_variant_summarization(extracted_variant)
             if get_time:
                 time_after_intra = time.perf_counter()
                 times.append(time_after_intra - time_before_intra)
@@ -104,7 +99,7 @@ def get_unique_summarizations_from_process(process, print_results=False, get_tim
                     all_unique_summarizations_set.append((encoding, [summarization]))
 
         else:
-            print("Could not summarize variant " + str(i) + ".")
+            logging.warning("Could not summarize variant " + str(i) + ".")
             if get_time:
                 times.append('NaN')
 
@@ -114,15 +109,13 @@ def get_unique_summarizations_from_process(process, print_results=False, get_tim
         return all_unique_summarizations_set, all_unique_summarizations_dict
 
 
-def get_unique_summarizations_from_variants(process, variants, print_results=False):
+def get_unique_summarizations_from_variants(process, variants):
     """
     Computes the Intra-Variant Summarizations for each variant of the given event log and determines equality among the resulting summarizations.
     :param process: The object-centric event-log in ocel format
     :type process: ocpa.objects.log.ocel.OCEL
     :param variants: a list of variants and their frequencies as tuples
     :type variants: list
-    :param print_results: Whether the print commands should be executed
-    :type print_results: bool
     :return: A list containing all unique summarizations and a dictionary mapping the summarizations to their SummarizedVariant instances and corresponding variants
     :rtype: list, dict
     """
@@ -140,11 +133,11 @@ def get_unique_summarizations_from_variants(process, variants, print_results=Fal
         _range, limit = range(len(variants)), 3
 
     for i in tqdm(_range):
-        print(' \n' + "Summarizing variant " + str(i) + " of the process...")
+        logging.debug(' \n' + "Summarizing variant " + str(i) + " of the process...")
         extracted_variant = IED.extract_lanes(variant_layout[variants[i][0]], variants[i][1])
         if (max([len(extracted_variant.get_lanes_of_type(_type))
                 for _type in list(extracted_variant.object_types)]) <= limit):
-            extracted_summarizations = IAVS.within_variant_summarization(extracted_variant, print_results)
+            extracted_summarizations = IAVS.within_variant_summarization(extracted_variant)
 
             for summarization in extracted_summarizations:
                 all_summarizations.append(summarization)

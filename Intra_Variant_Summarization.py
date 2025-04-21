@@ -1,3 +1,5 @@
+import logging
+
 import Super_Variant_Definition as SVD
 import Inter_Lane_Summarization as ILS
 import Inter_Lane_Alignment as ILA
@@ -37,7 +39,7 @@ def get_candidates(lanes, interactions):
     return result
 
 
-def __branch_on_candidates(variant, remaining_candidates, init_summarization, level, print_results):
+def __branch_on_candidates(variant, remaining_candidates, init_summarization, level):
     """
     Visits one node in the candidate tree, summarizes the current merging candidate and recurses on the subtrees.
     :param variant: The variant to be summarized
@@ -48,8 +50,6 @@ def __branch_on_candidates(variant, remaining_candidates, init_summarization, le
     :type init_summarization: dict
     :param level: The current depth in the tree
     :type level: int
-    :param print_results: Whether the print commands should be executed
-    :type print_results: bool
     :return: The summarization of the current candidate joined with the results from the child nodes
     :rtype: list
     """
@@ -57,13 +57,13 @@ def __branch_on_candidates(variant, remaining_candidates, init_summarization, le
     current_summarization = copy.deepcopy(init_summarization)
     new_lanes = []
     new_mappings = []
-    if print_results:
-        print("------------------------------------------")
-        print("Current Level: " + str(level))
+
+    logging.debug("------------------------------------------")
+    logging.debug("Current Level: " + str(level))
+
     for partition in current_summarization["Candidate"]:
-        if print_results:
-            print("----")
-            print("Summarizing Lanes: " + str([lane.lane_id for lane in partition]))
+        logging.debug("----")
+        logging.debug("Summarizing Lanes: " + str([lane.lane_id for lane in partition]))
 
         object_type = partition[0].object_type
         lane_name = partition[0].object_type + " i"
@@ -73,7 +73,7 @@ def __branch_on_candidates(variant, remaining_candidates, init_summarization, le
             cardinality = "n"
         elements, new_intermediate_mappings = ILS.__inter_lane_summarization(
             [lane.to_super_lane(variant.interaction_points) for lane in partition],
-            [variant.interaction_points for lane in partition], print_results=print_results, intra=True, nested=False)
+            [variant.interaction_points for lane in partition], intra=True, nested=False)
 
         realizations = []
         for i in range(len(partition)):
@@ -94,10 +94,7 @@ def __branch_on_candidates(variant, remaining_candidates, init_summarization, le
                 summary1 = new_lanes[i]
                 summary2 = new_lanes[j]
                 if summary1.same_summarization(summary2) or summary1.subsumed_summarization(summary2):
-                    if print_results:
-                        print("----")
-                        print("Redundancy found, pruning subtree!")
-                        print("\n")
+                    logging.debug("----\nRedundancy found, pruning subtree!\n\n")
                     return None
 
     current_summarization["Lanes"].extend(new_lanes)
@@ -105,10 +102,8 @@ def __branch_on_candidates(variant, remaining_candidates, init_summarization, le
 
     # Recursive call
     if len(remaining_candidates) == 0:
-        if print_results:
-            print("----")
-            print("Leaf node reached!")
-            print("\n")
+        logging.debug("----\nLeaf node reached!\n\n")
+
         return [current_summarization]
 
     else:
@@ -119,23 +114,21 @@ def __branch_on_candidates(variant, remaining_candidates, init_summarization, le
                 variant,
                 remaining_candidates[1:],
                 current_summarization,
-                level + 1,
-                print_results)
+                level + 1
+            )
 
             if subtree_result is not None:
                 result.extend(subtree_result)
-        if print_results:
-            print("\n")
+
+        logging.debug("\n")
         return result
 
 
-def within_variant_summarization(variant, print_results=True):
+def within_variant_summarization(variant):
     """
     Yields all unique valid summarizations of a given variant.
     :param variant: The variant that is to be generalized
     :type variant: ExtractedVariant
-    :param print_results: Whether the print commands should be executed
-    :type print_results: bool
     :return: A list of all unique valid summarizations of the variant
     :rtype: list of type SummarizedLane
     """
@@ -153,8 +146,8 @@ def within_variant_summarization(variant, print_results=True):
             variant,
             all_candidates[1:],
             init_summary,
-            1,
-            print_results)
+            1
+        )
         if subtree_result is not None:
             all_summarizations.extend(subtree_result)
 
@@ -163,9 +156,9 @@ def within_variant_summarization(variant, print_results=True):
     for summarization in all_summarizations:
 
         result_lanes, result_interaction_points = ILA.__re_align_lanes(
-            summarization["Lanes"],
-            ILA.join_interaction_mappings(summarization["Mappings"]),
-            print_results)
+            lanes=summarization["Lanes"],
+            mappings=ILA.join_interaction_mappings(summarization["Mappings"])
+        )
 
         result.append(
             SVD.SummarizedVariant(
@@ -175,9 +168,8 @@ def within_variant_summarization(variant, print_results=True):
                 variant.frequency))
         result[-1].encode_lexicographically()
 
-        if print_results:
-            print(result[-1])
-            print("-------------------")
+        logging.debug(result[-1])
+        logging.debug("-" * 20)
 
     return result
 
