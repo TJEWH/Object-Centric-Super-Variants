@@ -1,4 +1,5 @@
 import copy
+import logging
 import math
 import time
 from enum import Enum
@@ -63,6 +64,12 @@ def generate_super_variant_hierarchy_by_classification(initial_super_variant_cla
     """
     result = []
     final_level_super_variants = []
+
+    maximal_clusters = len(initial_super_variant_classification[0])
+    if number_of_super_variants_per_class >= maximal_clusters:
+        number_of_super_variants_per_class = maximal_clusters
+        logging.info(f"Number of super variants per class is set to {maximal_clusters} "
+                     f"as it was higher than the number of classes.")
 
     if frequency_distribution_type == Distribution.UNIFORM or frequency_distribution_type == Distribution.NORMAL:
         for super_variant_set in initial_super_variant_classification:
