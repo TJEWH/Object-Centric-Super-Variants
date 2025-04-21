@@ -4,7 +4,6 @@ import time
 from enum import Enum
 
 import Inter_Variant_Summarization as IEVS
-import Super_Variant_Visualization as SVV
 
 
 class Distribution(Enum):
@@ -21,20 +20,17 @@ def generate_super_variant_hierarchy(initial_super_variant_set, number_of_super_
                                      frequency_distribution_type=Distribution.EXPLORATION, base=2, print_results=False):
     """
     Generates a Super Variant hierarchy for a set of Super Variants.
-    :param initial_super_variant_set: The list of sets of Super Variants
-    :type initial_super_variant_set: list
-    :param number_of_super_variants: The number of desired clusters and final Super Variants per set of Super Variants
-    :type number_of_super_variants int
-    :param max_number_of_levels: The maximal level reached in the generation of Super Variants
-    :type max_number_of_levels: int
-    :param frequency_distribution_type: The distribution type used to cluster the Super Variants
-    :type frequency_distribution_type: Distribution
-    :param base: The logarithmic base, determines how many variants are to be summarized in a single generative step of an exploratory setting
-    :type base: int
-    :param print_results: Whether the print commands should be executed
-    :type print_results: bool
-    :return: The set of Super Variants for each level and the levels accumulated cost and a list of the final Super Variants
-    :rtype: dict, list
+
+    Parameters:
+        initial_super_variant_set (list): The list of sets of Super Variants
+        number_of_super_variants (int): The number of desired clusters and final Super Variants per set of Super Variants
+        max_number_of_levels (int): The maximal level reached in the generation of Super Variants
+        frequency_distribution_type (Distribution): The distribution type used to cluster the Super Variants
+        base (int): The logarithmic base, determines how many variants are to be summarized in a single generative step of an exploratory setting
+        print_results (bool): Whether the print commands should be executed
+
+    Returns:
+        dict, list: The set of Super Variants for each level and the levels accumulated cost and a list of the final Super Variants
     """
     return generate_super_variant_hierarchy_by_classification(
         [initial_super_variant_set],
@@ -48,130 +44,70 @@ def generate_super_variant_hierarchy(initial_super_variant_set, number_of_super_
 def generate_super_variant_hierarchy_by_classification(initial_super_variant_classification,
                                                        number_of_super_variants_per_class=1,
                                                        max_number_of_levels=math.inf,
-                                                       frequency_distribution_type=Distribution.EXPLORATION, base=2,
+                                                       frequency_distribution_type=Distribution.EXPLORATION,
+                                                       base=2,
                                                        print_results=False):
     """
     Generates a Super Variant hierarchy for each set of Super Variants based on an initial classification.
-    :param initial_super_variant_classification: The list of sets of Super Variants
-    :type initial_super_variant_classification: list
-    :param number_of_super_variants_per_class: The number of desired clusters and final Super Variants per set of Super Variants
-    :type number_of_super_variants_per_class: int
-    :param max_number_of_levels: The maximal level reached in the generation of Super Variants
-    :type max_number_of_levels: int
-    :param frequency_distribution_type: The distribution type used to cluster the Super Variants
-    :type frequency_distribution_type: Distribution
-    :param base: The logarithmic base, determines how many variants are to be summarized in a single generative step of an exploratory setting
-    :type base: int
-    :param print_results: Whether the print commands should be executed
-    :type print_results: bool
-    :return: The set of Super Variants for each level and the levels accumulated cost and a list of the final Super Variants
-    :rtype: dict, list
+
+    Parameters:
+        initial_super_variant_classification (list): The list of sets of Super Variants
+        number_of_super_variants_per_class (int): The number of desired clusters and final Super Variants per set of Super Variants
+        max_number_of_levels (int): The maximal level reached in the generation of Super Variants
+        frequency_distribution_type (Distribution): The distribution type used to cluster the Super Variants
+        base (int): The logarithmic base, determines how many variants are to be summarized in a single generative step of an exploratory setting
+        print_results (bool): Whether the print commands should be executed
+
+    Returns:
+        dict, list: The set of Super Variants for each level and the levels accumulated cost and a list of the final Super Variants
     """
     result = []
     final_level_super_variants = []
-    for super_variant_set in initial_super_variant_classification:
-        if frequency_distribution_type == Distribution.UNIFORM or frequency_distribution_type == Distribution.NORMAL:
-            if frequency_distribution_type == Distribution.UNIFORM:
-                class_result, class_final_level_super_variants = generate_super_variant_hierarchy_uniform(
-                    super_variant_set, number_of_super_variants_per_class, max_number_of_levels, print_results)
-            else:
-                class_result, class_final_level_super_variants = generate_super_variant_hierarchy_normal(
-                    super_variant_set, number_of_super_variants_per_class, max_number_of_levels, print_results)
 
+    if frequency_distribution_type == Distribution.UNIFORM or frequency_distribution_type == Distribution.NORMAL:
+        for super_variant_set in initial_super_variant_classification:
+            class_result, class_final_level_super_variants = generate_super_variant_hierarchy_by_frequency(
+                initial_super_variant_set=super_variant_set,
+                number_of_super_variants=number_of_super_variants_per_class,
+                distribution_type=frequency_distribution_type,
+                max_number_of_levels=max_number_of_levels,
+                print_results=print_results
+            )
             final_level_super_variants.append(class_final_level_super_variants)
+            result.append(class_result)
 
-        elif frequency_distribution_type == Distribution.EXPLORATION:
-            class_result = generate_super_variant_hierarchy_exploration(super_variant_set, max_number_of_levels, base,
-                                                                        print_results)
+    # Generates an exploratory Super Variant hierarchy given a logarithmic base and a maximal number of levels.
+    elif frequency_distribution_type == Distribution.EXPLORATION:
+        for super_variant_set in initial_super_variant_classification:
+            class_result = generate_super_variant_hierarchy_by_cost(
+                initial_super_variant_set=[(super_variant, None, None) for super_variant in super_variant_set],
+                max_number_of_level=max_number_of_levels,
+                counter=0,
+                base=base,
+                print_results=print_results)
+
             final_level_super_variants.append((max(class_result.items(), key=lambda x: x[0]))[1][0])
-
-        result.append(class_result)
+            result.append(class_result)
 
     return result, final_level_super_variants
-
-
-def generate_super_variant_hierarchy_uniform(initial_super_variant_set, number_of_super_variants,
-                                             max_number_of_levels=math.inf, print_results=False):
-    """
-    Generates a Super Variant hierarchy such that the frequencies of the final Super Variant reflect a uniform distribution.
-    :param initial_super_variant_set: The set of Super Variants
-    :type initial_super_variant_set: list
-    :param number_of_super_variants: The number of desired clusters and final Super Variants
-    :type number_of_super_variants: int
-    :param max_number_of_levels: The maximal level reached in the generation of Super Variants
-    :type max_number_of_levels: int
-    :param print_results: Whether the print commands should be executed
-    :type print_results: bool
-    :return: The set of Super Variants for each level and the levels accumulated cost and a list of the final Super Variants
-    :rtype: dict, list
-    """
-    return generate_super_variant_hierarchy_by_frequency(
-        initial_super_variant_set,
-        number_of_super_variants,
-        max_number_of_levels,
-        Distribution.UNIFORM,
-        print_results)
-
-
-def generate_super_variant_hierarchy_normal(initial_super_variant_set, number_of_super_variants,
-                                            max_number_of_levels=math.inf, print_results=False):
-    """
-    Generates a Super Variant hierarchy such that the frequencies of the final Super Variant reflect a normal distribution.
-    :param initial_super_variant_set: The set of Super Variants
-    :type initial_super_variant_set: list
-    :param number_of_super_variants: The number of desired clusters and final Super Variants
-    :type number_of_super_variants: int
-    :param max_number_of_levels: The maximal level reached in the generation of Super Variants
-    :type max_number_of_levels: int
-    :param print_results: Whether the print commands should be executed
-    :type print_results: bool
-    :return: The set of Super Variants for each level and the levels accumulated cost and a list of the final Super Variants
-    :rtype: dict, list
-    """
-    return generate_super_variant_hierarchy_by_frequency(
-        initial_super_variant_set,
-        number_of_super_variants,
-        max_number_of_levels,
-        Distribution.NORMAL,
-        print_results)
-
-
-def generate_super_variant_hierarchy_exploration(initial_super_variant_set, max_number_of_levels, base=2,
-                                                 print_results=False):
-    """
-    Generates an exploratory Super Variant hierarchy given a logarithmic base and a maximal number of levels.
-    :param initial_super_variant_set: The set of Super Variants
-    :type initial_super_variant_set: list
-    :param max_number_of_levels: The maximal level reached in the generation of Super Variants
-    :type max_number_of_levels: int
-    :param base: The logarithmic base, determines how many variants are to be summarized in a single generative step
-    :type base: int
-    :param print_results: Whether the print commands should be executed
-    :type print_results: bool
-    :return: The set of Super Variants for each level and the levels accumulated cost
-    :rtype: dict
-    """
-    return generate_super_variant_hierarchy_by_cost(
-        [(super_variant, None, None) for super_variant in initial_super_variant_set],
-        max_number_of_levels, 0, base,print_results)
 
 
 def generate_super_variant_hierarchy_by_frequency(initial_super_variant_set, number_of_super_variants,
                                                   max_number_of_levels, distribution_type, print_results=False):
     """
-    Creates a grouping of the initial set of Super Variants in accordance with a frequency distribution and then generates a Super Variant hierarchy.
-    :param initial_super_variant_set: The set of Super Variants
-    :type initial_super_variant_set: list
-    :param number_of_super_variants: The number of desired clusters and final Super Variants
-    :type number_of_super_variants: int
-    :param max_number_of_levels: The maximal level reached in the generation of Super Variants
-    :type max_number_of_levels: int
-    :param distribution_type: The distribution type used to cluster the Super Variants
-    :type distribution_type: Distribution
-    :param print_results: Whether the print commands should be executed
-    :type print_results: bool
-    :return: The set of Super Variants for each level and the levels accumulated cost and a list of the final Super Variants
-    :rtype: dict, list
+    Creates a grouping of the initial set of Super Variants in accordance with a frequency distribution and then
+    generates a Super Variant hierarchy.
+
+    Parameters:
+        initial_super_variant_set (list): The set of Super Variants
+        number_of_super_variants (int): The number of desired clusters and final Super Variants
+        max_number_of_levels (int): The maximal level reached in the generation of Super Variants
+        distribution_type (Distribution): The distribution type used to cluster the Super Variants
+        print_results (bool): Whether the print commands should be executed
+
+    Returns:
+        dict: The set of Super Variants for each level and the levels accumulated cost
+        list: A list of the final Super Variants
     """
     if len(initial_super_variant_set) <= number_of_super_variants:
         result = dict()
@@ -183,7 +119,12 @@ def generate_super_variant_hierarchy_by_frequency(initial_super_variant_set, num
         for super_variant in initial_super_variant_set:
             indexed_initial_set[super_variant.id] = super_variant
 
-        clusters = cluster_by_frequency(indexed_initial_set, number_of_super_variants, distribution_type, print_results)
+        clusters = _cluster_by_frequency(
+            indexed_initial_set=indexed_initial_set,
+            number_of_clusters=number_of_super_variants,
+            distribution_type=distribution_type,
+            print_results=print_results
+        )
 
         size_largest_cluster = max([len(cluster) for cluster in clusters])
         for i in range(2, max(3, size_largest_cluster)):
@@ -193,18 +134,22 @@ def generate_super_variant_hierarchy_by_frequency(initial_super_variant_set, num
 
         result = []
         final_level_super_variants = []
+
         for cluster in clusters:
             cluster_result = generate_super_variant_hierarchy_by_cost(
-                [(super_variant, None, None) for super_variant in cluster.values()],
-                max_number_of_levels, 0, base, print_results)
+                initial_super_variant_set=[(super_variant, None, None) for super_variant in cluster.values()],
+                max_number_of_level=max_number_of_levels,
+                counter=0,
+                base=base,
+                print_results=print_results)
 
             final_level_super_variants.extend((max(cluster_result.items(), key=lambda x: x[0]))[1][0])
+
             if print_results:
                 print("The following levels have been generated.")
                 for level in cluster_result.keys():
                     print(level)
-                    for super_variant in cluster_result[level][0]:
-                        print(super_variant[0].id)
+                    [print(super_variant[0].id) for super_variant in cluster_result[level][0]]
                     print("-----------")
             result.append(cluster_result)
 
@@ -215,22 +160,18 @@ def generate_super_variant_hierarchy_by_cost(initial_super_variant_set, max_numb
                                              print_results=False, measure_times=False, times=None):
     """
     Recursively generates Super Variants based on an initial set-up to a desired depth using the minimum cost possible.
-    :param initial_super_variant_set: The set of Super Variants
-    :type initial_super_variant_set: list
-    :param max_number_of_level: The maximal level reached in the generation of Super Variants
-    :type max_number_of_level: int
-    :param counter: The current generation level
-    :type counter: int
-    :param base: The logarithmic base, determines how many variants are to be summarized in a single generative step
-    :type base: int
-    :param print_results: Whether the print commands should be executed
-    :type print_results: bool
-    :param measure_times: Whether the computation times should be measured
-    :type measure_times: bool
-    :param times: The times of the other levels
-    :type times: dict
-    :return: The set of Super Variants for each level and the levels accumulated cost
-    :rtype: dict
+
+    Parameters:
+        initial_super_variant_set (list): The set of Super Variants
+        max_number_of_level (int): The maximal level reached in the generation of Super Variants
+        counter (int): The current generation level
+        base (int): The logarithmic base, determines how many variants are to be summarized in a single generative step
+        print_results (bool): Whether the print commands should be executed
+        measure_times (bool): Whether the computation times should be measured
+        times (dict): The times of the other levels
+
+    Returns:
+        dict: The set of Super Variants for each level and the levels accumulated cost
     """
     if len(initial_super_variant_set) == 1:
         result = dict()
@@ -270,7 +211,7 @@ def generate_super_variant_hierarchy_by_cost(initial_super_variant_set, max_numb
         if measure_times:
             time_after_mapping = time.perf_counter()
 
-        clusters = cluster_by_size(indexed_initial_set, max(base, 2), distances, print_results)  # on main only base
+        clusters = _cluster_by_size(indexed_initial_set, max(base, 2), distances, print_results)  # on main only base
         if measure_times:
             time_after_clustering = time.perf_counter()
             number_summarizations = 0
@@ -304,27 +245,17 @@ def generate_super_variant_hierarchy_by_cost(initial_super_variant_set, max_numb
         if measure_times:
             time_after_summarization = time.perf_counter()
 
-        if measure_times:
             if max_number_of_level == 1 or len(level_result) == 1:
                 result = dict()
             else:
-                if counter == 0:
-                    result, times = generate_super_variant_hierarchy_by_cost(
-                        level_result,
-                        max_number_of_level - 1,
-                        counter + 2,
-                        base,
-                        print_results,
-                        measure_times,
-                        times)
-                else:
-                    result, times = generate_super_variant_hierarchy_by_cost(
-                        level_result,
-                        max_number_of_level - 1,
-                        counter + 1,
-                        base,
-                        print_results, measure_times,
-                        times)
+                result, times = generate_super_variant_hierarchy_by_cost(
+                    level_result,
+                    max_number_of_level - 1,
+                    counter + 2 if counter == 0 else counter + 1,
+                    base,
+                    print_results,
+                    measure_times,
+                    times)
 
             if counter == 0:
                 result[1] = (level_result, accumulated_cost)
@@ -354,20 +285,12 @@ def generate_super_variant_hierarchy_by_cost(initial_super_variant_set, max_numb
             if max_number_of_level == 1 or len(level_result) == 1:
                 result = dict()
             else:
-                if counter == 0:
-                    result = generate_super_variant_hierarchy_by_cost(
-                        level_result,
-                        max_number_of_level - 1,
-                        counter + 2,
-                        base,
-                        print_results)
-                else:
-                    result = generate_super_variant_hierarchy_by_cost(
-                        level_result,
-                        max_number_of_level - 1,
-                        counter + 1,
-                        base,
-                        print_results)
+                result = generate_super_variant_hierarchy_by_cost(
+                    level_result,
+                    max_number_of_level - 1,
+                    counter + 2 if counter == 0 else counter + 1,
+                    base,
+                    print_results)
 
             if counter == 0:
                 result[1] = (level_result, accumulated_cost)
@@ -377,19 +300,18 @@ def generate_super_variant_hierarchy_by_cost(initial_super_variant_set, max_numb
             return result
 
 
-def cluster_by_frequency(indexed_initial_set, number_of_clusters, distribution_type, print_results=False):
+def _cluster_by_frequency(indexed_initial_set, number_of_clusters, distribution_type, print_results=False):
     """
     Clusters a set of Super Variants into a number of clusters based on the provided distances.
-    :param indexed_initial_set: The set of Super Variants with indices as keys
-    :type indexed_initial_set: dict
-    :param number_of_clusters: The number of desired clusters
-    :type number_of_clusters: int
-    :param distribution_type: The distribution type used to cluster the Super Variants
-    :type distribution_type: Distribution
-    :param print_results: Whether the print commands should be executed
-    :type print_results: bool
-    :return: A list containing a list for every cluster
-    :rtype: list
+
+    Parameters:
+        indexed_initial_set (dict): The set of Super Variants with indices as keys
+        number_of_clusters (int): The number of desired clusters
+        distribution_type (Distribution): The distribution type used to cluster the Super Variants
+        print_results (bool): Whether the print commands should be executed
+
+    Returns:
+        list: A list containing a list for every cluster
     """
     accumulated_frequency = sum([indexed_initial_set[index].frequency for index in indexed_initial_set.keys()])
 
@@ -455,19 +377,18 @@ def cluster_by_frequency(indexed_initial_set, number_of_clusters, distribution_t
     return clusters
 
 
-def cluster_by_size(indexed_initial_set, cluster_size, distances, print_results=False):
+def _cluster_by_size(indexed_initial_set, cluster_size, distances, print_results=False):
     """
     Clusters a set of Super Variants into a number of clusters based on the provided distances.
-    :param indexed_initial_set: The set of Super Variants with indices as keys
-    :type indexed_initial_set: dict
-    :param cluster_size: The number of Super Variants per cluster
-    :type cluster_size: int
-    :param distances: The distance for each pair of Super Variants
-    :type distances: dict
-    :param print_results: Whether the print commands should be executed
-    :type print_results: bool
-    :return: A list containing a list for every cluster
-    :rtype: list
+
+    Parameters:
+        indexed_initial_set (dict): The set of Super Variants with indices as keys
+        cluster_size (int): The number of Super Variants per cluster
+        distances (dict): The distance for each pair of Super Variants
+        print_results (bool): Whether the print commands should be executed
+
+    Returns:
+        list: A list containing a list for every cluster
     """
     number_of_clusters = math.ceil(len(indexed_initial_set) / cluster_size)
 
@@ -527,15 +448,16 @@ def cluster_by_size(indexed_initial_set, cluster_size, distances, print_results=
 
 def classify_initial_super_variants_by_activity(initial_super_variant_set, activity_label, object_types=set()):
     """
-    Given an activity_label, this method classifies a set of Super Variants into classes depending on whether that activity label is performed in the specified object instances.
-    :param initial_super_variant_set: The set of Super Variants
-    :type initial_super_variant_set: list of type SummarizedVariant
-    :param activity_label: The name of the activity
-    :type activity_label: string
-    :param object_types: The names of the considered object types
-    :type object_types: set
-    :return: A list containing a list with all Super Variants classes
-    :rtype: list
+    Given an activity_label, this method classifies a set of Super Variants into classes depending on whether that
+    activity label is performed in the specified object instances.
+
+    Parameters:
+        initial_super_variant_set (list): The set of Super Variants
+        activity_label (str): The name of the activity
+        object_types (set): The names of the considered object types
+
+    Returns:
+        list: A list containing a list with all Super Variants classes
     """
     if object_types == set():
         for super_variant in initial_super_variant_set:
@@ -557,66 +479,3 @@ def classify_initial_super_variants_by_activity(initial_super_variant_set, activ
             result[1].append(super_variant)
 
     return result
-
-
-def classify_initial_super_variants_by_object_cardinality(initial_super_variant_set, object_type):
-    """
-    Given an object type, this method classifies a set of Super Variants into classes depending on the number of involved objects of that type.
-    :param initial_super_variant_set: The set of Super Variants
-    :type initial_super_variant_set: list of type SummarizedVariant
-    :param object_type: The name of the object type
-    :type object_type: string
-    :return: A list containing a list with all Super Variants classes
-    :rtype: list
-    """
-
-    result = dict()
-
-    for super_variant in initial_super_variant_set:
-        cardinality = 0
-        for lane in super_variant.lanes:
-            if lane.object_type == object_type:
-                cardinality += 1
-
-        if cardinality in result.keys():
-            result[cardinality].append(super_variant)
-
-        else:
-            result[cardinality] = [super_variant]
-
-    return list(result.values())
-
-
-def classify_initial_super_variants_by_expression(initial_super_variant_set, boolean_expression):
-    """
-    Given a boolean expression, this method classifies a set of Super Variants into two classes.
-    :param initial_super_variant_set: The set of Super Variants
-    :type initial_super_variant_set: list of type SummarizedVariant
-    :param boolean_expression: The function evaluating a boolean expression on a Super Variant
-    :type boolean_expression: func
-    :return: A list containing a list with all Super Variants for which the boolean expression yields true or false, respectively
-    :rtype: list
-    """
-    result = [[], []]
-    for super_variant in initial_super_variant_set:
-        if boolean_expression(super_variant):
-            result[0].append(super_variant)
-        else:
-            result[1].append(super_variant)
-
-    return result
-
-
-def contains_3_payment_reminder(super_variant):
-    """
-    Determines whether a given Super Variant contains at least 3 occurences of an activity with the label "Payment Reminder".
-    :param super_variant: The Super Variant
-    :type super_variant: SummarizedVariant
-    :return: The boolean result of the evaluation
-    :rtype: bool
-    """
-    count = 0
-    for lane in super_variant.lanes:
-        count += lane.count_activity("Payment Reminder")
-
-    return count >= 3
