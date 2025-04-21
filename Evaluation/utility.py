@@ -31,6 +31,14 @@ def print_hierarchy_costs(hierarchies):
         print("Cost for hierarchy " + str(i) + ": " + str(accumulated_cost))
 
 
+def print_hierarchy_costs_alt(hierarchies):
+    # Printing the accumulated summarization costs
+    for h_list in hierarchies.values()[0]:
+
+        for hierarchy in h_list.values():
+            print("Cost for hierarchy " + str(hierarchy[0][0][0].id) + ": " + str(hierarchy[1]))
+
+
 def manual_alignment(super_variant, positions, interactions):
     """Only used in publication"""
     for i in range(len(super_variant.lanes)):
