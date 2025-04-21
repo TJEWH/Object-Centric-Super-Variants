@@ -260,8 +260,8 @@ def __re_align_lanes(lanes, mappings, intra=True, repeat=REPEAT_ALIGNMENT):
                         exact_positions.append(updated_positions[str(current_position)])
                         fixed_positions[lane.lane_id].append(str(updated_positions[str(current_position)]))
 
-                        logging.info("We have shifted lane " + new_lane.lane_name + " by " + str(offset) +
-                                     " starting from the element at the position " + str(current_position) + ".")
+                        logging.debug("We have shifted lane " + new_lane.lane_name + " by " + str(offset) +
+                                      " starting from the element at the position " + str(current_position) + ".")
                         changes_made = True
 
                         # Update all values in the dictionary accordingly
@@ -280,8 +280,8 @@ def __re_align_lanes(lanes, mappings, intra=True, repeat=REPEAT_ALIGNMENT):
 
                         shifted_lanes.append(new_lane)
                     else:
-                        logging.warning("The lane " + new_lane.lane_name +
-                                        "could not be shifted without influencing an already aligned interaction point.")
+                        logging.debug("The lane " + new_lane.lane_name +
+                                      "could not be shifted without influencing an already aligned interaction point.")
 
                         exact_positions.append(current_position)
                         shifted_lanes.append(lane)

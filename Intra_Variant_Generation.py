@@ -97,9 +97,10 @@ def get_unique_summarizations_from_process(process, get_time=False):
                 else:
                     all_unique_summarizations_dict[encoding] = ([i], [summarization])
                     all_unique_summarizations_set.append((encoding, [summarization]))
+            logging.info("Summarized variant " + str(i) + ".")
 
         else:
-            logging.warning("Could not summarize variant " + str(i) + ".")
+            logging.debug("Could not summarize variant " + str(i) + ".")
             if get_time:
                 times.append('NaN')
 

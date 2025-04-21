@@ -35,7 +35,7 @@ def join_super_variants(super_variant1, super_variant2, allow_nested_structures=
                                         True)
 
     if cost21 < cost12:
-        logging.info("The estimated cost of joining these Super Variants is " + str(cost21) + ".")
+        logging.debug("The estimated cost of joining these Super Variants is " + str(cost21) + ".")
 
         return inter_variant_summarization(copy.deepcopy(super_variant2),
                                            copy.deepcopy(super_variant1),
@@ -44,7 +44,7 @@ def join_super_variants(super_variant1, super_variant2, allow_nested_structures=
                                            ), cost21
 
     else:
-        logging.info("The estimated cost of joining these Super Variants is " + str(cost12) + ".")
+        logging.debug("The estimated cost of joining these Super Variants is " + str(cost12) + ".")
 
         return inter_variant_summarization(copy.deepcopy(super_variant1),
                                            copy.deepcopy(super_variant2),
@@ -74,7 +74,7 @@ def inter_variant_summarization(summarization1, summarization2, mapping, allow_n
 
     for pair in mapping:
         if pair[0] is None:
-            logging.info("Lane " + str(pair[1]) + " of the Super Variant 2 is made optional.")
+            logging.debug("Lane " + str(pair[1]) + " of the Super Variant 2 is made optional.")
 
             lane2 = [lane for lane in summarization2.lanes if lane.lane_id == pair[1]][0]
             super_lane, mapping = optional_super_lane(summarization2, lane2, False)
@@ -85,7 +85,7 @@ def inter_variant_summarization(summarization1, summarization2, mapping, allow_n
             intermediate_mappings.append((super_lane.lane_id, mapping))
 
         elif pair[1] is None:
-            logging.info("Lane " + str(pair[0]) + " of the Super Variant 1 is made optional.")
+            logging.debug("Lane " + str(pair[0]) + " of the Super Variant 1 is made optional.")
 
             lane1 = [lane for lane in summarization1.lanes if lane.lane_id == pair[0]][0]
             super_lane, mapping = optional_super_lane(summarization1, lane1, True)
@@ -96,7 +96,7 @@ def inter_variant_summarization(summarization1, summarization2, mapping, allow_n
             intermediate_mappings.append((super_lane.lane_id, mapping))
 
         else:
-            logging.info("Lane " + str(pair[0]) + " of the Super Variant 1 and lane " +
+            logging.debug("Lane " + str(pair[0]) + " of the Super Variant 1 and lane " +
                          str(pair[1]) + " of Super Variant 2 are merged.")
 
             lane1 = [lane for lane in summarization1.lanes if lane.lane_id == pair[0]][0]

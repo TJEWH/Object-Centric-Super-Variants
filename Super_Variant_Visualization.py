@@ -383,7 +383,8 @@ def __interaction_activity_chevron(ax, lane, element, index, lane_properties, in
 
     if not is_interacting:
         interacting_lanes = [[original_lane]]
-        logging.warning("Interaction not found.")
+        # TODO increase information gain
+        logging.debug("Interaction not found.")
         if MARK_INCORRECT_INTERACTIONS:
             outline_color = "red"
 

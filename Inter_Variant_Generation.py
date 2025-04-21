@@ -427,7 +427,7 @@ def _cluster_by_size(indexed_initial_set, cluster_size, distances):
 
         clusters.append(cluster)
 
-        logging.info("With average distance/cost: " + str(accumulated_distances / cluster_size))
+        logging.debug("With average distance/cost: " + str(accumulated_distances / cluster_size))
         logging.debug("-" * 36)
 
     return clusters
