@@ -12,7 +12,7 @@ class Distribution(Enum):
     EXPLORATION = 3
 
 
-NESTED_STRUCTURES = True
+NESTED_STRUCTURES = False
 
 
 def generate_super_variant_hierarchy(initial_super_variant_set, number_of_super_variants=1,
