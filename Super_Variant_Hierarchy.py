@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 MODE = SVV.Mode.LANE_FREQUENCY
 TOOLTIPS = False
+SAVE_FILE = False
 
 
 def explore_hierarchy_bottom_up(super_variants):
@@ -159,8 +160,9 @@ def visualize_super_variant_layer(super_variants, current_layer, current_start_i
     # manager.pyplot_show()
     plt.show()
 
-    fig.savefig("Visualizations/SuperVariantsLayer/Layer_" + str(current_layer) + "_" + str(start_index) + "_to_" + str(
-        (current_start_index + 2) % maximal_index) + ".svg")
+    if SAVE_FILE:
+        fig.savefig("Visualizations/SuperVariantsLayer/Layer_" + str(current_layer) + "_" + str(start_index) + "_to_" +
+                    str((current_start_index + 2) % maximal_index) + ".svg")
 
 
 def visualize_single_summarization_step(super_variant_1, super_variant_2, new_super_variant):
@@ -237,8 +239,9 @@ def visualize_single_summarization_step(super_variant_1, super_variant_2, new_su
     # manager.pyplot_show()
     plt.show()
 
-    fig.savefig("Visualizations/SuperVariantsCompositions/SuperVariant_" + str(new_super_variant.id) + "_from" + str(
-        super_variant_1[0].id) + "_and_" + str(super_variant_2[0].id) + ".svg")
+    if SAVE_FILE:
+        fig.savefig("Visualizations/SuperVariantsCompositions/SuperVariant_" + str(new_super_variant.id) + "_from" +
+                    str(super_variant_1[0].id) + "_and_" + str(super_variant_2[0].id) + ".svg")
 
 
 def append_annotation(current_annotations, ax, message):

@@ -10,6 +10,7 @@ DEFAULT_CHEVRON_LENGTH = 30.
 DEFAULT_CHEVRON_HEIGHT = 10.
 OUTLINE_INTERACTIONS = False
 MARK_INCORRECT_INTERACTIONS = True  # on main false
+SAVE_FILE = False
 
 
 class Mode(Enum):
@@ -86,7 +87,8 @@ def visualize_super_variant(super_variant, suppression_char="*", mode=Mode.ACTIV
         manager = plt.get_current_fig_manager()
         # manager.pyplot_show()
         plt.show()
-        fig.savefig("Visualizations/SingleSuperVariants/SuperVariant_" + str(super_variant.id) + ".svg")
+        if SAVE_FILE:
+            fig.savefig("Visualizations/SingleSuperVariants/SuperVariant_" + str(super_variant.id) + ".svg")
 
 
 def is_inside(circle_xy, rad, xy):
