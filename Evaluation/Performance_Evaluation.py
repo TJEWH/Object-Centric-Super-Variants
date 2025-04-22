@@ -9,7 +9,7 @@ import Inter_Variant_Generation as IEVG
 import Inter_Variant_Summarization as IEVS
 import Intra_Variant_Summarization as IAVS
 import Input_Extraction_Definition as IED
-from config import BRANCH
+from .. import *
 
 from enum import Enum
 import time
@@ -17,6 +17,30 @@ import csv
 import random
 import copy
 import math
+
+
+__branches = {
+    "main": {
+        "mode": 8,
+        "file": LOGS[2],
+        "parameters": {"execution_extraction": "leading_type"},
+    },
+    "expl": {
+        "mode": None,
+        "file": LOGS[6],
+    },
+    "eval": {
+        "mode": 9,
+        "file": LOGS[6],
+        "file_eval": LOGS[2],
+    },
+    "publ": {
+        "mode": 9,
+        "file": LOGS[4],
+        "file_eval": LOGS[6],
+    },
+}
+BRANCH = __branches["publ"]
 
 
 # Always take maximal generalization
