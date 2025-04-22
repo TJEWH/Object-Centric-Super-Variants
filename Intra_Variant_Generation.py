@@ -5,6 +5,10 @@ from config import BRANCH
 import Input_Extraction_Definition as IED
 import Intra_Variant_Summarization as IAVS
 
+RANGE_LIMIT = True
+RANGE_LIMIT_INDEX = 10
+INTERACTION_LIMIT = 4
+
 
 def complete_intra_variant_summarization_from_process(process, get_time=False):
     """
@@ -63,20 +67,20 @@ def get_unique_summarizations_from_process(process, get_time=False):
     if get_time:
         times = []
 
-    if BRANCH == "publ":
-        _range, limit = range(10), 6
-    else:
-        _range, limit = range(len(process.variants)), 4
+    _range = range(RANGE_LIMIT_INDEX) if RANGE_LIMIT else range(len(process.variants))
 
     for i in tqdm(_range):
         logging.debug(' \n' + "Summarizing variant " + str(i) + " of the process...")
         if get_time:
             time_before_intra = time.perf_counter()
+
         extracted_variant = IED.extract_lanes(variant_layout[process.variants[i]], process.variant_frequencies[i])
 
-        termination_condition = (i != 15) if BRANCH == "main" else (
-                max([len(interaction_point.interaction_lanes)
-                     for interaction_point in list(extracted_variant.interaction_points)]) <= limit)
+        termination_condition = (
+                max([
+                    len(interaction_point.interaction_lanes)
+                    for interaction_point in list(extracted_variant.interaction_points)
+                ]) <= INTERACTION_LIMIT)
 
         if termination_condition:
             extracted_summarizations = IAVS.within_variant_summarization(extracted_variant)
