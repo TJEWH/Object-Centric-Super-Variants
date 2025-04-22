@@ -1,10 +1,9 @@
 import logging
 
-from config import BRANCH
 import Input_Extraction_Definition as IED
 
-ALIGN = BRANCH["alignment"]["align"]
-REPEAT_ALIGNMENT = BRANCH["alignment"]["repeat"]
+ALIGN = False
+REPEAT_ALIGNMENT = None
 
 
 def join_interaction_mappings(interaction_mappings):

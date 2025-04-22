@@ -1,7 +1,6 @@
 import logging
 import time
 
-from config import BRANCH
 import Input_Extraction_Definition as IED
 import Intra_Variant_Summarization as IAVS
 
@@ -132,16 +131,19 @@ def get_unique_summarizations_from_variants(process, variants):
     all_unique_summarizations_set = []
     all_summarizations = []
 
-    if BRANCH == "publ":
-        _range, limit = range(10), 6
-    else:
-        _range, limit = range(len(variants)), 3
+    _range = range(RANGE_LIMIT_INDEX) if RANGE_LIMIT else range(len(variants))
 
     for i in tqdm(_range):
         logging.debug(' \n' + "Summarizing variant " + str(i) + " of the process...")
         extracted_variant = IED.extract_lanes(variant_layout[variants[i][0]], variants[i][1])
-        if (max([len(extracted_variant.get_lanes_of_type(_type))
-                for _type in list(extracted_variant.object_types)]) <= limit):
+
+        termination_condition = (
+                max([
+                    len(extracted_variant.get_lanes_of_type(_type))
+                    for _type in list(extracted_variant.object_types)
+                ]) <= INTERACTION_LIMIT)
+
+        if termination_condition:
             extracted_summarizations = IAVS.within_variant_summarization(extracted_variant)
 
             for summarization in extracted_summarizations:
